@@ -235,3 +235,57 @@ export function dumpAuthArtifactsState(input: DumpAuthArtifactsInput): ArtifactS
 
   return { storageStateFileExists, storageStateFileSizeBytes, profileDirExists, profileDirEntryCount };
 }
+
+export type StorageStateCookie = {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires?: number;
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: "Strict" | "Lax" | "None";
+};
+
+type CookieKey = { name: string; domain: string; path: string };
+
+export function parseStorageStateCookies(storageStatePath: string): StorageStateCookie[] {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(storageStatePath, "utf8");
+  } catch {
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    return [];
+  }
+  const cookiesField = (parsed as { cookies?: unknown }).cookies;
+  if (!Array.isArray(cookiesField)) {
+    return [];
+  }
+  const result: StorageStateCookie[] = [];
+  for (const entry of cookiesField) {
+    if (
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as { name?: unknown }).name === "string" &&
+      typeof (entry as { domain?: unknown }).domain === "string" &&
+      typeof (entry as { path?: unknown }).path === "string"
+    ) {
+      result.push(entry as StorageStateCookie);
+    }
+  }
+  return result;
+}
+
+export function filterNewCookies<T extends CookieKey>(incoming: T[], existing: CookieKey[]): T[] {
+  const key = (c: CookieKey): string => `${c.name}|${c.domain}|${c.path}`;
+  const existingKeys = new Set(existing.map(key));
+  return incoming.filter((cookie) => !existingKeys.has(key(cookie)));
+}
