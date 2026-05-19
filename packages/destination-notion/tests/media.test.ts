@@ -134,4 +134,115 @@ describe("applyPageMedia", () => {
     expect(retrieve).toHaveBeenCalledTimes(1);
     expect(update).not.toHaveBeenCalled();
   });
+
+  it("updates icon only when icon differs and cover matches", async () => {
+    const { client, update } = makeClient({
+      retrieve: async () => ({
+        icon: { type: "emoji", emoji: "📚" },
+        cover: { type: "external", external: { url: "https://images/abc.jpg" } }
+      })
+    });
+
+    await applyPageMedia(client, "page_diff_icon", externalDesired, { force: false, isNewPage: false });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      page_id: "page_diff_icon",
+      icon: { type: "external", external: { url: "https://images/abc.jpg" } }
+    });
+  });
+
+  it("updates cover only when cover differs and icon matches", async () => {
+    const { client, update } = makeClient({
+      retrieve: async () => ({
+        icon: { type: "external", external: { url: "https://images/abc.jpg" } },
+        cover: { type: "external", external: { url: "https://images/old.jpg" } }
+      })
+    });
+
+    await applyPageMedia(client, "page_diff_cover", externalDesired, { force: false, isNewPage: false });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      page_id: "page_diff_cover",
+      cover: { type: "external", external: { url: "https://images/abc.jpg" } }
+    });
+  });
+
+  it("updates both when no current icon or cover and URL present", async () => {
+    const { client, update } = makeClient({ retrieve: async () => ({ icon: null, cover: null }) });
+
+    await applyPageMedia(client, "page_blank", externalDesired, { force: false, isNewPage: false });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      page_id: "page_blank",
+      icon: { type: "external", external: { url: "https://images/abc.jpg" } },
+      cover: { type: "external", external: { url: "https://images/abc.jpg" } }
+    });
+  });
+
+  it("overwrites a user-set emoji with our emoji when URL is absent (trust-on-first-write)", async () => {
+    const { client, update } = makeClient({
+      retrieve: async () => ({ icon: { type: "emoji", emoji: "⭐" }, cover: null })
+    });
+
+    await applyPageMedia(client, "page_user_emoji", emojiDesired, { force: false, isNewPage: false });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      page_id: "page_user_emoji",
+      icon: { type: "emoji", emoji: "📚" }
+    });
+  });
+
+  it("rewrites icon+cover on force even when current matches desired", async () => {
+    const { client, update } = makeClient({
+      retrieve: async () => ({
+        icon: { type: "external", external: { url: "https://images/abc.jpg" } },
+        cover: { type: "external", external: { url: "https://images/abc.jpg" } }
+      })
+    });
+
+    await applyPageMedia(client, "page_force", externalDesired, { force: true, isNewPage: false });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      page_id: "page_force",
+      icon: { type: "external", external: { url: "https://images/abc.jpg" } },
+      cover: { type: "external", external: { url: "https://images/abc.jpg" } }
+    });
+  });
+
+  it("clears cover when force=true and desired has no coverUrl", async () => {
+    const { client, update } = makeClient({
+      retrieve: async () => ({
+        icon: { type: "emoji", emoji: "📚" },
+        cover: { type: "external", external: { url: "https://images/old.jpg" } }
+      })
+    });
+
+    await applyPageMedia(client, "page_force_clear", emojiDesired, { force: true, isNewPage: false });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      page_id: "page_force_clear",
+      icon: { type: "emoji", emoji: "📚" },
+      cover: null
+    });
+  });
+
+  it("does NOT clear cover on normal sync when URL disappears", async () => {
+    const { client, update } = makeClient({
+      retrieve: async () => ({
+        icon: { type: "emoji", emoji: "📚" },
+        cover: { type: "external", external: { url: "https://images/old.jpg" } }
+      })
+    });
+
+    await applyPageMedia(client, "page_no_clear", emojiDesired, { force: false, isNewPage: false });
+
+    // Icon matches current emoji, no change. Cover would differ but rule says don't clear on normal sync.
+    expect(update).not.toHaveBeenCalled();
+  });
 });
