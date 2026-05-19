@@ -236,6 +236,7 @@ app.whenReady().then(() => {
   let lastCloudFetchProgressKey: string | null = null;
   let activeCloudFetchMessage = "Fetching cloud notebook highlights.";
   let activeCloudFetchCounts: SyncProgressEvent["counts"] | undefined;
+  let pendingForceFullSweep = false;
 
   const cloudValidationLogPath = path.join(app.getPath("userData"), "cloud-validation.log");
   const cloudValidationLog = new CloudValidationLog({
@@ -638,9 +639,27 @@ app.whenReady().then(() => {
           lastCloudFetchProgressKey = null;
           activeCloudFetchMessage = "Fetching cloud notebook highlights.";
           activeCloudFetchCounts = undefined;
+
+          // Incremental sync: assemble per-book fingerprints to pass to the connector,
+          // aging out books whose last successful extraction is older than the sweep
+          // interval (forces re-extraction even if the fingerprint still matches).
+          const fullSweepIntervalDays = settings.cloud.fullSweepIntervalDays ?? 30;
+          const sweepThresholdMs = Date.now() - fullSweepIntervalDays * 24 * 60 * 60 * 1000;
+          const storedSyncStates = repository.getCloudBookSyncStates();
+          const knownFingerprints = new Map<string, string>();
+          for (const [bookId, state] of storedSyncStates) {
+            if (Date.parse(state.lastFetchedAt) >= sweepThresholdMs) {
+              knownFingerprints.set(bookId, state.fingerprint);
+            }
+          }
+          const forceFullSweep = pendingForceFullSweep;
+          pendingForceFullSweep = false;
+
           const cloudBatch = await withTimeout(
             cloudConnector.fetchSince(syncJobs.cloud.resumeCursor, {
-              signal: cancelSyncController.signal
+              signal: cancelSyncController.signal,
+              knownFingerprints,
+              forceFullSweep
             }),
             900_000,
             "Cloud notebook fetch timed out after 900 seconds."
@@ -655,13 +674,30 @@ app.whenReady().then(() => {
           const now = new Date().toISOString();
           totals.cloudPassagesFetched = cloudBatch.passages.length;
           const distinctCloudWorkCount = new Set(cloudBatch.passages.map((passage) => toCloudWorkIdentity(passage).key)).size;
+
+          // Persist per-book sync state. Fetched books get fingerprint+fetchedAt updated;
+          // fingerprint-skipped books only get last_seen_at bumped.
+          for (const bookId of cloudBatch.fetchedBookIds) {
+            const fingerprint = cloudBatch.fingerprints.get(bookId);
+            if (!fingerprint) continue;
+            repository.upsertCloudBookSyncState({
+              externalBookId: bookId,
+              fingerprint,
+              fetchedAt: now,
+              seenAt: now
+            });
+          }
+          for (const bookId of cloudBatch.skippedByFingerprintBookIds) {
+            repository.markCloudBookSeen(bookId, now);
+          }
+
           emitSyncProgress({
             runId,
             startedAtMs,
             phase: "source_cloud_fetch",
             status: "success",
             source: "cloud-notebook",
-            message: `Cloud fetch completed: ${cloudBatch.passages.length} quotes across ${distinctCloudWorkCount} books (${cloudBatch.stats.rowsAccepted}/${cloudBatch.stats.rowsSeen} rows accepted).`,
+            message: `Cloud fetch completed: ${cloudBatch.passages.length} quotes across ${distinctCloudWorkCount} extracted books (${cloudBatch.stats.fingerprintSkippedBooks} unchanged, ${cloudBatch.stats.rowsAccepted}/${cloudBatch.stats.rowsSeen} rows accepted).`,
             counts: { works: distinctCloudWorkCount, passages: cloudBatch.passages.length },
             persist: true
           });
@@ -800,15 +836,32 @@ app.whenReady().then(() => {
               });
             }
           }
-          const shouldReconcileDeletes =
-            normalizedExternalPassageIds.size > 0 &&
-            (cloudBatch.passages.length > 0 || priorCloudPassageCount === 0) &&
-            !(priorCloudPassageCount > 0 && cloudBatch.passages.length < Math.max(50, Math.floor(priorCloudPassageCount * 0.1)));
+          // Scoped reconciliation for incremental sync. Three deletion paths, each gated:
+          //   1. Stale passages inside fetched books -> delete passages whose work was
+          //      extracted this run AND whose external_passage_id is not in the retained set.
+          //   2. Books removed from the user's Kindle library -> delete cloud works whose
+          //      external_id is no longer in the sidebar.
+          //   3. Empty books -> drop cloud works in the fetched set that have zero passages.
+          // The low-confidence gate only fires when we actually attempted extractions;
+          // an all-skipped incremental run (fetchedBookIds.length === 0) is the success
+          // case, not a low-confidence one.
+          const skipReconcile =
+            cloudBatch.fetchedBookIds.length > 0 &&
+            priorCloudPassageCount > 0 &&
+            cloudBatch.passages.length < Math.max(50, Math.floor(priorCloudPassageCount * 0.1));
+
           let removedPassages = 0;
           let removedWorks = 0;
-          if (shouldReconcileDeletes) {
-            removedPassages = repository.deleteCloudPassagesNotInExternalIds(Array.from(normalizedExternalPassageIds));
-            removedWorks = repository.deleteEmptyCloudWorks();
+          let removedEmptyWorks = 0;
+          if (!skipReconcile) {
+            if (cloudBatch.fetchedBookIds.length > 0) {
+              removedPassages = repository.deleteCloudPassagesInBooksNotInExternalIds(
+                cloudBatch.fetchedBookIds,
+                Array.from(normalizedExternalPassageIds)
+              );
+              removedEmptyWorks = repository.deleteEmptyCloudWorksByExternalIds(cloudBatch.fetchedBookIds);
+            }
+            removedWorks = repository.deleteCloudWorksByExternalIdsNotIn(cloudBatch.sidebarBookIds);
           } else {
             emitSyncProgress({
               runId,
@@ -816,18 +869,22 @@ app.whenReady().then(() => {
               phase: "source_cloud_upsert",
               status: "info",
               source: "cloud-notebook",
-              message: `Skipped destructive reconciliation due to low-confidence fetch evidence (${cloudBatch.passages.length} quotes, ${normalizedExternalPassageIds.size} external ids, prior=${priorCloudPassageCount}).`,
+              message: `Skipped destructive reconciliation due to low-confidence fetch evidence (${cloudBatch.passages.length} quotes from ${cloudBatch.fetchedBookIds.length} extracted books; ${cloudBatch.skippedByFingerprintBookIds.length} fingerprint-skipped books left intact; prior=${priorCloudPassageCount}).`,
               persist: true
             });
           }
-          if (removedPassages > 0 || removedWorks > 0) {
+
+          // Drop sync-state rows for books no longer present in the sidebar.
+          repository.pruneCloudBookSyncStatesNotIn(cloudBatch.sidebarBookIds);
+
+          if (removedPassages > 0 || removedWorks > 0 || removedEmptyWorks > 0) {
             emitSyncProgress({
               runId,
               startedAtMs,
               phase: "source_cloud_upsert",
               status: "info",
               source: "cloud-notebook",
-              message: `Reconciled cloud data: removed ${removedPassages} stale quotes and ${removedWorks} empty books.`,
+              message: `Reconciled cloud data: removed ${removedPassages} stale quotes (across ${cloudBatch.fetchedBookIds.length} re-extracted books), ${removedEmptyWorks} now-empty books, and ${removedWorks} books no longer in your library.`,
               refreshHint: "ingest_update",
               persist: true
             });
@@ -1571,6 +1628,7 @@ type AppSettings = {
     notebookUrl: string;
     storageStatePath: string;
     profilePath: string;
+    fullSweepIntervalDays: number;
   };
   notion: {
     integrationToken?: string;
@@ -1592,7 +1650,8 @@ function loadSettings(settingsPath: string): AppSettings {
         enabled: process.env.CLOUD_SYNC_ENABLED === "true",
         notebookUrl: process.env.CLOUD_NOTEBOOK_URL ?? "https://read.amazon.com/notebook",
         storageStatePath: path.join(process.env.HOME ?? ".", ".archi-cloud-storage-state.json"),
-        profilePath: path.join(process.env.HOME ?? ".", ".archi-cloud-profile")
+        profilePath: path.join(process.env.HOME ?? ".", ".archi-cloud-profile"),
+        fullSweepIntervalDays: 30
       },
       notion: {
         integrationToken: process.env.NOTION_INTEGRATION_TOKEN ?? undefined,
@@ -1624,7 +1683,8 @@ function loadSettings(settingsPath: string): AppSettings {
       notebookUrl: parsed.cloud?.notebookUrl ?? process.env.CLOUD_NOTEBOOK_URL ?? "https://read.amazon.com/notebook",
       storageStatePath:
         parsed.cloud?.storageStatePath ?? path.join(process.env.HOME ?? ".", ".archi-cloud-storage-state.json"),
-      profilePath: parsed.cloud?.profilePath ?? path.join(process.env.HOME ?? ".", ".archi-cloud-profile")
+      profilePath: parsed.cloud?.profilePath ?? path.join(process.env.HOME ?? ".", ".archi-cloud-profile"),
+      fullSweepIntervalDays: parsed.cloud?.fullSweepIntervalDays ?? 30
     },
     notion: {
       integrationToken: parsed.notion?.integrationToken ?? process.env.NOTION_INTEGRATION_TOKEN ?? undefined,
