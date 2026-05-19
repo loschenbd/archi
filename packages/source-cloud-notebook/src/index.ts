@@ -892,6 +892,26 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
         }
         return undefined;
       };
+      const resolveExternalPassageId = (
+        row: HTMLElement | null,
+        highlightNode: HTMLElement,
+        bookId: string,
+        rowIndex: number
+      ): string => {
+        const rowId = row?.id;
+        const elementId = highlightNode.id;
+        const prefixedId = [rowId, elementId].find(
+          (candidate) => candidate?.startsWith("highlight-") || candidate?.startsWith("annotation-")
+        );
+        return (
+          row?.dataset.annotationId ??
+          row?.dataset.highlightId ??
+          highlightNode.dataset.highlightId ??
+          prefixedId?.replace(/^highlight-/, "") ??
+          prefixedId?.replace(/^annotation-/, "") ??
+          `${bookId}:row:${rowIndex}`
+        );
+      };
       const parsePosition = (
         text: string | undefined
       ): { positionStart?: string; positionEnd?: string; positionKind?: "page" | "location" | "unknown" } => {
@@ -1036,18 +1056,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
           if (!body || isMetadataTitle(body)) {
             return null;
           }
-          const rowId = row?.id;
-          const elementId = highlightNode.id;
-          const prefixedId = [rowId, elementId].find(
-            (candidate) => candidate?.startsWith("highlight-") || candidate?.startsWith("annotation-")
-          );
-          const id =
-            row.dataset.annotationId ??
-            row.dataset.highlightId ??
-            highlightNode.dataset.highlightId ??
-            prefixedId?.replace(/^highlight-/, "") ??
-            prefixedId?.replace(/^annotation-/, "") ??
-            `${selectedBookId}:row:${index}`;
+          const id = resolveExternalPassageId(row, highlightNode, selectedBookId, index);
           const rowLocationNode = row?.querySelector(
             ".kp-notebook-annotation-location, .kp-notebook-metadata, #annotationHighlightHeader, [id*='annotationHighlightHeader'], [class*='annotation-location'], [data-location], [data-annotation-location]"
           ) as HTMLElement | null;
