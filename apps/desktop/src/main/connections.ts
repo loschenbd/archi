@@ -1,6 +1,44 @@
 import fs from "node:fs";
 import { NotionDestination } from "@archi/destination-notion";
 import { PlaywrightCloudNotebookConnector, type CloudConnectorStatus } from "@archi/source-cloud-notebook";
+import type { CloudValidationReport } from "@archi/source-cloud-notebook";
+
+export type CloudValidationLogOptions = {
+  persist: (report: CloudValidationReport) => void;
+  ringBufferSize?: number;
+};
+
+export class CloudValidationLog {
+  private readonly buffer: CloudValidationReport[] = [];
+  private readonly capacity: number;
+  private readonly persist: (report: CloudValidationReport) => void;
+
+  constructor(options: CloudValidationLogOptions) {
+    this.persist = options.persist;
+    this.capacity = options.ringBufferSize ?? 20;
+  }
+
+  record(report: CloudValidationReport): void {
+    this.buffer.push(report);
+    if (this.buffer.length > this.capacity) {
+      this.buffer.splice(0, this.buffer.length - this.capacity);
+    }
+    try {
+      this.persist(report);
+    } catch {
+      // persist failures must not propagate
+    }
+  }
+
+  recent(limit: number): CloudValidationReport[] {
+    const safe = Math.max(0, Math.min(limit, this.buffer.length));
+    return this.buffer.slice(-safe).reverse();
+  }
+
+  latest(): CloudValidationReport | undefined {
+    return this.buffer[this.buffer.length - 1];
+  }
+}
 
 export type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 export type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
@@ -217,8 +255,25 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
 
   constructor(
     private readonly settings: AppSettingsAccess,
-    private readonly connector: PlaywrightCloudNotebookConnector
+    private readonly connector: PlaywrightCloudNotebookConnector,
+    private readonly validationLog?: CloudValidationLog
   ) {}
+
+  private latestValidationMetadata(): Record<string, string | boolean | number | null> {
+    const latest = this.validationLog?.latest();
+    if (!latest) {
+      return {};
+    }
+    return {
+      latestValidationTimestamp: latest.timestamp,
+      latestValidationPhase: latest.phase,
+      latestValidationOutcome: latest.outcome,
+      latestValidationReason: latest.decisionReasonCode,
+      latestValidationUrlClass: latest.urlClassification,
+      latestValidationHeadless: latest.headless,
+      latestValidationCookieJarSize: latest.cookieJarSize
+    };
+  }
 
   async getStatus(): Promise<ConnectionState> {
     if (!this.settings.getCloudSettings().enabled) {
@@ -261,7 +316,8 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
           summary: "Cloud notebook session is ready."
         },
         metadata: {
-          enabled: this.settings.getCloudSettings().enabled
+          enabled: this.settings.getCloudSettings().enabled,
+          ...this.latestValidationMetadata()
         }
       });
     }
@@ -286,7 +342,8 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
               summary: "Cloud notebook session is ready."
             },
       metadata: {
-        enabled: this.settings.getCloudSettings().enabled
+        enabled: this.settings.getCloudSettings().enabled,
+        ...this.latestValidationMetadata()
       }
     });
   }
@@ -314,6 +371,7 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
       },
       metadata: {
         enabled: this.settings.getCloudSettings().enabled,
+        ...this.latestValidationMetadata(),
         authInProgress
       }
     });
