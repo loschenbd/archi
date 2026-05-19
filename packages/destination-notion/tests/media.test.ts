@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { applyPageMedia, chooseMedia, emojiFor, type MediaNotionClient } from "../src/media.js";
+import { applyPageMedia, chooseMedia, emojiFor, isMediaUrlRejection, type MediaNotionClient } from "../src/media.js";
 
 const baseWork = {
   displayTitle: "Book Title",
@@ -244,5 +244,53 @@ describe("applyPageMedia", () => {
 
     // Icon matches current emoji, no change. Cover would differ but rule says don't clear on normal sync.
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+class FakeNotionError extends Error {
+  code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+describe("isMediaUrlRejection", () => {
+  it("returns true for validation_error with 'Invalid image url'", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("Invalid image url", "validation_error"))).toBe(true);
+  });
+
+  it("returns true for validation_error with 'url is not a valid url'", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("url is not a valid url", "validation_error"))).toBe(true);
+  });
+
+  it("returns true for validation_error with 'image is too large'", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("image is too large", "validation_error"))).toBe(true);
+  });
+
+  it("returns true for validation_error with 'unsupported image'", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("unsupported image format", "validation_error"))).toBe(true);
+  });
+
+  it("returns true for validation_error with 'external url is invalid'", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("external url is invalid", "validation_error"))).toBe(true);
+  });
+
+  it("returns true for validation_error with 'could not download'", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("could not download image", "validation_error"))).toBe(true);
+  });
+
+  it("returns false for validation_error with an unrelated message", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("title is required", "validation_error"))).toBe(false);
+  });
+
+  it("returns false for rate_limited", () => {
+    expect(isMediaUrlRejection(new FakeNotionError("Invalid image url", "rate_limited"))).toBe(false);
+  });
+
+  it("returns false for non-Error values", () => {
+    expect(isMediaUrlRejection("Invalid image url")).toBe(false);
+    expect(isMediaUrlRejection(null)).toBe(false);
+    expect(isMediaUrlRejection(undefined)).toBe(false);
   });
 });

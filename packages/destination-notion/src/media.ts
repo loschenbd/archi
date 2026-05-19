@@ -153,3 +153,16 @@ export async function applyPageMedia(
 
   await client.pages.update(body);
 }
+
+const URL_REJECTION_PATTERN = /invalid image url|url is not a valid url|image is too large|unsupported image|external url is invalid|could not download/i;
+
+export function isMediaUrlRejection(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const code = (error as Error & { code?: string }).code;
+  if (code !== "validation_error") {
+    return false;
+  }
+  return URL_REJECTION_PATTERN.test(error.message);
+}
