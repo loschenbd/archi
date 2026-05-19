@@ -1114,9 +1114,9 @@ private async mergeStorageStateCookies(context: BrowserContext): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Replace inline `canAccessNotebook` with a `validate`-backed implementation**
+- [ ] **Step 3: Replace inline `canAccessNotebook` with a `validate`-backed implementation; keep `isAuthenticatedPage` as a non-navigating pre-check**
 
-Find `private async canAccessNotebook(page: Page)` (around line 380) and `private async isAuthenticatedPage(page: Page)` (around line 359). Replace both with:
+Find `private async canAccessNotebook(page: Page)` (around line 380). Replace it with the new methods below. **Keep `isAuthenticatedPage` intact** — it is a lightweight, non-navigating check used during the interactive reconnect wait-loop (where calling `validateNotebookAccess` every second would navigate away from the login page the user is filling in).
 
 ```typescript
 private async validateNotebookAccess(page: Page, phase: ValidationPhase): Promise<CloudValidationReport> {
@@ -1186,7 +1186,7 @@ private async canAccessNotebook(page: Page, phase: ValidationPhase = "fetch"): P
 
 Search the file for `canAccessNotebook(page)` and `isAuthenticatedPage(page)` calls. Update them as follows.
 
-In `reconnect()` (search "await this.canAccessNotebook(page)") update the call to pass `"reconnect"` for both occurrences inside the function. The second-occurrence loop that uses `isAuthenticatedPage` should now use `validateNotebookAccess(page, "reconnect")` and check `report.outcome === "connected"` and `report.urlClassification !== "signin"` instead. Concretely:
+In `reconnect()` (search "await this.canAccessNotebook(page)") update both `canAccessNotebook` calls to pass `"reconnect"` as the phase. The inner `if (await this.isAuthenticatedPage(page))` check stays — it's still our non-navigating gate. Only after `isAuthenticatedPage` returns true do we call `canAccessNotebook` (which navigates). Concretely:
 
 Replace inside `reconnect()`:
 
@@ -1230,15 +1230,19 @@ if (await this.canAccessNotebook(page, "reconnect")) {
 const deadline = Date.now() + 5 * 60 * 1000;
 while (Date.now() < deadline) {
   await page.waitForTimeout(1000);
-  const report = await this.validateNotebookAccess(page, "reconnect");
-  if (report.outcome === "connected" || (report.urlClassification === "notebook" && report.cookieJarSize > 0)) {
-    this.status = "reconnected";
-    this.statusValidatedAtMs = Date.now();
-    await this.persistContextState(context);
-    return;
+  if (await this.isAuthenticatedPage(page)) {
+    const canAccessNotebook = await this.canAccessNotebook(page, "reconnect").catch(() => false);
+    if (canAccessNotebook || this.isNotebookUrl(page.url())) {
+      this.status = "reconnected";
+      this.statusValidatedAtMs = Date.now();
+      await this.persistContextState(context);
+      return;
+    }
   }
 }
 ```
+
+The only changes: the two `canAccessNotebook` calls now pass `"reconnect"` as the phase. The `isAuthenticatedPage` pre-check is intentionally preserved so we don't navigate every second while the user is filling in the sign-in form.
 
 In `fetchSince`, the call `if (!(await this.canAccessNotebook(page)))` should become `if (!(await this.canAccessNotebook(page, "fetch")))`.
 
@@ -1276,9 +1280,9 @@ constructor(private readonly options: PlaywrightCloudOptions) {
 
 This guarantees we capture the artifact snapshot on every launch even if no validation runs immediately.
 
-- [ ] **Step 6: Remove now-unused `isAuthenticatedPage`**
+- [ ] **Step 6: Keep `isAuthenticatedPage`**
 
-If the file still has `private async isAuthenticatedPage(page: Page): Promise<boolean>` and it's no longer called, delete the method. (Skip if a search shows it still has callers.)
+`isAuthenticatedPage` should still exist after this task — the reconnect wait-loop uses it as a non-navigating pre-check. Do not delete it. Verify it has exactly one caller (`reconnect()` line inside the deadline loop).
 
 - [ ] **Step 7: Run type-check and existing tests, confirm they pass**
 
