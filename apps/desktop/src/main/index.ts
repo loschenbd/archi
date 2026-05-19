@@ -439,7 +439,7 @@ app.whenReady().then(() => {
     }
   };
 
-  const runSyncOnce = async (): Promise<typeof state> => {
+  const runSyncOnce = async (runOpts: { forceRefreshMedia: boolean }): Promise<typeof state> => {
     const runId = crypto.randomUUID();
     const startedAtMs = Date.now();
     cancelSyncRequested = false;
@@ -1026,7 +1026,7 @@ app.whenReady().then(() => {
                   fingerprintHash: passage.fingerprintHash
                 };
               }),
-              { onProgress: onNotionProgress }
+              { onProgress: onNotionProgress, forceRefreshMedia: runOpts.forceRefreshMedia }
             );
             throwIfCancelled();
             const resolvedNotionConfig = notionDestination.getResolvedConfig();
@@ -1176,11 +1176,11 @@ app.whenReady().then(() => {
     return state;
   };
 
-  const runSync = (): Promise<typeof state> => {
+  const runSync = (opts?: { forceRefreshMedia?: boolean }): Promise<typeof state> => {
     if (inFlightSync) {
       return inFlightSync;
     }
-    inFlightSync = runSyncOnce().finally(() => {
+    inFlightSync = runSyncOnce({ forceRefreshMedia: opts?.forceRefreshMedia ?? false }).finally(() => {
       inFlightSync = null;
       inFlightRunId = null;
       inFlightRunStartedAtMs = null;
@@ -1567,6 +1567,11 @@ app.whenReady().then(() => {
   ipcMain.handle("archi:force-full-kindle-sync", async () => {
     pendingForceFullSweep = true;
     const current = await runSync();
+    schedule();
+    return current;
+  });
+  ipcMain.handle("archi:refresh-notion-media", async () => {
+    const current = await runSync({ forceRefreshMedia: true });
     schedule();
     return current;
   });
