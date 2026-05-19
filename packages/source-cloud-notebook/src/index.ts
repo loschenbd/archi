@@ -9,7 +9,7 @@ import {
   type CloudValidationReport,
   type ValidationPhase
 } from "./validation-report.js";
-import { computeBookFingerprint, FINGERPRINT_FIRST_ID_LIMIT } from "./fingerprint.js";
+import { computeBookFingerprint, decideBookAction, FINGERPRINT_FIRST_ID_LIMIT } from "./fingerprint.js";
 
 export type CloudConnectorStatus = "connected" | "needs_auth" | "reconnected";
 
@@ -28,6 +28,8 @@ export type CloudPassage = {
   markedAt?: string;
 };
 
+export type CloudBookFingerprint = string;
+
 export type CloudFetchStats = {
   totalBooks: number;
   scannedBooks: number;
@@ -35,6 +37,18 @@ export type CloudFetchStats = {
   rowsSeen: number;
   rowsAccepted: number;
   passagesDiscovered: number;
+  fingerprintSkippedBooks: number;
+  fingerprintChangedBooks: number;
+};
+
+export type CloudFetchResult = {
+  cursor?: string;
+  passages: CloudPassage[];
+  fingerprints: Map<string, CloudBookFingerprint>;
+  fetchedBookIds: string[];
+  skippedByFingerprintBookIds: string[];
+  sidebarBookIds: string[];
+  stats: CloudFetchStats;
 };
 
 type CloudLibraryBook = {
@@ -121,6 +135,8 @@ export function resolveReadableNotebookTitle(candidates: Array<string | undefine
 
 export type CloudFetchOptions = {
   signal?: AbortSignal;
+  knownFingerprints?: Map<string, CloudBookFingerprint>;
+  forceFullSweep?: boolean;
 };
 
 export type CloudCachedStatus = {
@@ -132,10 +148,7 @@ export interface CloudNotebookConnector {
   getStatus(): Promise<CloudConnectorStatus>;
   getCachedStatus(): CloudCachedStatus;
   reconnect(): Promise<void>;
-  fetchSince(
-    cursor?: string,
-    options?: CloudFetchOptions
-  ): Promise<{ cursor?: string; passages: CloudPassage[]; stats: CloudFetchStats }>;
+  fetchSince(cursor?: string, options?: CloudFetchOptions): Promise<CloudFetchResult>;
 }
 
 export type CloudBookDiscovery = {
@@ -268,10 +281,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
     });
   }
 
-  async fetchSince(
-    cursor?: string,
-    options?: CloudFetchOptions
-  ): Promise<{ cursor?: string; passages: CloudPassage[]; stats: CloudFetchStats }> {
+  async fetchSince(cursor?: string, options?: CloudFetchOptions): Promise<CloudFetchResult> {
     const signal = options?.signal;
     const throwIfAborted = (): void => {
       signal?.throwIfAborted();
@@ -298,7 +308,13 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
         let skippedBooks = 0;
         let rowsSeen = 0;
         let rowsAccepted = 0;
+        let fingerprintSkippedBooks = 0;
+        let fingerprintChangedBooks = 0;
         const passagesById = new Map<string, CloudPassage>();
+        const fingerprints = new Map<string, CloudBookFingerprint>();
+        const fetchedBookIds: string[] = [];
+        const skippedByFingerprintBookIds: string[] = [];
+        const sidebarBookIds: string[] = [];
         const reportFetchProgress = (): void => {
           this.options.onFetchProgress?.({
             scannedBooks,
@@ -306,7 +322,9 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
             skippedBooks,
             rowsSeen,
             rowsAccepted,
-            passagesDiscovered: passagesById.size
+            passagesDiscovered: passagesById.size,
+            fingerprintSkippedBooks,
+            fingerprintChangedBooks
           });
         };
         const rememberPassages = (items: CloudPassage[]): void => {
@@ -340,19 +358,71 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
           reportFetchProgress();
           for (const [bookIndex, book] of books.entries()) {
             throwIfAborted();
+            sidebarBookIds.push(book.id);
+            const selectStartedAt = Date.now();
             const selected = await this.selectBook(page, book.id);
+            const selectDurationMs = Date.now() - selectStartedAt;
             scannedBooks = bookIndex + 1;
             if (!selected) {
               skippedBooks += 1;
-              this.options.onDebug?.(`skip_book_selection bookId=${book.id}`);
+              this.options.onDebug?.(
+                `book id=${book.id} select_ms=${selectDurationMs} peek_ms=0 extract_ms=0 decision=select-failed`
+              );
               reportFetchProgress();
               continue;
             }
             throwIfAborted();
-            const extracted = await this.extractCurrentBookPassages(page, book);
+            const peekStartedAt = Date.now();
+            let peekedFingerprint: string | undefined;
+            try {
+              peekedFingerprint = await this.peekBookFingerprint(page);
+            } catch (peekError) {
+              this.options.onDebug?.(
+                `book id=${book.id} peek_error=${String(peekError)} -- falling through to extract`
+              );
+            }
+            const peekDurationMs = Date.now() - peekStartedAt;
+
+            if (peekedFingerprint !== undefined) {
+              fingerprints.set(book.id, peekedFingerprint);
+              const decision = decideBookAction({
+                prior: options?.knownFingerprints?.get(book.id),
+                peeked: peekedFingerprint,
+                forceFullSweep: options?.forceFullSweep ?? false
+              });
+              if (decision.kind === "skip") {
+                fingerprintSkippedBooks += 1;
+                skippedByFingerprintBookIds.push(book.id);
+                this.options.onDebug?.(
+                  `book id=${book.id} select_ms=${selectDurationMs} peek_ms=${peekDurationMs} extract_ms=0 decision=unchanged`
+                );
+                reportFetchProgress();
+                continue;
+              }
+              this.options.onDebug?.(
+                `book id=${book.id} select_ms=${selectDurationMs} peek_ms=${peekDurationMs} decision=changed reason=${decision.reason}`
+              );
+            }
+
+            const extractStartedAt = Date.now();
+            let extracted;
+            try {
+              extracted = await this.extractCurrentBookPassages(page, book);
+            } catch (extractError) {
+              fingerprints.delete(book.id);
+              skippedBooks += 1;
+              this.options.onDebug?.(
+                `book id=${book.id} extract_error=${String(extractError)} -- fingerprint not stored`
+              );
+              reportFetchProgress();
+              continue;
+            }
+            const extractDurationMs = Date.now() - extractStartedAt;
             rowsSeen += extracted.rowsSeen;
             rowsAccepted += extracted.rowsAccepted;
             rememberPassages(extracted.passages);
+            fetchedBookIds.push(book.id);
+            fingerprintChangedBooks += 1;
             if (extracted.passages.length > 0) {
               this.options.onBookFetched?.({
                 book: {
@@ -365,6 +435,9 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
                 passages: extracted.passages
               });
             }
+            this.options.onDebug?.(
+              `book id=${book.id} select_ms=${selectDurationMs} peek_ms=${peekDurationMs} extract_ms=${extractDurationMs} decision=extracted`
+            );
             reportFetchProgress();
           }
         }
@@ -373,13 +446,19 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
         return {
           cursor: cursor ?? new Date().toISOString(),
           passages,
+          fingerprints,
+          fetchedBookIds,
+          skippedByFingerprintBookIds,
+          sidebarBookIds,
           stats: {
             totalBooks,
             scannedBooks,
             skippedBooks,
             rowsSeen,
             rowsAccepted,
-            passagesDiscovered: passages.length
+            passagesDiscovered: passages.length,
+            fingerprintSkippedBooks,
+            fingerprintChangedBooks
           }
         };
       } finally {
