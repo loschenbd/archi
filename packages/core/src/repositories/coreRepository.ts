@@ -2,6 +2,13 @@ import crypto from "node:crypto";
 import type { CoreDatabase } from "../db/client.js";
 import type { Passage, SyncJob, SyncJobStatus, Work } from "../types.js";
 
+export type CloudBookSyncState = {
+  externalBookId: string;
+  fingerprint: string;
+  lastFetchedAt: string;   // ISO timestamp; only advanced on successful extraction
+  lastSeenAt: string;      // ISO timestamp; advanced whenever the book appears in the sidebar
+};
+
 function asJson(value: unknown): string | null {
   return value === undefined ? null : JSON.stringify(value);
 }
@@ -247,6 +254,131 @@ export class CoreRepository {
        )`
     );
     const result = statement.run(...externalPassageIds);
+    return result.changes;
+  }
+
+  getCloudBookSyncStates(): Map<string, { fingerprint: string; lastFetchedAt: string; lastSeenAt: string }> {
+    const rows = this.db
+      .prepare(
+        "SELECT external_book_id, fingerprint, last_fetched_at, last_seen_at FROM cloud_book_sync_state"
+      )
+      .all() as Array<{
+      external_book_id: string;
+      fingerprint: string;
+      last_fetched_at: string;
+      last_seen_at: string;
+    }>;
+    const out = new Map<string, { fingerprint: string; lastFetchedAt: string; lastSeenAt: string }>();
+    for (const row of rows) {
+      out.set(row.external_book_id, {
+        fingerprint: row.fingerprint,
+        lastFetchedAt: row.last_fetched_at,
+        lastSeenAt: row.last_seen_at
+      });
+    }
+    return out;
+  }
+
+  upsertCloudBookSyncState(args: {
+    externalBookId: string;
+    fingerprint: string;
+    fetchedAt: string;
+    seenAt: string;
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO cloud_book_sync_state (external_book_id, fingerprint, last_fetched_at, last_seen_at)
+         VALUES (@externalBookId, @fingerprint, @fetchedAt, @seenAt)
+         ON CONFLICT(external_book_id) DO UPDATE SET
+           fingerprint = excluded.fingerprint,
+           last_fetched_at = excluded.last_fetched_at,
+           last_seen_at = excluded.last_seen_at`
+      )
+      .run(args);
+  }
+
+  markCloudBookSeen(externalBookId: string, seenAt: string): void {
+    // No-op if the row doesn't exist. We do not insert here -- we only track books we've extracted.
+    this.db
+      .prepare(
+        "UPDATE cloud_book_sync_state SET last_seen_at = @seenAt WHERE external_book_id = @externalBookId"
+      )
+      .run({ externalBookId, seenAt });
+  }
+
+  pruneCloudBookSyncStatesNotIn(seenBookIds: string[]): number {
+    if (seenBookIds.length === 0) {
+      const result = this.db.prepare("DELETE FROM cloud_book_sync_state").run();
+      return result.changes;
+    }
+    const placeholders = seenBookIds.map(() => "?").join(",");
+    const result = this.db
+      .prepare(`DELETE FROM cloud_book_sync_state WHERE external_book_id NOT IN (${placeholders})`)
+      .run(...seenBookIds);
+    return result.changes;
+  }
+
+  deleteCloudPassagesInBooksNotInExternalIds(
+    bookExternalIds: string[],
+    retainedPassageExternalIds: string[]
+  ): number {
+    if (bookExternalIds.length === 0) {
+      return 0;
+    }
+    const bookPlaceholders = bookExternalIds.map(() => "?").join(",");
+    const retainedClause =
+      retainedPassageExternalIds.length === 0
+        ? ""
+        : ` AND passages.external_passage_id NOT IN (${retainedPassageExternalIds.map(() => "?").join(",")})`;
+    const sql = `
+      DELETE FROM passages
+      WHERE work_id IN (
+        SELECT id FROM works
+        WHERE ingest_source = 'cloud-notebook'
+          AND external_id IN (${bookPlaceholders})
+      )
+      ${retainedClause || "AND 1=1"}
+    `;
+    // When retainedPassageExternalIds is empty, the clause above degenerates to "AND 1=1",
+    // which means "delete every passage in the in-scope books." That is intentional and matches
+    // the spec: if a book was extracted and produced zero passages, all prior passages for it
+    // are stale by definition.
+    const params = [...bookExternalIds, ...retainedPassageExternalIds];
+    const result = this.db.prepare(sql).run(...params);
+    return result.changes;
+  }
+
+  deleteCloudWorksByExternalIdsNotIn(sidebarBookExternalIds: string[]): number {
+    if (sidebarBookExternalIds.length === 0) {
+      const result = this.db
+        .prepare("DELETE FROM works WHERE ingest_source = 'cloud-notebook'")
+        .run();
+      return result.changes;
+    }
+    const placeholders = sidebarBookExternalIds.map(() => "?").join(",");
+    const result = this.db
+      .prepare(
+        `DELETE FROM works
+         WHERE ingest_source = 'cloud-notebook'
+           AND (external_id IS NULL OR external_id NOT IN (${placeholders}))`
+      )
+      .run(...sidebarBookExternalIds);
+    return result.changes;
+  }
+
+  deleteEmptyCloudWorksByExternalIds(bookExternalIds: string[]): number {
+    if (bookExternalIds.length === 0) {
+      return 0;
+    }
+    const placeholders = bookExternalIds.map(() => "?").join(",");
+    const result = this.db
+      .prepare(
+        `DELETE FROM works
+         WHERE ingest_source = 'cloud-notebook'
+           AND external_id IN (${placeholders})
+           AND id NOT IN (SELECT DISTINCT work_id FROM passages)`
+      )
+      .run(...bookExternalIds);
     return result.changes;
   }
 
