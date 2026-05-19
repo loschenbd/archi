@@ -9,6 +9,7 @@ import {
   type CloudValidationReport,
   type ValidationPhase
 } from "./validation-report.js";
+import { computeBookFingerprint, FINGERPRINT_FIRST_ID_LIMIT } from "./fingerprint.js";
 
 export type CloudConnectorStatus = "connected" | "needs_auth" | "reconnected";
 
@@ -1100,6 +1101,47 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
       };
     }, selectedBook ?? { id: "" });
     return extraction as { passages: CloudPassage[]; rowsSeen: number; rowsAccepted: number };
+  }
+
+  private async peekBookFingerprint(page: Page): Promise<string> {
+    const data = await page.evaluate((limit: number) => {
+      const isVisible = (node: HTMLElement | null): boolean => {
+        if (!node) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden") return false;
+        return node.getClientRects().length > 0;
+      };
+      const annotationsRoot = (document.querySelector("#annotations-section") ??
+        document.querySelector("#kp-notebook-annotations") ??
+        document.body) as HTMLElement;
+      const rows = Array.from(
+        annotationsRoot.querySelectorAll<HTMLElement>(
+          ".kp-notebook-row-separator, [data-annotation-id], [id^='annotation-row-'], [id^='highlight-']"
+        )
+      ).filter((node, index, all) => all.indexOf(node) === index && isVisible(node));
+      const firstIds: string[] = [];
+      for (const [i, row] of rows.entries()) {
+        if (firstIds.length >= limit) break;
+        const highlightNode = (row.querySelector(
+          ".kp-notebook-highlight, [id^='highlight'], [class*='highlight-text']"
+        ) ?? row) as HTMLElement;
+        const rowId = row.id;
+        const elementId = highlightNode.id;
+        const prefixedId = [rowId, elementId].find(
+          (candidate) => candidate?.startsWith("highlight-") || candidate?.startsWith("annotation-")
+        );
+        const id =
+          row.dataset.annotationId ??
+          row.dataset.highlightId ??
+          highlightNode.dataset.highlightId ??
+          prefixedId?.replace(/^highlight-/, "") ??
+          prefixedId?.replace(/^annotation-/, "") ??
+          `row:${i}`;
+        firstIds.push(id);
+      }
+      return { visibleAnnotationCount: rows.length, firstAnnotationIds: firstIds };
+    }, FINGERPRINT_FIRST_ID_LIMIT);
+    return computeBookFingerprint(data);
   }
 
   private isNotebookUrl(candidateUrl: string): boolean {
