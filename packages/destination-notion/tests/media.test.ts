@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { chooseMedia, emojiFor } from "../src/media.js";
+import { describe, expect, it, vi } from "vitest";
+import { applyPageMedia, chooseMedia, emojiFor, type MediaNotionClient } from "../src/media.js";
 
 const baseWork = {
   displayTitle: "Book Title",
@@ -54,9 +54,6 @@ describe("chooseMedia", () => {
     expect(result.icon).toEqual({ type: "emoji", emoji: "📰" });
   });
 });
-
-import { vi } from "vitest";
-import { applyPageMedia, type MediaNotionClient } from "../src/media.js";
 
 function makeClient(overrides: Partial<{
   retrieve: (args: { page_id: string }) => unknown;
