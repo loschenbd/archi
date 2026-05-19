@@ -30,4 +30,9 @@ describe("classifyUrl", () => {
     expect(classifyUrl("not a url at all")).toBe("unknown");
     expect(classifyUrl("")).toBe("unknown");
   });
+
+  it("rejects amazon-lookalike hosts that have extra subdomain segments after the TLD", () => {
+    expect(classifyUrl("https://amazon.com.evil.io/ap/signin")).toBe("unknown");
+    expect(classifyUrl("https://amazon.co.uk.attacker.com/kp/notebook")).toBe("unknown");
+  });
 });

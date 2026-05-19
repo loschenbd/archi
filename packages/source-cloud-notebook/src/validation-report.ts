@@ -49,9 +49,9 @@ export function classifyUrl(rawUrl: string): UrlClassification {
   } catch {
     return "unknown";
   }
-  const host = parsed.host.toLowerCase();
+  const host = parsed.hostname.toLowerCase();
   const path = parsed.pathname.toLowerCase();
-  if (!/(^|\.)amazon\.[a-z.]+$/.test(host) && !/(^|\.)amazon\.com$/.test(host)) {
+  if (!/(^|\.)amazon\.[a-z]+(\.[a-z]+)?$/.test(host)) {
     return "unknown";
   }
   if (path.startsWith("/kp/notebook")) {
