@@ -1,3 +1,5 @@
+import fs from "node:fs";
+
 export type ValidationPhase = "startup" | "reconnect" | "fetch" | "status_refresh";
 
 export type ValidationOutcome = "connected" | "needs_auth" | "transient";
@@ -70,4 +72,31 @@ export function classifyUrl(rawUrl: string): UrlClassification {
     return "interstitial_continue_shopping";
   }
   return "interstitial_other";
+}
+
+const MAX_LOG_BYTES = 1024 * 1024;
+
+export function appendValidationReport(logPath: string, report: CloudValidationReport): void {
+  try {
+    let size = 0;
+    try {
+      size = fs.statSync(logPath).size;
+    } catch {
+      size = 0;
+    }
+    if (size > MAX_LOG_BYTES) {
+      const rotated = `${logPath}.1`;
+      try {
+        fs.rmSync(rotated, { force: true });
+      } catch {
+        // ignore
+      }
+      fs.renameSync(logPath, rotated);
+    }
+    fs.appendFileSync(logPath, `${JSON.stringify(report)}\n`, "utf8");
+  } catch (error) {
+    // Telemetry must never throw. Log to console and move on.
+    // eslint-disable-next-line no-console
+    console.warn("[cloud-validation] append failed:", (error as Error).message);
+  }
 }
