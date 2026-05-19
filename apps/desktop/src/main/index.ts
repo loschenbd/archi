@@ -6,10 +6,11 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import dotenv from "dotenv";
 import { CoreRepository, computeFingerprintHash, openCoreDatabase } from "@archi/core";
 import { NotionDestination, type NotionSyncBatchProgressEvent } from "@archi/destination-notion";
-import { PlaywrightCloudNotebookConnector, decodeKindleHighlightLocation, type CloudPassage } from "@archi/source-cloud-notebook";
+import { PlaywrightCloudNotebookConnector, decodeKindleHighlightLocation, appendValidationReport, type CloudPassage, type CloudValidationReport } from "@archi/source-cloud-notebook";
 import { normalizeDeviceExport } from "@archi/source-device-export";
 import {
   CloudNotebookConnectionAdapter,
+  CloudValidationLog,
   ConnectionManager,
   type ConnectionProvider,
   DeviceExportConnectionAdapter,
@@ -236,10 +237,16 @@ app.whenReady().then(() => {
   let activeCloudFetchMessage = "Fetching cloud notebook highlights.";
   let activeCloudFetchCounts: SyncProgressEvent["counts"] | undefined;
 
+  const cloudValidationLogPath = path.join(app.getPath("userData"), "cloud-validation.log");
+  const cloudValidationLog = new CloudValidationLog({
+    persist: (report: CloudValidationReport) => appendValidationReport(cloudValidationLogPath, report)
+  });
+
   const cloudConnector = new PlaywrightCloudNotebookConnector({
     notebookUrl: settings.cloud.notebookUrl,
     storageStatePath: settings.cloud.storageStatePath,
     profilePath: settings.cloud.profilePath,
+    onValidation: (report) => cloudValidationLog.record(report),
     onNeedsAuth: async () => {
       state.status = "needs_auth";
     },
@@ -376,7 +383,8 @@ app.whenReady().then(() => {
       getCloudSettings: () => settings.cloud,
       getNotionSettings: () => settings.notion
     },
-    cloudConnector
+    cloudConnector,
+    cloudValidationLog
   );
   const deviceAdapter = new DeviceExportConnectionAdapter({
     getDeviceExportPath: () => settings.deviceExportPath,
@@ -1354,6 +1362,10 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.handle("archi:list-connection-debug-events", () => connectionDebugEvents.slice(-200).reverse());
+  ipcMain.handle("archi:get-recent-validations", (_event, limit: number = 5) => cloudValidationLog.recent(limit));
+  ipcMain.handle("archi:open-validation-log", () => {
+    shell.showItemInFolder(cloudValidationLogPath);
+  });
   ipcMain.handle("archi:list-works", () =>
     repository.listWorks().map((work) => ({
       id: work.id,
