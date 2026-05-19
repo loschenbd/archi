@@ -200,3 +200,38 @@ export async function validate(page: PageLike, options: ValidateOptions): Promis
   // Treated as transient — connector may retry or surface to the user via diagnostics.
   return { ...report, outcome: "transient", decisionReasonCode: "interstitial_unrecognized" };
 }
+
+export type DumpAuthArtifactsInput = {
+  storageStatePath: string;
+  profilePath?: string;
+};
+
+export function dumpAuthArtifactsState(input: DumpAuthArtifactsInput): ArtifactStats {
+  let storageStateFileExists = false;
+  let storageStateFileSizeBytes = 0;
+  try {
+    const stat = fs.statSync(input.storageStatePath);
+    storageStateFileExists = stat.isFile();
+    storageStateFileSizeBytes = storageStateFileExists ? stat.size : 0;
+  } catch {
+    storageStateFileExists = false;
+    storageStateFileSizeBytes = 0;
+  }
+
+  let profileDirExists = false;
+  let profileDirEntryCount = 0;
+  if (input.profilePath) {
+    try {
+      const stat = fs.statSync(input.profilePath);
+      profileDirExists = stat.isDirectory();
+      if (profileDirExists) {
+        profileDirEntryCount = fs.readdirSync(input.profilePath).length;
+      }
+    } catch {
+      profileDirExists = false;
+      profileDirEntryCount = 0;
+    }
+  }
+
+  return { storageStateFileExists, storageStateFileSizeBytes, profileDirExists, profileDirEntryCount };
+}
