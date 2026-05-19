@@ -1,4 +1,5 @@
 import { Client } from "@notionhq/client";
+import { applyPageMedia, chooseMedia, emojiFor, isMediaUrlRejection } from "./media.js";
 
 export type NotionDestinationConfig = {
   integrationToken: string;
@@ -102,6 +103,7 @@ export type NotionSyncBatchProgressEvent = {
 
 export type NotionSyncBatchOptions = {
   onProgress?: (event: NotionSyncBatchProgressEvent) => void;
+  forceRefreshMedia?: boolean;
 };
 
 export class NotionDestination {
@@ -380,6 +382,7 @@ export class NotionDestination {
     const workPageBySourceId = new Map<string, string>();
     const syncedAt = new Date().toISOString();
     options?.onProgress?.({ phase: "works", processed: 0, total: works.length });
+    const forceRefreshMedia = options?.forceRefreshMedia ?? false;
 
     for (const [index, work] of works.entries()) {
       const normalizedWork: NotionWorkInput = {
@@ -387,7 +390,7 @@ export class NotionDestination {
         externalId: this.resolveWorkExternalId(work),
         lastSyncedAt: syncedAt
       };
-      const pageId = await this.upsertLibraryWork(libraryDatabaseId, passagesDatabaseId, normalizedWork);
+      const pageId = await this.upsertLibraryWork(libraryDatabaseId, passagesDatabaseId, normalizedWork, forceRefreshMedia);
       if (work.sourceWorkId) {
         workPageBySourceId.set(work.sourceWorkId, pageId);
       }
@@ -409,7 +412,8 @@ export class NotionDestination {
   private async upsertLibraryWork(
     libraryDatabaseId: string,
     passagesDatabaseId: string,
-    work: NotionWorkInput
+    work: NotionWorkInput,
+    forceRefreshMedia: boolean
   ): Promise<string> {
     const externalId = this.normalizeTextValue(work.externalId);
     const existing =
@@ -432,20 +436,54 @@ export class NotionDestination {
       Archived: { checkbox: work.isArchived }
     };
 
+    let pageId: string;
+    let isNewPage: boolean;
     if (existing) {
       await this.updatePageProperties(existing.id, properties);
-      await this.tryEnsureWorkPageQuotesFeed(existing.id, passagesDatabaseId);
-      return existing.id;
+      pageId = existing.id;
+      isNewPage = false;
+    } else {
+      const created = await this.withRetry(() =>
+        this.client.pages.create({
+          parent: { database_id: libraryDatabaseId },
+          properties: properties as never
+        })
+      );
+      pageId = created.id;
+      isNewPage = true;
     }
 
-    const created = await this.withRetry(() =>
-      this.client.pages.create({
-        parent: { database_id: libraryDatabaseId },
-        properties: properties as never
-      })
-    );
-    await this.tryEnsureWorkPageQuotesFeed(created.id, passagesDatabaseId);
-    return created.id;
+    await this.applyMediaForWork(pageId, work, forceRefreshMedia, isNewPage);
+    await this.tryEnsureWorkPageQuotesFeed(pageId, passagesDatabaseId);
+    return pageId;
+  }
+
+  private async applyMediaForWork(
+    pageId: string,
+    work: NotionWorkInput,
+    forceRefreshMedia: boolean,
+    isNewPage: boolean
+  ): Promise<void> {
+    const desired = chooseMedia(work);
+    try {
+      await this.withRetry(() => applyPageMedia(this.client as never, pageId, desired, { force: forceRefreshMedia, isNewPage }));
+    } catch (error) {
+      if (isMediaUrlRejection(error)) {
+        try {
+          await this.withRetry(() =>
+            this.client.pages.update({
+              page_id: pageId,
+              icon: { type: "emoji", emoji: emojiFor(work.workType) }
+            } as never)
+          );
+        } catch {
+          // Emoji fallback failed too. Sync stays alive; the page just won't get media this run.
+        }
+        return;
+      }
+      // Non-URL-rejection error: log and move on. Sync continues.
+      console.warn(`[notion-destination] applyPageMedia failed for page ${pageId}:`, error);
+    }
   }
 
   private async findLegacyLibraryWorkWithoutExternalId(
