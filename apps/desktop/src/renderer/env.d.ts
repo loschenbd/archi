@@ -48,6 +48,7 @@ declare global {
       setCloudEnabled: (enabled: boolean) => Promise<{ cloudEnabled: boolean }>;
       runSyncNow: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
       forceFullKindleSync: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
+      refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
       cancelSync: () => Promise<{ requested: boolean; message: string }>;
       listWorks: () => Promise<
         Array<{

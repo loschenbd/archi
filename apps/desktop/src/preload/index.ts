@@ -110,6 +110,7 @@ const api = {
   setCloudEnabled: (enabled: boolean): Promise<{ cloudEnabled: boolean }> => ipcRenderer.invoke("archi:set-cloud-enabled", enabled),
   runSyncNow: (): Promise<SyncState> => ipcRenderer.invoke("archi:run-sync-now"),
   forceFullKindleSync: (): Promise<SyncState> => ipcRenderer.invoke("archi:force-full-kindle-sync"),
+  refreshNotionMedia: (): Promise<SyncState> => ipcRenderer.invoke("archi:refresh-notion-media"),
   cancelSync: (): Promise<{ requested: boolean; message: string }> => ipcRenderer.invoke("archi:cancel-sync"),
   listWorks: (): Promise<
     Array<{
