@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
 
@@ -15,6 +17,25 @@ export type ConnectionState = {
   };
   metadata?: Record<string, string | boolean | number | null>;
 };
+
+type CloudValidationReportView = {
+  timestamp: string;
+  phase: string;
+  headless: boolean;
+  finalUrl: string;
+  urlClassification: string;
+  outcome: string;
+  decisionReasonCode: string;
+  cookieJarSize: number;
+};
+
+type CloudValidationDiagnosticsApi = {
+  getRecentValidations(limit?: number): Promise<CloudValidationReportView[]>;
+  openValidationLog(): Promise<void>;
+};
+
+const diagnosticsApi = (): CloudValidationDiagnosticsApi =>
+  window.archi as unknown as CloudValidationDiagnosticsApi;
 
 type Props = {
   connections: Record<ConnectionProvider, ConnectionState>;
@@ -49,6 +70,28 @@ export function ConnectionsScreen({
   const notionBusy = notion.status === "configuring";
   const cloudBusy = cloud.status === "configuring";
   const cloudAuthInProgress = cloud.metadata?.authInProgress === true;
+
+  const [recentValidations, setRecentValidations] = useState<CloudValidationReportView[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      const reports = await diagnosticsApi()
+        .getRecentValidations(5)
+        .catch(() => [] as CloudValidationReportView[]);
+      if (!cancelled) {
+        setRecentValidations(reports);
+      }
+    };
+    void load();
+    const interval = setInterval(() => void load(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const latestValidation = recentValidations[0];
 
   return (
     <section className="connections-screen">
@@ -98,7 +141,56 @@ export function ConnectionsScreen({
               </button>
             ) : null}
           </div>
-
+          <details className="connection-diagnostics">
+            <summary>Diagnostics</summary>
+            {latestValidation === undefined ? (
+              <p>No validation reports yet. Click Test or wait for the next sync.</p>
+            ) : (
+              <>
+                <dl className="diagnostics-latest">
+                  <dt>Latest check</dt>
+                  <dd>{new Date(latestValidation.timestamp).toLocaleString()}</dd>
+                  <dt>Phase</dt>
+                  <dd>{latestValidation.phase}</dd>
+                  <dt>Outcome</dt>
+                  <dd>{latestValidation.outcome}</dd>
+                  <dt>Reason</dt>
+                  <dd>{latestValidation.decisionReasonCode}</dd>
+                  <dt>URL class</dt>
+                  <dd>{latestValidation.urlClassification}</dd>
+                  <dt>Headless</dt>
+                  <dd>{latestValidation.headless ? "yes" : "no"}</dd>
+                  <dt>Cookie jar size</dt>
+                  <dd>{latestValidation.cookieJarSize}</dd>
+                  <dt>Final URL</dt>
+                  <dd className="diagnostics-url">{latestValidation.finalUrl || "—"}</dd>
+                </dl>
+                <table className="diagnostics-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Phase</th>
+                      <th>Outcome</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentValidations.map((r, idx) => (
+                      <tr key={`${r.timestamp}-${idx}`}>
+                        <td>{new Date(r.timestamp).toLocaleTimeString()}</td>
+                        <td>{r.phase}</td>
+                        <td>{r.outcome}</td>
+                        <td>{r.decisionReasonCode}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+            <button type="button" onClick={() => void diagnosticsApi().openValidationLog()}>
+              Reveal log in Finder
+            </button>
+          </details>
         </article>
 
         <article className="connection-card">
