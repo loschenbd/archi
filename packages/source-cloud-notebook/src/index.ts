@@ -1,6 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import {
+  validate,
+  dumpAuthArtifactsState,
+  parseStorageStateCookies,
+  filterNewCookies,
+  type CloudValidationReport,
+  type ValidationPhase
+} from "./validation-report.js";
 
 export type CloudConnectorStatus = "connected" | "needs_auth" | "reconnected";
 
@@ -140,22 +148,67 @@ export type CloudBookDiscovery = {
   passages: CloudPassage[];
 };
 
+export type ChromiumMode = "legacy_headless" | "new_headless" | "offscreen_headed" | "headed_visible";
+
 export type PlaywrightCloudOptions = {
   notebookUrl: string;
   storageStatePath: string;
   profilePath?: string;
+  chromiumMode?: ChromiumMode;
   onNeedsAuth?: () => Promise<void>;
   onFetchProgress?: (event: CloudFetchStats) => void;
   onBookFetched?: (event: CloudBookDiscovery) => void;
   onDebug?: (message: string) => void;
+  onValidation?: (report: CloudValidationReport) => void;
 };
+
+type LaunchSpec = {
+  headless: boolean;
+  args: string[];
+};
+
+function runChromiumOptions(mode: ChromiumMode): LaunchSpec {
+  switch (mode) {
+    case "headed_visible":
+      return { headless: false, args: [] };
+    case "offscreen_headed":
+      return { headless: false, args: ["--window-position=-2400,-2400", "--window-size=1280,900"] };
+    case "new_headless":
+      return { headless: true, args: ["--headless=new"] };
+    case "legacy_headless":
+    default:
+      return { headless: true, args: [] };
+  }
+}
 
 export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector {
   private status: CloudConnectorStatus = "needs_auth";
   private statusValidatedAtMs: number | null = null;
   private operationQueue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly options: PlaywrightCloudOptions) {}
+  constructor(private readonly options: PlaywrightCloudOptions) {
+    if (options.onValidation) {
+      const artifactStats = dumpAuthArtifactsState({
+        storageStatePath: options.storageStatePath,
+        profilePath: options.profilePath
+      });
+      options.onValidation({
+        timestamp: new Date().toISOString(),
+        phase: "startup",
+        headless: false,
+        finalUrl: "",
+        urlClassification: "unknown",
+        loginFormVisible: false,
+        notebookDomPresent: false,
+        cookieJarSize: 0,
+        hasAtMainCookie: false,
+        hasUbidMainCookie: false,
+        ...artifactStats,
+        outcome: "transient",
+        decisionReasonCode: "ok"
+      });
+    }
+  }
 
   async getStatus(): Promise<CloudConnectorStatus> {
     return this.withConnectorLock(async () => {
@@ -176,7 +229,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
       const { browser, context } = await this.openContext({ interactive: true });
       try {
         const page = await context.newPage();
-        if (await this.canAccessNotebook(page)) {
+        if (await this.canAccessNotebook(page, "reconnect")) {
           this.status = "reconnected";
           this.statusValidatedAtMs = Date.now();
           await this.persistContextState(context);
@@ -191,7 +244,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
           // appears authenticated, verify notebook access explicitly in case the final URL
           // does not land exactly on notebook path after login redirects.
           if (await this.isAuthenticatedPage(page)) {
-            const canAccessNotebook = await this.canAccessNotebook(page).catch(() => false);
+            const canAccessNotebook = await this.canAccessNotebook(page, "reconnect").catch(() => false);
             if (canAccessNotebook || this.isNotebookUrl(page.url())) {
               this.status = "reconnected";
               this.statusValidatedAtMs = Date.now();
@@ -227,7 +280,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
       const { browser, context } = await this.openContext();
       try {
         const page = await context.newPage();
-        if (!(await this.canAccessNotebook(page))) {
+        if (!(await this.canAccessNotebook(page, "fetch"))) {
           this.status = "needs_auth";
           this.statusValidatedAtMs = Date.now();
           throw new Error("Cloud notebook session expired.");
@@ -339,21 +392,46 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   private async openContext(options?: { interactive?: boolean }): Promise<{ browser?: Browser; context: BrowserContext }> {
     this.ensurePersistencePaths();
 
+    const mode: ChromiumMode = options?.interactive
+      ? "headed_visible"
+      : this.options.chromiumMode ?? "legacy_headless";
+    const launchSpec = runChromiumOptions(mode);
+
     if (this.options.profilePath) {
       const context = await chromium.launchPersistentContext(this.options.profilePath, {
-        headless: options?.interactive ? false : true
+        headless: launchSpec.headless,
+        args: launchSpec.args
       });
-      // launchPersistentContext owns the browser lifecycle via context.close().
+      await this.mergeStorageStateCookies(context);
       return { context };
     }
 
-    const browser = await chromium.launch({ headless: options?.interactive ? false : true });
+    const browser = await chromium.launch({ headless: launchSpec.headless, args: launchSpec.args });
     const context = fs.existsSync(this.options.storageStatePath)
-      ? await browser.newContext({
-          storageState: this.options.storageStatePath
-        })
+      ? await browser.newContext({ storageState: this.options.storageStatePath })
       : await browser.newContext();
     return { browser, context };
+  }
+
+  private async mergeStorageStateCookies(context: BrowserContext): Promise<void> {
+    if (!fs.existsSync(this.options.storageStatePath)) {
+      return;
+    }
+    const incoming = parseStorageStateCookies(this.options.storageStatePath);
+    if (incoming.length === 0) {
+      return;
+    }
+    const existing = await context.cookies();
+    const newCookies = filterNewCookies(incoming, existing);
+    if (newCookies.length === 0) {
+      return;
+    }
+    try {
+      await context.addCookies(newCookies);
+      this.options.onDebug?.(`merged ${newCookies.length} cookies from storage-state into persistent profile`);
+    } catch (error) {
+      this.options.onDebug?.(`cookie merge failed: ${(error as Error).message}`);
+    }
   }
 
   private async isAuthenticatedPage(page: Page): Promise<boolean> {
@@ -377,25 +455,67 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
     return true;
   }
 
-  private async canAccessNotebook(page: Page): Promise<boolean> {
-    await page.goto(this.options.notebookUrl, { waitUntil: "domcontentloaded" });
-    if (!(await this.isAuthenticatedPage(page))) {
-      return false;
-    }
-    await this.bypassContinueShoppingInterstitial(page);
-    if (!(await this.isNotebookExperience(page))) {
-      await page.goto(this.options.notebookUrl, { waitUntil: "domcontentloaded" });
-      if (!(await this.isAuthenticatedPage(page))) {
+  private async validateNotebookAccess(page: Page, phase: ValidationPhase): Promise<CloudValidationReport> {
+    const mode: ChromiumMode = this.options.chromiumMode ?? "legacy_headless";
+    const headless = mode === "legacy_headless" || mode === "new_headless";
+    const artifactStats = dumpAuthArtifactsState({
+      storageStatePath: this.options.storageStatePath,
+      profilePath: this.options.profilePath
+    });
+
+    const pageLike = {
+      url: () => page.url(),
+      goto: (url: string, opts?: { waitUntil?: "domcontentloaded" | "load" | "networkidle"; timeout?: number }) =>
+        page.goto(url, opts),
+      waitForLoadState: (state: "domcontentloaded" | "load" | "networkidle") =>
+        page.waitForLoadState(state).then(() => undefined),
+      isLoginFormVisible: async (): Promise<boolean> => {
+        for (const selector of ["#ap_email", "#ap_password", "input[type='password']", "input[name='email']"]) {
+          const visible = await page.locator(selector).first().isVisible({ timeout: 200 }).catch(() => false);
+          if (visible) return true;
+        }
         return false;
-      }
-      await this.bypassContinueShoppingInterstitial(page);
+      },
+      isNotebookDomPresent: () =>
+        page
+          .evaluate(() =>
+            Boolean(
+              document.querySelector("#kp-notebook-library") ||
+                document.querySelector("#kp-notebook-annotations") ||
+                document.querySelector(".kp-notebook-library-each-book") ||
+                document.querySelector(".kp-notebook-highlight")
+            )
+          )
+          .catch(() => false),
+      getCookies: () => page.context().cookies()
+    };
+
+    let report = await validate(pageLike, {
+      notebookUrl: this.options.notebookUrl,
+      phase,
+      headless,
+      artifactStats
+    });
+
+    // Apply the existing continue-shopping interstitial bypass as part of validation —
+    // if we can bypass and re-check, do so once before reporting.
+    if (report.urlClassification === "interstitial_continue_shopping") {
+      await this.bypassContinueShoppingInterstitial(page).catch(() => undefined);
+      report = await validate(pageLike, {
+        notebookUrl: this.options.notebookUrl,
+        phase,
+        headless,
+        artifactStats
+      });
     }
-    await page.waitForLoadState("networkidle").catch(() => undefined);
-    // Some flows bounce once before final auth state settles.
-    if (!(await this.isAuthenticatedPage(page))) {
-      return false;
-    }
-    return this.isNotebookExperience(page);
+
+    this.options.onValidation?.(report);
+    return report;
+  }
+
+  private async canAccessNotebook(page: Page, phase: ValidationPhase = "fetch"): Promise<boolean> {
+    const report = await this.validateNotebookAccess(page, phase);
+    return report.outcome === "connected";
   }
 
   private async collectLibraryBooks(page: Page): Promise<CloudLibraryBook[]> {
@@ -994,7 +1114,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
     const { browser, context } = await this.openContext();
     try {
       const page = await context.newPage();
-      this.status = (await this.canAccessNotebook(page)) ? "connected" : "needs_auth";
+      this.status = (await this.canAccessNotebook(page, "status_refresh")) ? "connected" : "needs_auth";
       this.statusValidatedAtMs = Date.now();
     } catch {
       this.status = "needs_auth";
@@ -1039,3 +1159,13 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
     return run;
   }
 }
+
+export type {
+  CloudValidationReport,
+  ValidationPhase,
+  ValidationOutcome,
+  UrlClassification,
+  DecisionReasonCode,
+  ArtifactStats
+} from "./validation-report.js";
+export { classifyUrl, validate, dumpAuthArtifactsState, appendValidationReport } from "./validation-report.js";
