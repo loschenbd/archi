@@ -140,6 +140,20 @@ export function ConnectionsScreen({
                 Disconnect
               </button>
             ) : null}
+            {cloudConnected ? (
+              <button
+                onClick={async () => {
+                  const ok = window.confirm(
+                    "Re-extract highlights from every book in your Kindle library, ignoring incremental sync state. This is slower than a normal sync but useful if highlights look out of date. Continue?"
+                  );
+                  if (!ok) return;
+                  await window.archi.forceFullKindleSync();
+                }}
+                disabled={cloudBusy}
+              >
+                Force full Kindle sync
+              </button>
+            ) : null}
           </div>
           <details className="connection-diagnostics">
             <summary>Diagnostics</summary>

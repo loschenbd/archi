@@ -1564,6 +1564,12 @@ app.whenReady().then(() => {
     schedule();
     return current;
   });
+  ipcMain.handle("archi:force-full-kindle-sync", async () => {
+    pendingForceFullSweep = true;
+    const current = await runSync();
+    schedule();
+    return current;
+  });
   ipcMain.handle("archi:cancel-sync", () => {
     if (!inFlightSync || !inFlightRunId || !inFlightRunStartedAtMs) {
       return {
