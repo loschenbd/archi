@@ -1,0 +1,65 @@
+{
+  "name": "@archi/desktop",
+  "productName": "Archi",
+  "version": "0.1.0",
+  "description": "Local-first Kindle to Notion sync desktop app",
+  "author": "Archi",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build:deps": "pnpm -r --filter @archi/desktop^... build",
+    "build": "pnpm run build:deps && vite build && tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json",
+    "dev": "concurrently -k -n RENDERER,MAIN,PRELOAD,ELECTRON -c green,cyan,magenta,yellow \"pnpm dev:renderer\" \"pnpm dev:main\" \"pnpm dev:preload\" \"pnpm dev:electron\"",
+    "dev:renderer": "vite",
+    "dev:main": "tsc -p tsconfig.main.json -w",
+    "dev:preload": "tsc -p tsconfig.preload.json -w",
+    "dev:electron": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron dist/main/index.js",
+    "rebuild:native": "node ./scripts/rebuild-native-for-electron.mjs",
+    "healthcheck": "node ./scripts/doctor.mjs",
+    "lint": "eslint src --ext .ts,.tsx",
+    "package": "pnpm build && electron-builder --config electron-builder.yml --mac dmg && node ./scripts/verify-packaged-runtime.mjs",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
+  },
+  "dependencies": {
+    "@archi/core": "workspace:*",
+    "@archi/destination-notion": "workspace:*",
+    "@archi/source-cloud-notebook": "workspace:*",
+    "@archi/source-device-export": "workspace:*",
+    "@archi/ui": "workspace:*",
+    "dotenv": "^17.4.2",
+    "electron-log": "^5.2.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependenciesMeta": {
+    "@archi/core": {
+      "injected": true
+    },
+    "@archi/destination-notion": {
+      "injected": true
+    },
+    "@archi/source-cloud-notebook": {
+      "injected": true
+    },
+    "@archi/source-device-export": {
+      "injected": true
+    },
+    "@archi/ui": {
+      "injected": true
+    }
+  },
+  "devDependencies": {
+    "@electron/notarize": "^3.1.1",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.4.19",
+    "wait-on": "^9.0.10"
+  }
+}

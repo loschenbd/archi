@@ -1,0 +1,32 @@
+{
+  "name": "@archi/source-cloud-notebook",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@archi/core": "workspace:*",
+    "playwright": "^1.53.0",
+    "playwright-core": "^1.60.0"
+  },
+  "dependenciesMeta": {
+    "@archi/core": {
+      "injected": true
+    }
+  }
+}

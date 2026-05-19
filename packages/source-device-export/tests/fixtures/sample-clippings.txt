@@ -1,0 +1,11 @@
+Atomic Habits (James Clear)
+- Your Highlight on Location 101-102 | Added on Sunday, January 1, 2023 10:00:00 PM
+
+You do not rise to the level of your goals. You fall to the level of your systems.
+==========
+Designing Data-Intensive Applications (Martin Kleppmann)
+- Your Highlight on Page 42 | Added on Monday, January 2, 2023 11:00:00 PM
+
+The idea is to make data-intensive applications more reliable.
+Note: Revisit this for chapter summary.
+==========

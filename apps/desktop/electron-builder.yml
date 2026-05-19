@@ -1,0 +1,23 @@
+appId: com.archi.desktop
+productName: Archi
+directories:
+  output: release
+  buildResources: assets
+files:
+  - dist/**/*
+  - package.json
+  - "!node_modules/@archi/*/src{,/**/*}"
+  - "!node_modules/@archi/*/{test,tests,__tests__}{,/**/*}"
+  - "!node_modules/@archi/*/tsconfig*.json"
+asarUnpack:
+  - "**/*.node"
+afterSign: scripts/notarize.mjs
+mac:
+  category: public.app-category.productivity
+  icon: assets/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: assets/entitlements.mac.plist
+  entitlementsInherit: assets/entitlements.mac.plist
+  target:
+    - dmg

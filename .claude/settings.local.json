@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm rebuild *)",
+      "Bash(node install.js)",
+      "Bash(tmux send-keys *)",
+      "Bash(tmux capture-pane *)",
+      "Bash(node -e \"console.log\\('node abi:', process.versions.modules, 'platform:', process.platform, 'arch:', process.arch\\)\")",
+      "Bash(/Users/benjaminloschen/Projects/archi/node_modules/.pnpm/electron@31.7.7/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron --version)",
+      "Bash(cat .npmrc)",
+      "Bash(cat pnpm-workspace.yaml)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('pnpm config:', JSON.stringify\\(p.pnpm || {}, null, 2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('scripts:', json.dumps\\(p.get\\('scripts',{}\\), indent=2\\)\\); print\\('binary:', json.dumps\\(p.get\\('binary',{}\\), indent=2\\)\\)\")",
+      "Bash(./node_modules/.bin/prebuild-install --runtime=electron --target=31.7.7 --arch=arm64 --platform=darwin)",
+      "Bash(./node_modules/.bin/prebuild-install --runtime=electron --target=31.7.7 --arch=arm64 --platform=darwin --verbose)",
+      "Bash(awk '{print $11, $12, $13, $14}')",
+      "Bash(ps -o pid,lstart,command -p 70411)",
+      "Bash(sqlite3 '__TRACKED_VAR__/Library/Application Support/Archi/archi.db' .tables)",
+      "Bash(sqlite3 '__TRACKED_VAR__/Library/Application Support/Archi/archi.db' 'SELECT version, applied_at FROM migrations ORDER BY version')",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm test *)",
+      "Bash(awk '{print $2, $5, $7}')",
+      "Bash(awk '{print $2, $5}')",
+      "Bash(pkill -f \"dist/main/index.js\")",
+      "Bash(awk '{print $2}')",
+      "Bash(pnpm -r build)",
+      "Bash(sqlite3 *)",
+      "Bash(awk '{print \"pid:\", $2, \"started:\", $5}')",
+      "Bash(python3 -c \"import json, sys; d=json.load\\(sys.stdin\\); print\\('cookies:', len\\(d.get\\('cookies', []\\)\\), 'origins:', len\\(d.get\\('origins', []\\)\\)\\); cookies = d.get\\('cookies', []\\); now=__import__\\('time'\\).time\\(\\); print\\('expiring cookies \\(sample\\):'\\); [print\\(c['name'], c['domain'], 'expires_in_days:', round\\(\\(c.get\\('expires',-1\\)-now\\)/86400,1\\) if c.get\\('expires',-1\\)>0 else 'session'\\) for c in cookies[:15]]\")",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "Bash(pnpm install *)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
