@@ -100,3 +100,103 @@ export function appendValidationReport(logPath: string, report: CloudValidationR
     console.warn("[cloud-validation] append failed:", (error as Error).message);
   }
 }
+
+export type PageCookie = { name: string; domain: string; path: string };
+
+export type PageLike = {
+  url(): string;
+  goto(url: string, opts?: { waitUntil?: "domcontentloaded" | "load" | "networkidle"; timeout?: number }): Promise<unknown>;
+  waitForLoadState(state: "domcontentloaded" | "load" | "networkidle"): Promise<void>;
+  isLoginFormVisible(): Promise<boolean>;
+  isNotebookDomPresent(): Promise<boolean>;
+  getCookies(): Promise<PageCookie[]>;
+};
+
+export type ArtifactStats = {
+  storageStateFileExists: boolean;
+  storageStateFileSizeBytes: number;
+  profileDirExists: boolean;
+  profileDirEntryCount: number;
+};
+
+export type ValidateOptions = {
+  notebookUrl: string;
+  phase: ValidationPhase;
+  headless: boolean;
+  artifactStats: ArtifactStats;
+};
+
+export async function validate(page: PageLike, options: ValidateOptions): Promise<CloudValidationReport> {
+  const timestamp = new Date().toISOString();
+  const baseReport: CloudValidationReport = {
+    timestamp,
+    phase: options.phase,
+    headless: options.headless,
+    finalUrl: "",
+    urlClassification: "unknown",
+    loginFormVisible: false,
+    notebookDomPresent: false,
+    cookieJarSize: 0,
+    hasAtMainCookie: false,
+    hasUbidMainCookie: false,
+    ...options.artifactStats,
+    outcome: "needs_auth",
+    decisionReasonCode: "unknown_error"
+  };
+
+  try {
+    await page.goto(options.notebookUrl, { waitUntil: "domcontentloaded" });
+  } catch (error) {
+    return {
+      ...baseReport,
+      finalUrl: page.url(),
+      urlClassification: classifyUrl(page.url()),
+      outcome: "needs_auth",
+      decisionReasonCode: "goto_failed",
+      errorMessage: (error as Error).message,
+      errorStack: (error as Error).stack
+    };
+  }
+
+  // Best-effort: wait for network idle, but don't fail validation on it.
+  await page.waitForLoadState("networkidle").catch(() => undefined);
+
+  const finalUrl = page.url();
+  const urlClassification = classifyUrl(finalUrl);
+  const loginFormVisible = await page.isLoginFormVisible().catch(() => false);
+  const notebookDomPresent = await page.isNotebookDomPresent().catch(() => false);
+  const cookies = await page.getCookies().catch(() => [] as PageCookie[]);
+  const hasAtMainCookie = cookies.some((c) => c.name === "at-main");
+  const hasUbidMainCookie = cookies.some((c) => c.name === "ubid-main");
+
+  const report: CloudValidationReport = {
+    ...baseReport,
+    finalUrl,
+    urlClassification,
+    loginFormVisible,
+    notebookDomPresent,
+    cookieJarSize: cookies.length,
+    hasAtMainCookie,
+    hasUbidMainCookie
+  };
+
+  // Decision tree. Order matters: hard reasons first, then transient, then connected.
+  if (urlClassification === "signin") {
+    return { ...report, outcome: "needs_auth", decisionReasonCode: "signin_url_redirect" };
+  }
+  if (loginFormVisible) {
+    return { ...report, outcome: "needs_auth", decisionReasonCode: "login_form_visible" };
+  }
+  if (cookies.length === 0) {
+    return { ...report, outcome: "needs_auth", decisionReasonCode: "cookies_empty_on_load" };
+  }
+  if (urlClassification === "notebook" && notebookDomPresent) {
+    return { ...report, outcome: "connected", decisionReasonCode: "ok" };
+  }
+  if (urlClassification === "notebook" && !notebookDomPresent) {
+    return { ...report, outcome: "transient", decisionReasonCode: "notebook_dom_missing" };
+  }
+  // MFA, captcha, continue-shopping, interstitial_other, or unknown amazon page
+  // Treated as transient — connector may retry or surface to the user via diagnostics.
+  return { ...report, outcome: "transient", decisionReasonCode: "interstitial_unrecognized" };
+}
