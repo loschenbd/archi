@@ -185,6 +185,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   private status: CloudConnectorStatus = "needs_auth";
   private statusValidatedAtMs: number | null = null;
   private operationQueue: Promise<void> = Promise.resolve();
+  private currentlyHeadless: boolean = true;
 
   constructor(private readonly options: PlaywrightCloudOptions) {
     if (options.onValidation) {
@@ -396,6 +397,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
       ? "headed_visible"
       : this.options.chromiumMode ?? "legacy_headless";
     const launchSpec = runChromiumOptions(mode);
+    this.currentlyHeadless = launchSpec.headless;
 
     if (this.options.profilePath) {
       const context = await chromium.launchPersistentContext(this.options.profilePath, {
@@ -456,8 +458,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   }
 
   private async validateNotebookAccess(page: Page, phase: ValidationPhase): Promise<CloudValidationReport> {
-    const mode: ChromiumMode = this.options.chromiumMode ?? "legacy_headless";
-    const headless = mode === "legacy_headless" || mode === "new_headless";
+    const headless = this.currentlyHeadless;
     const artifactStats = dumpAuthArtifactsState({
       storageStatePath: this.options.storageStatePath,
       profilePath: this.options.profilePath
@@ -490,7 +491,7 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
       getCookies: () => page.context().cookies()
     };
 
-    let report = await validate(pageLike, {
+    const initialReport = await validate(pageLike, {
       notebookUrl: this.options.notebookUrl,
       phase,
       headless,
@@ -498,19 +499,23 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
     });
 
     // Apply the existing continue-shopping interstitial bypass as part of validation —
-    // if we can bypass and re-check, do so once before reporting.
-    if (report.urlClassification === "interstitial_continue_shopping") {
+    // if we can bypass and re-check, do so once before reporting. Emit BOTH the
+    // pre-bypass and post-bypass reports so telemetry retains the interstitial signal.
+    if (initialReport.urlClassification === "interstitial_continue_shopping") {
+      this.options.onValidation?.(initialReport);
       await this.bypassContinueShoppingInterstitial(page).catch(() => undefined);
-      report = await validate(pageLike, {
+      const postBypassReport = await validate(pageLike, {
         notebookUrl: this.options.notebookUrl,
         phase,
         headless,
         artifactStats
       });
+      this.options.onValidation?.(postBypassReport);
+      return postBypassReport;
     }
 
-    this.options.onValidation?.(report);
-    return report;
+    this.options.onValidation?.(initialReport);
+    return initialReport;
   }
 
   private async canAccessNotebook(page: Page, phase: ValidationPhase = "fetch"): Promise<boolean> {
