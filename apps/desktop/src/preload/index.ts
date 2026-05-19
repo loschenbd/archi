@@ -55,6 +55,42 @@ type ConnectionState = {
   };
   metadata?: Record<string, string | boolean | number | null>;
 };
+type CloudValidationReportView = {
+  timestamp: string;
+  phase: "startup" | "reconnect" | "fetch" | "status_refresh";
+  headless: boolean;
+  finalUrl: string;
+  urlClassification:
+    | "notebook"
+    | "signin"
+    | "mfa"
+    | "captcha"
+    | "interstitial_continue_shopping"
+    | "interstitial_other"
+    | "unknown";
+  loginFormVisible: boolean;
+  notebookDomPresent: boolean;
+  cookieJarSize: number;
+  hasAtMainCookie: boolean;
+  hasUbidMainCookie: boolean;
+  storageStateFileExists: boolean;
+  storageStateFileSizeBytes: number;
+  profileDirExists: boolean;
+  profileDirEntryCount: number;
+  outcome: "connected" | "needs_auth" | "transient";
+  decisionReasonCode:
+    | "ok"
+    | "signin_url_redirect"
+    | "login_form_visible"
+    | "notebook_dom_missing"
+    | "goto_failed"
+    | "cookies_empty_on_load"
+    | "interstitial_unrecognized"
+    | "unknown_error";
+  errorMessage?: string;
+  errorStack?: string;
+};
+
 type SyncProgressListener = (event: SyncProgressEvent) => void;
 const syncProgressListenerMap = new Map<SyncProgressListener, (_event: IpcRendererEvent, payload: SyncProgressEvent) => void>();
 
@@ -144,7 +180,10 @@ const api = {
     }
     ipcRenderer.removeListener("archi:sync-progress", wrapped);
     syncProgressListenerMap.delete(listener);
-  }
+  },
+  getRecentValidations: (limit: number = 5): Promise<CloudValidationReportView[]> =>
+    ipcRenderer.invoke("archi:get-recent-validations", limit),
+  openValidationLog: (): Promise<void> => ipcRenderer.invoke("archi:open-validation-log")
 };
 
 contextBridge.exposeInMainWorld("archi", api);
