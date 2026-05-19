@@ -638,6 +638,7 @@ export function App(): JSX.Element {
                 });
             }}
             onRefreshNotionMedia={refreshNotionMedia}
+            isSyncing={isSyncing}
           />
         );
       case "Library":

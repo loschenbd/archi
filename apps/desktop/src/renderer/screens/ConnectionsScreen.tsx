@@ -50,6 +50,7 @@ type Props = {
   onChooseDeviceExportPath: () => void;
   onSetCloudEnabled: (enabled: boolean) => void;
   onRefreshNotionMedia: () => void;
+  isSyncing: boolean;
 };
 
 export function ConnectionsScreen({
@@ -63,7 +64,8 @@ export function ConnectionsScreen({
   onDisconnect,
   onTest,
   onSetCloudEnabled,
-  onRefreshNotionMedia
+  onRefreshNotionMedia,
+  isSyncing
 }: Props): JSX.Element {
   const notion = connections.notion;
   const cloud = connections.cloud_notebook;
@@ -266,7 +268,7 @@ export function ConnectionsScreen({
               </button>
             ) : null}
             {notionConnected ? (
-              <button onClick={onRefreshNotionMedia} disabled={notionBusy}>
+              <button onClick={onRefreshNotionMedia} disabled={notionBusy || isSyncing}>
                 Refresh Notion media
               </button>
             ) : null}
