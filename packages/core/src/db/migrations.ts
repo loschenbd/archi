@@ -66,5 +66,16 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
         last_error TEXT
       );
     `
+  },
+  {
+    version: 2,
+    sql: `
+      CREATE TABLE IF NOT EXISTS cloud_book_sync_state (
+        external_book_id TEXT PRIMARY KEY,
+        fingerprint      TEXT NOT NULL,
+        last_fetched_at  TEXT NOT NULL,
+        last_seen_at     TEXT NOT NULL
+      );
+    `
   }
 ];
