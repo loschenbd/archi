@@ -441,6 +441,44 @@ export function App(): JSX.Element {
       });
   };
 
+  const refreshNotionMedia = (): void => {
+    if (isSyncing) {
+      return;
+    }
+    const confirmed = window.confirm(
+      "Re-write the page icon and cover image for every work in Notion. " +
+        "This can take several minutes for large libraries and may overwrite any icons/covers you've customized. Continue?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    setIsSyncing(true);
+    setIsCancelingSync(false);
+
+    void window.archi
+      .refreshNotionMedia()
+      .then((next) => {
+        setSyncState(next);
+        refreshLists();
+        refreshConnections();
+      })
+      .catch((error) => {
+        setIsSyncing(false);
+        setIsCancelingSync(false);
+        setIpcError(
+          `Refresh failed to start (${error instanceof Error ? error.message : "unknown error"}). ` +
+            "If the main process is unhealthy, restart the dev server."
+        );
+      })
+      .finally(() => {
+        if (listRefreshTimerRef.current) {
+          clearTimeout(listRefreshTimerRef.current);
+          listRefreshTimerRef.current = null;
+          isListRefreshQueuedRef.current = false;
+        }
+      });
+  };
+
   const cancelSync = (): void => {
     if (!isSyncing || isCancelingSync) {
       return;
@@ -599,6 +637,7 @@ export function App(): JSX.Element {
                   refreshConnections();
                 });
             }}
+            onRefreshNotionMedia={refreshNotionMedia}
           />
         );
       case "Library":
@@ -642,6 +681,7 @@ export function App(): JSX.Element {
     recentActivity,
     syncRunStartedAtIso,
     selectedLibraryWorkId,
+    refreshNotionMedia,
     runSyncNow,
     syncProgress,
     syncState.lastRunAt,
