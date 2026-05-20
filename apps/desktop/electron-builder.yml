@@ -12,6 +12,7 @@ files:
 asarUnpack:
   - "**/*.node"
 afterSign: scripts/notarize.mjs
+afterAllArtifactBuild: scripts/staple-dmg.mjs
 mac:
   category: public.app-category.productivity
   icon: assets/icon.icns
