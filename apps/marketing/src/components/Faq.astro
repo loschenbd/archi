@@ -14,7 +14,7 @@ const items: { id?: string; q: string; a: string }[] = [
   },
   {
     q: "Is it free?",
-    a: "Yes. Archi is free and open source under the MIT license. No accounts, no upsell.",
+    a: 'Yes. Archi is free and open source under the MIT license. No accounts, no upsell. If you want to support the project, you can <a href="https://buymeacoffee.com/benjlos" rel="noopener" target="_blank" class="text-accent-strong underline underline-offset-2 hover:text-accent">buy me a coffee</a>.',
   },
   {
     id: "privacy",
@@ -39,7 +39,7 @@ const items: { id?: string; q: string; a: string }[] = [
             {item.q}
             <span aria-hidden="true" class="text-ink-500 transition-transform group-open:rotate-45 text-lg leading-none">+</span>
           </summary>
-          <p class="mt-3 text-sm text-ink-500 leading-relaxed">{item.a}</p>
+          <p class="mt-3 text-sm text-ink-500 leading-relaxed" set:html={item.a} />
         </details>
       </li>
     ))}
