@@ -37,7 +37,7 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 180,
     overscan: 6,
-    getItemKey: (index) => filtered[index].id
+    getItemKey: (index) => filtered[index]?.id ?? index
   });
 
   // Reset scroll when the user changes filters. `passages` is intentionally
@@ -99,6 +99,9 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
           >
             {virtualItems.map((virtualItem) => {
               const passage = filtered[virtualItem.index];
+              if (!passage) {
+                return null;
+              }
               return (
                 <div
                   key={virtualItem.key}
