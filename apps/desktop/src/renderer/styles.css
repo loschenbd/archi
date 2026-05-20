@@ -1907,3 +1907,74 @@ select {
   justify-content: center;
   padding: 8px;
 }
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 500;
+  animation: update-banner-slide-in 140ms ease;
+}
+
+@keyframes update-banner-slide-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.update-banner-message {
+  flex: 1;
+  min-width: 0;
+}
+
+.update-banner-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.update-banner-primary,
+.update-banner-secondary {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+}
+
+.update-banner-primary {
+  background: var(--accent);
+  color: var(--paper-white);
+}
+
+.update-banner-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.update-banner-secondary {
+  background: transparent;
+  color: var(--accent-strong);
+}
+
+.update-banner-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-soft) 80%, var(--surface));
+}
+
+.update-banner-progress {
+  flex: 0 0 160px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  overflow: hidden;
+}
+
+.update-banner-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}

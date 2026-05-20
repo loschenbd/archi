@@ -32,6 +32,13 @@ type SyncProgressEvent = {
   refreshHint?: "ingest_update" | "completed";
 };
 
+type UpdaterStatusKind = "available" | "none" | "progress" | "downloaded" | "error";
+
+type UpdaterStatusEvent = {
+  kind: UpdaterStatusKind;
+  payload?: { version?: string; percent?: number; message?: string };
+};
+
 declare global {
   interface Window {
     archi: {
@@ -51,6 +58,11 @@ declare global {
       refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
       cancelSync: () => Promise<{ requested: boolean; message: string }>;
       openSupportLink: () => Promise<void>;
+      updater: {
+        download: () => Promise<void>;
+        quitAndInstall: () => Promise<void>;
+        onStatus: (cb: (event: UpdaterStatusEvent) => void) => () => void;
+      };
       listWorks: () => Promise<
         Array<{
           id: string;
