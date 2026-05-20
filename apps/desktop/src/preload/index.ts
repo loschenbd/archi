@@ -91,6 +91,13 @@ type CloudValidationReportView = {
   errorStack?: string;
 };
 
+type UpdaterStatusKind = "available" | "none" | "progress" | "downloaded" | "error";
+
+type UpdaterStatusEvent = {
+  kind: UpdaterStatusKind;
+  payload?: { version?: string; percent?: number; message?: string };
+};
+
 type SyncProgressListener = (event: SyncProgressEvent) => void;
 const syncProgressListenerMap = new Map<SyncProgressListener, (_event: IpcRendererEvent, payload: SyncProgressEvent) => void>();
 
@@ -185,7 +192,25 @@ const api = {
   },
   getRecentValidations: (limit: number = 5): Promise<CloudValidationReportView[]> =>
     ipcRenderer.invoke("archi:get-recent-validations", limit),
-  openValidationLog: (): Promise<void> => ipcRenderer.invoke("archi:open-validation-log")
+  openValidationLog: (): Promise<void> => ipcRenderer.invoke("archi:open-validation-log"),
+  openSupportLink: (): Promise<void> => ipcRenderer.invoke("archi:open-support-link"),
+  updater: {
+    download: (): Promise<void> => ipcRenderer.invoke("archi:updater-download"),
+    quitAndInstall: (): Promise<void> => ipcRenderer.invoke("archi:updater-quit-install"),
+    onStatus: (callback: (event: UpdaterStatusEvent) => void): (() => void) => {
+      const handler = (_event: IpcRendererEvent, payload: UpdaterStatusEvent) => callback(payload);
+      ipcRenderer.on("archi:updater-status", handler);
+      return () => {
+        ipcRenderer.off("archi:updater-status", handler);
+      };
+    }
+  },
+  preferences: {
+    get: <T>(key: string, fallback: T): Promise<T> =>
+      ipcRenderer.invoke("archi:get-preference", { key, fallback }),
+    set: (key: string, value: unknown): Promise<void> =>
+      ipcRenderer.invoke("archi:set-preference", { key, value })
+  }
 };
 
 contextBridge.exposeInMainWorld("archi", api);

@@ -2,7 +2,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 import crypto from "node:crypto";
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import electronUpdater from "electron-updater";
+const { autoUpdater } = electronUpdater;
+import { PreferencesStore } from "./preferences.js";
+import { UpdaterController, type AutoUpdaterLike } from "./updater.js";
+import { buildApplicationMenu, SUPPORT_URL } from "./menu.js";
 import dotenv from "dotenv";
 import { CoreRepository, computeFingerprintHash, openCoreDatabase } from "@archi/core";
 import { NotionDestination, type NotionSyncBatchProgressEvent } from "@archi/destination-notion";
@@ -133,6 +138,22 @@ function createWindow(): BrowserWindow {
     void window.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
     void window.loadFile(path.join(__dirname, "../renderer/index.html"));
+  }
+
+  if (!app.isPackaged && process.env.VITE_DEV_SERVER_URL) {
+    const url = new URL(process.env.VITE_DEV_SERVER_URL);
+    const fakeUpdate = url.searchParams.get("fakeUpdate");
+    if (fakeUpdate) {
+      window.webContents.once("did-finish-load", () => {
+        if (fakeUpdate === "available") {
+          window.webContents.send("archi:updater-status", { kind: "available", payload: { version: "9.9.9" } });
+        } else if (fakeUpdate === "downloaded") {
+          window.webContents.send("archi:updater-status", { kind: "downloaded", payload: { version: "9.9.9" } });
+        } else if (fakeUpdate === "progress") {
+          window.webContents.send("archi:updater-status", { kind: "progress", payload: { percent: 37 } });
+        }
+      });
+    }
   }
 
   window.once("ready-to-show", () => {
@@ -1211,6 +1232,13 @@ app.whenReady().then(() => {
     }, intervalMs);
   };
 
+  const preferences = new PreferencesStore(app.getPath("userData"));
+
+  const updater = new UpdaterController(
+    autoUpdater as unknown as AutoUpdaterLike,
+    () => mainWindow?.webContents ?? null
+  );
+
   ipcMain.handle("archi:get-sync-state", () => state);
   ipcMain.handle("archi:close-window", (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
@@ -1604,7 +1632,37 @@ app.whenReady().then(() => {
     };
   });
 
+  ipcMain.handle("archi:open-support-link", async () => {
+    await shell.openExternal(SUPPORT_URL);
+  });
+
+  ipcMain.handle("archi:updater-download", async () => {
+    await updater.download();
+  });
+
+  ipcMain.handle("archi:updater-quit-install", () => {
+    updater.quitAndInstall();
+  });
+
+  ipcMain.handle("archi:get-preference", (_event, { key, fallback }: { key: string; fallback: unknown }) => {
+    return preferences.get(key, fallback);
+  });
+
+  ipcMain.handle("archi:set-preference", (_event, { key, value }: { key: string; value: unknown }) => {
+    preferences.set(key, value);
+  });
+
   createWindow();
+
+  Menu.setApplicationMenu(
+    buildApplicationMenu({
+      onCheckForUpdates: () => updater.checkManual(app.isPackaged)
+    })
+  );
+
+  setTimeout(() => updater.checkOnLaunch(app.isPackaged), 5000);
+  setInterval(() => updater.checkOnLaunch(app.isPackaged), 6 * 60 * 60 * 1000);
+
   if (settings.onboarding.completed) {
     startBackgroundSync();
   }

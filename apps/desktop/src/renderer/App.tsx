@@ -6,6 +6,10 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { PassagesScreen } from "./screens/PassagesScreen";
+import { SupportButton } from "./components/SupportButton";
+import { SupportPromptModal } from "./components/SupportPromptModal";
+import { UpdateBanner } from "./components/UpdateBanner";
+import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
 const screens = ["Home", "Connections", "Library", "Passages", "Logs"] as const;
@@ -228,6 +232,7 @@ export function App(): JSX.Element {
   const [isCancelingSync, setIsCancelingSync] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgressEvent | null>(null);
   const [ipcError, setIpcError] = useState<string | null>(null);
+  const [supportPromptOpen, setSupportPromptOpen] = useState<boolean>(false);
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
     passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
@@ -409,6 +414,31 @@ export function App(): JSX.Element {
       window.archi.offSyncProgress(handleSyncProgress);
     };
   }, [refreshConnections, refreshLists, requestListRefresh]);
+
+  useEffect(() => {
+    let alreadyShown = false;
+    let cancelled = false;
+
+    void window.archi.preferences.get<boolean>("support.promptShown", false).then((shown) => {
+      if (cancelled) return;
+      alreadyShown = shown;
+    });
+
+    const listener = (event: Parameters<Parameters<typeof window.archi.onSyncProgress>[0]>[0]): void => {
+      if (alreadyShown || cancelled) return;
+      if (!shouldShowSupportPrompt(event, false)) return;
+      alreadyShown = true;
+      void window.archi.preferences.set("support.promptShown", true);
+      setSupportPromptOpen(true);
+    };
+
+    window.archi.onSyncProgress(listener);
+
+    return () => {
+      cancelled = true;
+      window.archi.offSyncProgress(listener);
+    };
+  }, []);
 
   const runSyncNow = (): void => {
     if (isSyncing) {
@@ -746,7 +776,9 @@ export function App(): JSX.Element {
   }
 
   return (
-    <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+    <>
+      <UpdateBanner />
+      <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <WindowTitleBar />
       <aside className="sidebar">
         <div className="sidebar-brand">
@@ -771,6 +803,8 @@ export function App(): JSX.Element {
             </button>
           ))}
         </nav>
+        <div className="sidebar-divider" aria-hidden="true" />
+        <SupportButton collapsed={sidebarCollapsed} />
         <button
           type="button"
           className="sidebar-collapse-toggle"
@@ -807,5 +841,7 @@ export function App(): JSX.Element {
         <div className="screen-card">{screenContent}</div>
       </section>
     </main>
+    <SupportPromptModal open={supportPromptOpen} onClose={() => setSupportPromptOpen(false)} />
+    </>
   );
 }
