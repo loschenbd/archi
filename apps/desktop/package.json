@@ -19,6 +19,7 @@
     "healthcheck": "node ./scripts/doctor.mjs",
     "lint": "eslint src --ext .ts,.tsx",
     "package": "pnpm build && electron-builder --config electron-builder.yml --mac dmg && node ./scripts/verify-packaged-runtime.mjs",
+    "package:universal": "pnpm build && electron-builder --config electron-builder.yml --mac dmg --universal && node ./scripts/verify-packaged-runtime.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
   },

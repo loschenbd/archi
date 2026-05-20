@@ -1,15 +1,19 @@
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 
-const asarPath = path.resolve(
-  process.cwd(),
-  "release",
-  "mac-arm64",
-  "Archi.app",
-  "Contents",
-  "Resources",
-  "app.asar"
-);
+const releaseDir = path.resolve(process.cwd(), "release");
+const candidateMacDirs = ["mac-arm64", "mac-x64", "mac-universal", "mac"];
+const macDir = candidateMacDirs
+  .map((name) => path.join(releaseDir, name))
+  .find((dir) => fs.existsSync(path.join(dir, "Archi.app")));
+
+if (!macDir) {
+  console.error(`Could not find a packaged Archi.app under ${releaseDir} (looked in: ${candidateMacDirs.join(", ")}).`);
+  process.exit(1);
+}
+
+const asarPath = path.join(macDir, "Archi.app", "Contents", "Resources", "app.asar");
 
 const output = execSync(`npx asar list "${asarPath}"`, { encoding: "utf8" });
 const asarEntries = new Set(output.split("\n").filter(Boolean));

@@ -171,9 +171,13 @@ export function ConnectionsScreen({
                   <dt>Phase</dt>
                   <dd>{latestValidation.phase}</dd>
                   <dt>Outcome</dt>
-                  <dd>{latestValidation.outcome}</dd>
+                  <dd>
+                    <span className="diagnostics-outcome" data-status={latestValidation.outcome}>
+                      {latestValidation.outcome.replace(/_/g, " ")}
+                    </span>
+                  </dd>
                   <dt>Reason</dt>
-                  <dd>{latestValidation.decisionReasonCode}</dd>
+                  <dd className="diagnostics-mono">{latestValidation.decisionReasonCode}</dd>
                   <dt>URL class</dt>
                   <dd>{latestValidation.urlClassification}</dd>
                   <dt>Headless</dt>
@@ -197,15 +201,23 @@ export function ConnectionsScreen({
                       <tr key={`${r.timestamp}-${idx}`}>
                         <td>{new Date(r.timestamp).toLocaleTimeString()}</td>
                         <td>{r.phase}</td>
-                        <td>{r.outcome}</td>
-                        <td>{r.decisionReasonCode}</td>
+                        <td>
+                          <span className="diagnostics-outcome" data-status={r.outcome}>
+                            {r.outcome.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="diagnostics-mono">{r.decisionReasonCode}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </>
             )}
-            <button type="button" onClick={() => void diagnosticsApi().openValidationLog()}>
+            <button
+              type="button"
+              className="diagnostics-reveal-button"
+              onClick={() => void diagnosticsApi().openValidationLog()}
+            >
               Reveal log in Finder
             </button>
           </details>
