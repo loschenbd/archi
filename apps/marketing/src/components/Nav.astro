@@ -8,14 +8,9 @@ import DownloadButton from "./DownloadButton.astro";
       Archi
     </a>
 
-    <div class="flex items-center gap-1 md:gap-5 text-sm text-ink-500">
-      <a href="#how-it-works" class="hidden md:inline-block hover:text-ink-900 px-2 py-1">How it works</a>
-      <a href="#privacy" class="hidden md:inline-block hover:text-ink-900 px-2 py-1">Privacy</a>
-      <a href="https://github.com/loschenbd/archi" rel="noopener" class="hidden md:inline-block hover:text-ink-900 px-2 py-1">GitHub</a>
-      <span id="nav-download" data-scroll-hidden="true" class="ml-2 opacity-0 pointer-events-none transition-opacity duration-200">
-        <DownloadButton variant="primary" label="Download" class="!px-3.5 !py-1.5 !text-[13px]" />
-      </span>
-    </div>
+    <span id="nav-download" data-scroll-hidden="true" class="opacity-0 pointer-events-none transition-opacity duration-200">
+      <DownloadButton variant="primary" label="Download" class="!px-3.5 !py-1.5 !text-[13px]" />
+    </span>
   </nav>
 </header>
 
