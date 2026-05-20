@@ -14,6 +14,10 @@ asarUnpack:
 mac:
   category: public.app-category.productivity
   icon: assets/icon.icns
+  # Stable, version-less DMG filename so the marketing site's
+  # /releases/latest/download/Archi-arm64.dmg link resolves on every
+  # release without manual asset renaming.
+  artifactName: "${productName}-${arch}.${ext}"
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: assets/entitlements.mac.plist
