@@ -2,15 +2,15 @@
 const items: { id?: string; q: string; a: string }[] = [
   {
     q: "Do I need a Kindle device or just the app?",
-    a: "Either works, as long as you have an Amazon account with Kindle highlights. Archi reads them from Amazon's web Notebook — no physical Kindle required.",
+    a: "Either works, as long as you have an Amazon account with Kindle highlights. Archi reads them from Amazon's web Notebook. No physical Kindle required.",
   },
   {
     q: "Does Archi work without Notion?",
-    a: "Yes. Notion is one optional destination. The local library is the product — search, filter, and browse on your Mac without ever sending anything outward.",
+    a: "Yes. Notion is one optional destination. The local library is the product. Search, filter, and browse on your Mac without ever sending anything outward.",
   },
   {
     q: "Why macOS only?",
-    a: "We don't support other platforms yet — just macOS for now.",
+    a: "We don't support other platforms yet. Just macOS for now.",
   },
   {
     q: "Is it free?",
@@ -19,11 +19,11 @@ const items: { id?: string; q: string; a: string }[] = [
   {
     id: "privacy",
     q: "Where does my data live?",
-    a: "On your Mac, in a local SQLite database under your user data directory. There are no Archi servers. There is no telemetry. Kindle Cloud Notebook access uses your browser session — Archi never sees your Amazon password.",
+    a: "Only on your Mac, and in Notion if you send it there. There are no Archi servers, and no telemetry.",
   },
   {
     q: "What's 'Cloud Notebook'? Is it required?",
-    a: "Cloud Notebook is Amazon's web view of your Kindle highlights at read.amazon.com/notebook — it's how Archi gets your data. Archi signs in once via a built-in Playwright browser and keeps the session, so you only authenticate one time. Yes, it's required for now.",
+    a: "Cloud Notebook is Amazon's web view of your Kindle highlights at read.amazon.com/notebook. It's how Archi gets your data. Archi signs in once via a built-in Playwright browser and keeps the session, so you only authenticate one time. Yes, it's required for now.",
   },
 ];
 ---
