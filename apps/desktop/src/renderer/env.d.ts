@@ -63,6 +63,10 @@ declare global {
         quitAndInstall: () => Promise<void>;
         onStatus: (cb: (event: UpdaterStatusEvent) => void) => () => void;
       };
+      preferences: {
+        get: <T>(key: string, fallback: T) => Promise<T>;
+        set: (key: string, value: unknown) => Promise<void>;
+      };
       listWorks: () => Promise<
         Array<{
           id: string;

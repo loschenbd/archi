@@ -2056,3 +2056,9 @@ select {
 .support-prompt-secondary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--surface-subtle) 60%, var(--surface));
 }
+
+.sidebar-divider {
+  height: 1px;
+  margin: 8px 8px 6px;
+  background: color-mix(in srgb, var(--ink-300) 28%, transparent);
+}
