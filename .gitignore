@@ -8,3 +8,8 @@ playwright-report
 test-results
 .superpowers
 .worktrees
+
+# Electron build output
+apps/desktop/release
+apps/desktop/.packaged-app-test
+apps/desktop/release-deploytest
