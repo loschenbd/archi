@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 
 type Passage = {
@@ -12,6 +12,20 @@ type Props = {
   passages: Passage[];
   onOpenWork: (workId: string) => void;
 };
+
+function highlightMatches(text: string, query: string): ReactNode {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i}>{part}</mark>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    )
+  );
+}
 
 export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
   const [query, setQuery] = useState("");
@@ -114,7 +128,9 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
                     <span className="passage-card-mark" aria-hidden="true">
                       &ldquo;
                     </span>
-                    <blockquote className="passage-card-body">{passage.body}</blockquote>
+                    <blockquote className="passage-card-body">
+                      {highlightMatches(passage.body, query)}
+                    </blockquote>
                     <footer className="passage-card-footer">
                       <p className="passage-card-attribution">
                         <span className="passage-card-dash" aria-hidden="true">
