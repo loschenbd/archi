@@ -818,7 +818,7 @@ export function App(): JSX.Element {
           </svg>
         </button>
       </aside>
-      <section className="content">
+      <section className="content" data-screen={activeScreen}>
         <header className="content-header">
           <div>
             {selectedWork ? (
