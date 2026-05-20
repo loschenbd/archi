@@ -31,11 +31,19 @@
     "@archi/source-device-export": "workspace:*",
     "@archi/ui": "workspace:*",
     "@tanstack/react-virtual": "^3",
+    "builder-util-runtime": "^9.5.1",
     "dotenv": "^17.4.2",
     "electron-log": "^5.2.4",
     "electron-updater": "^6.8.3",
+    "fs-extra": "^11.3.5",
+    "js-yaml": "^4.1.1",
+    "lazy-val": "^1.0.5",
+    "lodash.escaperegexp": "^4.1.2",
+    "lodash.isequal": "^4.5.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "semver": "^7.8.0",
+    "tiny-typed-emitter": "^2.1.0"
   },
   "dependenciesMeta": {
     "@archi/core": {
