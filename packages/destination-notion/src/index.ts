@@ -6,7 +6,17 @@ export type NotionDestinationConfig = {
   parentPageId?: string;
   libraryDatabaseId?: string;
   passagesDatabaseId?: string;
+  rootIcon?: NotionRootIcon;
 };
+
+export type NotionRootIcon = {
+  filename: string;
+  contentType: string;
+  bytes: Uint8Array;
+};
+
+const NOTION_API_BASE = "https://api.notion.com/v1";
+const NOTION_FILE_UPLOAD_VERSION = "2026-03-11";
 
 export type NotionWorkInput = {
   sourceWorkId?: string;
@@ -208,6 +218,7 @@ export class NotionDestination {
     if (this.config.parentPageId) {
       try {
         await this.ensurePageIsActive(this.config.parentPageId);
+        await this.ensureRootPageIcon(this.config.parentPageId);
         return this.config.parentPageId;
       } catch (error) {
         if (!this.isNotionObjectMissingError(error) && !this.isWorkspaceUnarchiveUnsupportedError(error)) {
@@ -225,6 +236,7 @@ export class NotionDestination {
       this.config.parentPageId = existingAppRootPageId;
       try {
         await this.ensurePageIsActive(existingAppRootPageId);
+        await this.ensureRootPageIcon(existingAppRootPageId);
         return existingAppRootPageId;
       } catch (error) {
         if (!this.isNotionObjectMissingError(error) && !this.isWorkspaceUnarchiveUnsupportedError(error)) {
@@ -245,6 +257,7 @@ export class NotionDestination {
         })
       );
       this.config.parentPageId = createdParentPage.id;
+      await this.ensureRootPageIcon(createdParentPage.id, { force: true });
       return createdParentPage.id;
     } catch {
       // Fall through to discovery of an existing accessible page.
@@ -375,6 +388,74 @@ export class NotionDestination {
         archived: false
       })
     );
+  }
+
+  private async ensureRootPageIcon(pageId: string, opts: { force?: boolean } = {}): Promise<void> {
+    if (!this.config.rootIcon) {
+      return;
+    }
+    try {
+      if (!opts.force) {
+        const page = (await this.withRetry(() => this.client.pages.retrieve({ page_id: pageId }))) as {
+          icon?: unknown;
+        };
+        if (page.icon) {
+          // Page already has an icon (user-set or previously synced); don't overwrite.
+          return;
+        }
+      }
+      const fileUploadId = await this.uploadRootIconFile(this.config.rootIcon);
+      await this.withRetry(() =>
+        this.client.pages.update({
+          page_id: pageId,
+          icon: { type: "file_upload", file_upload: { id: fileUploadId } } as never
+        })
+      );
+    } catch (error) {
+      // Icon is a nice-to-have; don't block sync if upload or update fails.
+      // eslint-disable-next-line no-console
+      console.warn("Failed to set Archi root page icon:", error instanceof Error ? error.message : error);
+    }
+  }
+
+  private async uploadRootIconFile(icon: NotionRootIcon): Promise<string> {
+    const createResponse = await this.withRetry(async () => {
+      const response = await fetch(`${NOTION_API_BASE}/file_uploads`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.integrationToken}`,
+          "Notion-Version": NOTION_FILE_UPLOAD_VERSION,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ mode: "single_part", filename: icon.filename, content_type: icon.contentType })
+      });
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        throw new Error(`Notion file_uploads create failed (${response.status}): ${detail}`);
+      }
+      return (await response.json()) as { id?: string };
+    });
+    if (!createResponse.id) {
+      throw new Error("Notion file_uploads create returned no id.");
+    }
+    const uploadId = createResponse.id;
+    await this.withRetry(async () => {
+      const form = new FormData();
+      form.append("file", new Blob([icon.bytes as BlobPart], { type: icon.contentType }), icon.filename);
+      const response = await fetch(`${NOTION_API_BASE}/file_uploads/${uploadId}/send`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.integrationToken}`,
+          "Notion-Version": NOTION_FILE_UPLOAD_VERSION
+        },
+        body: form
+      });
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        throw new Error(`Notion file_uploads send failed (${response.status}): ${detail}`);
+      }
+    });
+    return uploadId;
   }
 
   async syncBatch(works: NotionWorkInput[], passages: NotionPassageInput[], options?: NotionSyncBatchOptions): Promise<void> {
