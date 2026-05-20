@@ -1,6 +1,48 @@
-import { Menu, shell, type MenuItemConstructorOptions } from "electron";
+import { BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from "electron";
 
 export const SUPPORT_URL = "https://buymeacoffee.com/benjlos";
+
+let supportWindow: BrowserWindow | null = null;
+
+export function openSupportWindow(parent?: BrowserWindow | null): BrowserWindow {
+  if (supportWindow && !supportWindow.isDestroyed()) {
+    if (supportWindow.isMinimized()) {
+      supportWindow.restore();
+    }
+    supportWindow.focus();
+    return supportWindow;
+  }
+
+  const window = new BrowserWindow({
+    title: "Support Archi",
+    width: 520,
+    height: 760,
+    parent: parent ?? undefined,
+    autoHideMenuBar: true,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  // Send target="_blank" links (e.g. Stripe 3-D Secure popups) to the OS browser
+  // so checkout flows that depend on a real browser surface keep working.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  window.on("closed", () => {
+    if (supportWindow === window) {
+      supportWindow = null;
+    }
+  });
+
+  void window.loadURL(SUPPORT_URL);
+  supportWindow = window;
+  return window;
+}
 
 type MenuActions = {
   onCheckForUpdates: () => void;
@@ -16,7 +58,7 @@ export function buildApplicationMenu(actions: MenuActions): Menu {
       {
         label: "Support Archi…",
         click: () => {
-          void shell.openExternal(SUPPORT_URL);
+          openSupportWindow(BrowserWindow.getFocusedWindow());
         }
       },
       { type: "separator" },

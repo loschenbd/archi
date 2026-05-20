@@ -7,7 +7,7 @@ import electronUpdater from "electron-updater";
 const { autoUpdater } = electronUpdater;
 import { PreferencesStore } from "./preferences.js";
 import { UpdaterController, type AutoUpdaterLike } from "./updater.js";
-import { buildApplicationMenu, SUPPORT_URL } from "./menu.js";
+import { buildApplicationMenu, openSupportWindow } from "./menu.js";
 import dotenv from "dotenv";
 import { CoreRepository, computeFingerprintHash, openCoreDatabase } from "@archi/core";
 import { NotionDestination, type NotionSyncBatchProgressEvent } from "@archi/destination-notion";
@@ -1632,8 +1632,8 @@ app.whenReady().then(() => {
     };
   });
 
-  ipcMain.handle("archi:open-support-link", async () => {
-    await shell.openExternal(SUPPORT_URL);
+  ipcMain.handle("archi:open-support-link", () => {
+    openSupportWindow(mainWindow);
   });
 
   ipcMain.handle("archi:updater-download", async () => {

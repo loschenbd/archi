@@ -321,7 +321,9 @@ select {
 }
 
 .sidebar-collapse-toggle {
-  margin-top: auto;
+  /* Cancel the sidebar's 18px flex gap so the chevron sits 2px below the
+     support button — matching the nav buttons' grid-gap. */
+  margin-top: -16px;
   align-self: center;
   display: inline-flex;
   align-items: center;
@@ -2138,6 +2140,6 @@ select {
 
 .sidebar-divider {
   height: 1px;
-  margin: 8px 8px 6px;
+  margin: auto 8px 6px;
   background: color-mix(in srgb, var(--ink-300) 28%, transparent);
 }
