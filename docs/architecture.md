@@ -26,3 +26,7 @@ Archi is a local-first sync pipeline with a desktop shell.
 - Notion authentication is OAuth-based when `NOTION_OAUTH_*` env variables are present; migrated legacy integration tokens are stored in encrypted local credential storage.
 - Cloud notebook authentication is Playwright-based and persisted via profile directory + storage-state snapshot, then revalidated on startup.
 - Cloud notebook validation emits a structured `CloudValidationReport` on every check (startup, reconnect, fetch, status refresh). Reports are appended to `userData/cloud-validation.log` (JSONL, 1 MB rotation, one generation) and held in a 20-deep ring buffer in the main process. The latest report is surfaced on `ConnectionState.metadata` and exposed to the renderer via `window.archi.getRecentValidations()`. Hard `decisionReasonCode`s (`signin_url_redirect`, `login_form_visible`, `cookies_empty_on_load`, `goto_failed`) cause `connected → needs_auth`; transient classifications (unrecognized interstitials, missing notebook DOM on a notebook URL) keep the cached status until a hard signal or user action.
+
+## Marketing site
+
+The public-facing landing page lives in `apps/marketing/` (Astro 5 + Tailwind 4) and deploys to `archi.benjaminloschen.com` via `.github/workflows/marketing-deploy.yml`. Design tokens are duplicated from `apps/desktop/src/renderer/styles.css` into `apps/marketing/src/styles/tokens.css`; keep them in sync by hand when tokens change.
