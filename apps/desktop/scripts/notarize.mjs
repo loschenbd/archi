@@ -2,6 +2,8 @@ import path from "node:path";
 import process from "node:process";
 import { notarize } from "@electron/notarize";
 
+const KEYCHAIN_PROFILE = "archi-notarize";
+
 export default async function notarizeApp(context) {
   const { electronPlatformName, appOutDir, packager } = context;
 
@@ -9,23 +11,14 @@ export default async function notarizeApp(context) {
     return;
   }
 
-  const appleId = process.env.APPLE_ID;
-  const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD;
-  const teamId = process.env.APPLE_TEAM_ID;
-
-  if (!appleId || !appleIdPassword || !teamId) {
-    console.log("Skipping notarization (missing APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, or APPLE_TEAM_ID).");
+  if (process.env.ARCHI_SKIP_NOTARIZE === "1") {
+    console.log("Skipping notarization (ARCHI_SKIP_NOTARIZE=1).");
     return;
   }
 
   const appName = packager.appInfo.productFilename;
   const appPath = path.join(appOutDir, `${appName}.app`);
 
-  console.log(`Notarizing ${appPath} with Apple notary service...`);
-  await notarize({
-    appPath,
-    appleId,
-    appleIdPassword,
-    teamId
-  });
+  console.log(`Notarizing ${appPath} via keychain profile "${KEYCHAIN_PROFILE}"...`);
+  await notarize({ appPath, keychainProfile: KEYCHAIN_PROFILE });
 }
