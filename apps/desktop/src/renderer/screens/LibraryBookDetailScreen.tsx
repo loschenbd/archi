@@ -52,6 +52,25 @@ function formatLocationLabel(kind?: PositionKind, start?: string, end?: string):
   return end && end !== start ? `${base}-${end}` : base;
 }
 
+function formatShortLocation(kind?: PositionKind, start?: string, end?: string): string {
+  if (!start) {
+    return "Unknown location";
+  }
+  const normalizedKind = kind && kind !== "unknown" ? kind : "location";
+  const prefix =
+    normalizedKind === "location"
+      ? "Loc."
+      : normalizedKind === "page"
+        ? "Page"
+        : normalizedKind === "offset"
+          ? "Offset"
+          : normalizedKind === "order"
+            ? "#"
+            : "Loc.";
+  const base = `${prefix} ${start}`;
+  return end && end !== start ? `${base}–${end}` : base;
+}
+
 function getKindOrder(kind?: PositionKind): number {
   switch (kind) {
     case "location":
@@ -198,6 +217,16 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
   }, []);
 
   const groups = useMemo(() => groupPassages(passages), [passages]);
+  const sortedPassages = useMemo(
+    () =>
+      groups.flatMap((group) =>
+        group.passages.map((passage) => ({
+          passage,
+          locationLabel: formatShortLocation(passage.positionKind, passage.positionStart, passage.positionEnd)
+        }))
+      ),
+    [groups]
+  );
 
   const handleOpenInKindle = async (passage: LibraryPassage): Promise<void> => {
     setOpeningPassageId(passage.id);
@@ -230,29 +259,27 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
       {isLoading ? <p>Loading quotes...</p> : null}
       {errorMessage ? <p className="error">{errorMessage}</p> : null}
       {kindleErrorMessage ? <p className="error">{kindleErrorMessage}</p> : null}
-      {!isLoading && !errorMessage && groups.length === 0 ? <p>No quotes found for this work yet.</p> : null}
-      <div className="library-location-groups">
-        {groups.map((group) => (
-          <article key={group.id} className="library-location-group">
-            <header>
-              <h3>{group.label}</h3>
-            </header>
-            <ul>
-              {group.passages.map((passage) => (
-                <li key={passage.id} className="library-quote-card">
-                  <p>{passage.body}</p>
-                  {passage.readerNote ? <p className="library-quote-note">Note: {passage.readerNote}</p> : null}
-                  <div className="library-quote-actions">
-                    <button type="button" onClick={() => void handleOpenInKindle(passage)} disabled={openingPassageId === passage.id}>
-                      {openingPassageId === passage.id ? "Opening..." : "Open this quote in Kindle"}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </article>
+      {!isLoading && !errorMessage && sortedPassages.length === 0 ? <p>No quotes found for this work yet.</p> : null}
+      <ul className="library-quotes">
+        {sortedPassages.map(({ passage, locationLabel }) => (
+          <li key={passage.id} className="library-quote-card">
+            <p className="library-quote-body">{passage.body}</p>
+            {passage.readerNote ? <p className="library-quote-note">Note: {passage.readerNote}</p> : null}
+            <footer className="library-quote-footer">
+              <span className="library-quote-location">{locationLabel}</span>
+              <span className="library-quote-separator" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className="library-quote-open"
+                onClick={() => void handleOpenInKindle(passage)}
+                disabled={openingPassageId === passage.id}
+              >
+                {openingPassageId === passage.id ? "Opening…" : "↗ Open in Kindle"}
+              </button>
+            </footer>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

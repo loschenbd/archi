@@ -13,6 +13,34 @@ type Props = {
   onSelectWork: (workId: string) => void;
 };
 
+const IGNORED_LEADING_ARTICLES = ["the", "a", "an"] as const;
+const LETTER_FILTER_BUCKETS: string[] = [
+  "#",
+  ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))
+];
+
+function getStartBucket(title: string): string {
+  let normalized = title.trim().toLowerCase().replace(/^[^a-z0-9]+/i, "");
+  for (const article of IGNORED_LEADING_ARTICLES) {
+    const prefix = `${article} `;
+    if (normalized.startsWith(prefix)) {
+      normalized = normalized.slice(prefix.length).replace(/^[^a-z0-9]+/i, "");
+      break;
+    }
+  }
+  const first = normalized[0];
+  if (!first) {
+    return "?";
+  }
+  if (first >= "0" && first <= "9") {
+    return "#";
+  }
+  if (first >= "a" && first <= "z") {
+    return first.toUpperCase();
+  }
+  return "?";
+}
+
 function getPlaceholderInitial(title: string): string {
   const trimmed = title.trim();
   if (!trimmed) {
@@ -24,13 +52,28 @@ function getPlaceholderInitial(title: string): string {
 
 export function LibraryScreen({ works, selectedWorkId, onSelectWork }: Props): JSX.Element {
   const [query, setQuery] = useState("");
+  const [letterFilter, setLetterFilter] = useState<string | null>(null);
+
+  const availableBuckets = useMemo(() => {
+    const buckets = new Set<string>();
+    for (const work of works) {
+      buckets.add(getStartBucket(work.title));
+    }
+    return buckets;
+  }, [works]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    if (!q) {
-      return works;
-    }
-    return works.filter((work) => `${work.title} ${work.creator ?? ""}`.toLowerCase().includes(q));
-  }, [query, works]);
+    return works.filter((work) => {
+      if (q && !`${work.title} ${work.creator ?? ""}`.toLowerCase().includes(q)) {
+        return false;
+      }
+      if (letterFilter && getStartBucket(work.title) !== letterFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [query, works, letterFilter]);
 
   return (
     <section className="library-screen">
@@ -43,6 +86,32 @@ export function LibraryScreen({ works, selectedWorkId, onSelectWork }: Props): J
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
+      <div className="library-letter-filter" role="group" aria-label="Filter by starting letter">
+        <button
+          type="button"
+          className={`library-letter-filter-pill${letterFilter === null ? " active" : ""}`}
+          onClick={() => setLetterFilter(null)}
+          aria-pressed={letterFilter === null}
+        >
+          All
+        </button>
+        {LETTER_FILTER_BUCKETS.map((letter) => {
+          const isAvailable = availableBuckets.has(letter);
+          const isActive = letterFilter === letter;
+          return (
+            <button
+              key={letter}
+              type="button"
+              className={`library-letter-filter-pill${isActive ? " active" : ""}${!isAvailable ? " empty" : ""}`}
+              disabled={!isAvailable}
+              aria-pressed={isActive}
+              onClick={() => setLetterFilter(isActive ? null : letter)}
+            >
+              {letter}
+            </button>
+          );
+        })}
+      </div>
       <p className="screen-count">
         {filtered.length} {filtered.length === 1 ? "work" : "works"}
       </p>
