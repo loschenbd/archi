@@ -1,0 +1,47 @@
+---
+const items: { id?: string; q: string; a: string }[] = [
+  {
+    q: "Do I need a Kindle device or just the app?",
+    a: "Either works. Archi reads from Kindle's USB-exported clippings file as well as the web Notebook. You can use one, the other, or both.",
+  },
+  {
+    q: "Does Archi work without Notion?",
+    a: "Yes. Notion is one optional destination. The local library is the product — search, filter, and browse on your Mac without ever sending anything outward.",
+  },
+  {
+    q: "Why macOS only?",
+    a: "Archi is built with Electron and uses macOS keychain APIs for credential storage and signed/notarised packaging. Other platforms aren't on the roadmap yet.",
+  },
+  {
+    q: "Is it free?",
+    a: "Yes. Archi is free and open source under the MIT license. No accounts, no upsell.",
+  },
+  {
+    id: "privacy",
+    q: "Where does my data live?",
+    a: "On your Mac, in a local SQLite database under your user data directory. There are no Archi servers. There is no telemetry. Kindle Cloud Notebook access uses your browser session — Archi never sees your Amazon password.",
+  },
+  {
+    q: "What's 'Cloud Notebook'? Is it required?",
+    a: "Cloud Notebook is Amazon's web view of your Kindle highlights. Archi can optionally read it via Playwright if you sign in once. It's not required — USB export works on its own.",
+  },
+];
+---
+<section id="faq" class="mx-auto max-w-[760px] px-6 py-20 md:py-28">
+  <p class="text-xs uppercase tracking-[0.18em] text-ink-500 mb-3">Questions</p>
+  <h2 class="font-serif text-[28px] md:text-[40px] tracking-[-0.015em] text-ink-900 mb-10">Common questions, briefly.</h2>
+
+  <ul class="space-y-2">
+    {items.map((item) => (
+      <li>
+        <details id={item.id} class="group bg-paper-white border border-ink-100 rounded-[12px] px-5 py-4 open:bg-paper-100">
+          <summary class="cursor-pointer list-none flex items-center justify-between text-ink-900 font-medium">
+            {item.q}
+            <span aria-hidden="true" class="text-ink-500 transition-transform group-open:rotate-45 text-lg leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-ink-500 leading-relaxed">{item.a}</p>
+        </details>
+      </li>
+    ))}
+  </ul>
+</section>

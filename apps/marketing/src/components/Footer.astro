@@ -1,0 +1,39 @@
+---
+const REPO = "https://github.com/loschenbd/archi";
+const year = new Date().getFullYear();
+---
+<footer class="border-t border-ink-100 bg-paper-100 mt-20">
+  <div class="mx-auto max-w-[1080px] px-6 py-12 md:py-16 grid gap-8 md:grid-cols-[1fr_auto]">
+    <div>
+      <div class="flex items-center gap-2.5 font-semibold text-ink-900 mb-3">
+        <span class="inline-block w-6 h-6 rounded-[6px] bg-ink-900 relative">
+          <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-accent"></span>
+        </span>
+        Archi
+      </div>
+      <p class="text-sm text-ink-500 max-w-[40ch]">A quiet macOS app that makes your Kindle highlights searchable.</p>
+      <div class="mt-4 flex items-center gap-3">
+        <img src="https://img.shields.io/github/v/release/loschenbd/archi?display_name=tag&color=c84c3c&style=flat-square" alt="Latest release" />
+        <span class="text-xs text-ink-500">v0.1 · macOS 12+</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
+      <div class="text-xs uppercase tracking-[0.14em] text-ink-500 mb-2">Product</div>
+      <div class="text-xs uppercase tracking-[0.14em] text-ink-500 mb-2">Project</div>
+      <a href="#hero" class="text-ink-700 hover:text-ink-900">Download</a>
+      <a href={REPO} rel="noopener" class="text-ink-700 hover:text-ink-900">GitHub</a>
+      <a href="#how-it-works" class="text-ink-700 hover:text-ink-900">How it works</a>
+      <a href={`${REPO}/blob/main/LICENSE`} rel="noopener" class="text-ink-700 hover:text-ink-900">License</a>
+      <a href="#faq" class="text-ink-700 hover:text-ink-900">FAQ</a>
+      <a href={`${REPO}/releases`} rel="noopener" class="text-ink-700 hover:text-ink-900">Releases</a>
+    </div>
+  </div>
+
+  <div class="border-t border-ink-100">
+    <div class="mx-auto max-w-[1080px] px-6 py-4 flex items-center justify-between text-xs text-ink-500">
+      <span>Made by Ben Loschen</span>
+      <span>© {year}</span>
+    </div>
+  </div>
+</footer>
