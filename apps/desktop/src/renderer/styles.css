@@ -118,10 +118,18 @@ select {
   color: var(--text);
 }
 
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 208px minmax(0, 1fr);
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   transition: grid-template-columns 180ms ease;
 }
