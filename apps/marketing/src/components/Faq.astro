@@ -2,7 +2,7 @@
 const items: { id?: string; q: string; a: string }[] = [
   {
     q: "Do I need a Kindle device or just the app?",
-    a: "Either works. Archi reads from Kindle's USB-exported clippings file as well as the web Notebook. You can use one, the other, or both.",
+    a: "Either works, as long as you have an Amazon account with Kindle highlights. Archi reads them from Amazon's web Notebook — no physical Kindle required.",
   },
   {
     q: "Does Archi work without Notion?",
@@ -10,7 +10,7 @@ const items: { id?: string; q: string; a: string }[] = [
   },
   {
     q: "Why macOS only?",
-    a: "Archi is built with Electron and uses macOS keychain APIs for credential storage and signed/notarised packaging. Other platforms aren't on the roadmap yet.",
+    a: "We don't support other platforms yet — just macOS for now.",
   },
   {
     q: "Is it free?",
@@ -23,7 +23,7 @@ const items: { id?: string; q: string; a: string }[] = [
   },
   {
     q: "What's 'Cloud Notebook'? Is it required?",
-    a: "Cloud Notebook is Amazon's web view of your Kindle highlights. Archi can optionally read it via Playwright if you sign in once. It's not required — USB export works on its own.",
+    a: "Cloud Notebook is Amazon's web view of your Kindle highlights at read.amazon.com/notebook — it's how Archi gets your data. Archi signs in once via a built-in Playwright browser and keeps the session, so you only authenticate one time. Yes, it's required for now.",
   },
 ];
 ---
