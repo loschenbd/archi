@@ -42,21 +42,6 @@ const resolveAppAssetPath = (filename: string): string =>
     ? path.join(process.resourcesPath, "assets", filename)
     : path.resolve(__dirname, "../../assets", filename);
 
-let cachedNotionRootIcon: { filename: string; contentType: string; bytes: Uint8Array } | null = null;
-const loadNotionRootIcon = (): { filename: string; contentType: string; bytes: Uint8Array } | undefined => {
-  if (cachedNotionRootIcon) {
-    return cachedNotionRootIcon;
-  }
-  try {
-    const filename = "logo-clean.png";
-    const bytes = fs.readFileSync(resolveAppAssetPath(filename));
-    cachedNotionRootIcon = { filename, contentType: "image/png", bytes };
-    return cachedNotionRootIcon;
-  } catch {
-    return undefined;
-  }
-};
-
 const state: {
   status: string;
   lastRunAt: string | null;
@@ -1010,8 +995,7 @@ app.whenReady().then(() => {
               integrationToken: notionToken,
               parentPageId: settings.notion.parentPageId,
               libraryDatabaseId: settings.notion.libraryDatabaseId,
-              passagesDatabaseId: settings.notion.passagesDatabaseId,
-              rootIcon: loadNotionRootIcon()
+              passagesDatabaseId: settings.notion.passagesDatabaseId
             });
 
             const onNotionProgress = (event: NotionSyncBatchProgressEvent): void => {
