@@ -35,8 +35,8 @@ function highlight(text: string, query: string): string {
 
   {rows.map((row, i) => (
     <div class={`px-1 py-3.5 ${i === 0 ? "" : "border-t border-paper-200"}`}>
-      <p class="font-serif text-[17px] leading-[1.45] text-ink-900 mb-2" set:html={highlight(row.quote, QUERY)} />
-      <p class="text-xs text-ink-500 flex gap-2.5 items-center">
+      <p class="font-serif text-[16px] sm:text-[17px] leading-[1.45] text-ink-900 mb-2" set:html={highlight(row.quote, QUERY)} />
+      <p class="text-xs text-ink-500 flex flex-wrap gap-x-2.5 gap-y-1 items-center">
         <span>{row.book}</span>
         <span class="w-[3px] h-[3px] bg-ink-300 rounded-full" aria-hidden="true"></span>
         <span>{row.author}</span>

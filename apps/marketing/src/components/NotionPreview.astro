@@ -11,10 +11,10 @@ const notionLibraryRows = [
   { title: "Amusing Ourselves to Death", author: "Neil Postman", count: 22 },
 ];
 ---
-<section id="notion" class="mx-auto max-w-[1080px] px-6 py-20 md:py-28">
+<section id="notion" class="mx-auto max-w-[1080px] px-6 py-14 md:py-20 lg:py-28">
   <p class="text-xs uppercase tracking-[0.18em] text-ink-500 mb-3">In Notion</p>
-  <h2 class="font-serif text-[28px] md:text-[40px] tracking-[-0.015em] text-ink-900 mb-4 max-w-[28ch]">Send all your book highlights to Notion. The structure comes with it.</h2>
-  <p class="text-base text-ink-500 mb-12 max-w-[60ch]">Archi writes two clean databases: a <em>Library</em> of books and a <em>Passages</em> store of highlights linked back to them. Searchable, sortable, yours.</p>
+  <h2 class="font-serif text-[26px] md:text-[40px] tracking-[-0.015em] text-ink-900 mb-4 max-w-[28ch]">Send all your book highlights to Notion. The structure comes with it.</h2>
+  <p class="text-base text-ink-500 mb-10 md:mb-12 max-w-[60ch]">Archi writes two clean databases: a <em>Library</em> of books and a <em>Passages</em> store of highlights linked back to them. Searchable, sortable, yours.</p>
 
   <div class="grid gap-4 md:grid-cols-2">
     <div class="bg-paper-white border border-ink-100 rounded-[14px] p-5">
@@ -28,20 +28,20 @@ const notionLibraryRows = [
 
     <div class="bg-paper-white border border-ink-100 rounded-[14px] p-5">
       <div class="text-xs uppercase tracking-[0.12em] text-ink-500 mb-3">Notion · Library</div>
-      <table class="w-full text-sm">
+      <table class="w-full text-[13px] md:text-sm table-fixed">
         <thead>
           <tr class="text-ink-500 text-xs">
             <th class="text-left font-medium py-2 border-b border-ink-100">Title</th>
-            <th class="text-left font-medium py-2 border-b border-ink-100">Author</th>
-            <th class="text-right font-medium py-2 border-b border-ink-100">Passages</th>
+            <th class="text-left font-medium py-2 border-b border-ink-100 hidden sm:table-cell">Author</th>
+            <th class="text-right font-medium py-2 border-b border-ink-100 w-16">Passages</th>
           </tr>
         </thead>
         <tbody>
           {notionLibraryRows.map((row) => (
             <tr class="border-b border-paper-200">
-              <td class="py-2 text-ink-900">{row.title}</td>
-              <td class="py-2 text-ink-500">{row.author}</td>
-              <td class="py-2 text-right text-ink-500">{row.count}</td>
+              <td class="py-2 pr-2 text-ink-900 align-top">{row.title}</td>
+              <td class="py-2 pr-2 text-ink-500 hidden sm:table-cell align-top">{row.author}</td>
+              <td class="py-2 text-right text-ink-500 align-top">{row.count}</td>
             </tr>
           ))}
         </tbody>
