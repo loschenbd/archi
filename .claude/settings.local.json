@@ -29,7 +29,16 @@
       "Bash(python3 -c \"import json, sys; d=json.load\\(sys.stdin\\); print\\('cookies:', len\\(d.get\\('cookies', []\\)\\), 'origins:', len\\(d.get\\('origins', []\\)\\)\\); cookies = d.get\\('cookies', []\\); now=__import__\\('time'\\).time\\(\\); print\\('expiring cookies \\(sample\\):'\\); [print\\(c['name'], c['domain'], 'expires_in_days:', round\\(\\(c.get\\('expires',-1\\)-now\\)/86400,1\\) if c.get\\('expires',-1\\)>0 else 'session'\\) for c in cookies[:15]]\")",
       "mcp__claude_ai_Notion__notion-fetch",
       "Bash(pnpm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git rebase *)",
+      "Bash(git stash *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(pnpm --filter @archi/core --filter @archi/destination-notion --filter @archi/source-cloud-notebook --filter @archi/source-device-export --filter @archi/ui build)",
+      "Bash(git worktree *)",
+      "Bash(git branch *)",
+      "Bash(tmux list-sessions *)",
+      "Bash(tmux list-panes *)"
     ]
   }
 }
