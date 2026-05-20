@@ -36,11 +36,13 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        # --no-frozen-lockfile because pre-existing dependenciesMeta drift on
-        # source-device-export blocks frozen mode. The marketing package has
-        # no workspace dependencies, so lockfile drift outside its subgraph
-        # cannot affect this build.
-        run: pnpm install --no-frozen-lockfile --filter @archi/marketing...
+        # --no-frozen-lockfile: pre-existing dependenciesMeta drift on
+        # source-device-export blocks frozen mode.
+        # --ignore-scripts: workspace root postinstall rebuilds Electron native
+        # modules (better-sqlite3) which the marketing build doesn't need and
+        # which fails when desktop deps aren't installed.
+        # The marketing package has no workspace deps and no scripts.
+        run: pnpm install --no-frozen-lockfile --ignore-scripts --filter @archi/marketing...
 
       - name: Build site
         run: pnpm --filter @archi/marketing build
