@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
-import { autoUpdater } from "electron-updater";
+import electronUpdater from "electron-updater";
+const { autoUpdater } = electronUpdater;
 import { PreferencesStore } from "./preferences.js";
 import { UpdaterController, type AutoUpdaterLike } from "./updater.js";
 import { buildApplicationMenu, SUPPORT_URL } from "./menu.js";
@@ -40,6 +41,21 @@ const resolveAppAssetPath = (filename: string): string =>
   app.isPackaged
     ? path.join(process.resourcesPath, "assets", filename)
     : path.resolve(__dirname, "../../assets", filename);
+
+let cachedNotionRootIcon: { filename: string; contentType: string; bytes: Uint8Array } | null = null;
+const loadNotionRootIcon = (): { filename: string; contentType: string; bytes: Uint8Array } | undefined => {
+  if (cachedNotionRootIcon) {
+    return cachedNotionRootIcon;
+  }
+  try {
+    const filename = "logo-clean.png";
+    const bytes = fs.readFileSync(resolveAppAssetPath(filename));
+    cachedNotionRootIcon = { filename, contentType: "image/png", bytes };
+    return cachedNotionRootIcon;
+  } catch {
+    return undefined;
+  }
+};
 
 const state: {
   status: string;
@@ -137,6 +153,22 @@ function createWindow(): BrowserWindow {
     void window.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
     void window.loadFile(path.join(__dirname, "../renderer/index.html"));
+  }
+
+  if (!app.isPackaged && process.env.VITE_DEV_SERVER_URL) {
+    const url = new URL(process.env.VITE_DEV_SERVER_URL);
+    const fakeUpdate = url.searchParams.get("fakeUpdate");
+    if (fakeUpdate) {
+      window.webContents.once("did-finish-load", () => {
+        if (fakeUpdate === "available") {
+          window.webContents.send("archi:updater-status", { kind: "available", payload: { version: "9.9.9" } });
+        } else if (fakeUpdate === "downloaded") {
+          window.webContents.send("archi:updater-status", { kind: "downloaded", payload: { version: "9.9.9" } });
+        } else if (fakeUpdate === "progress") {
+          window.webContents.send("archi:updater-status", { kind: "progress", payload: { percent: 37 } });
+        }
+      });
+    }
   }
 
   window.once("ready-to-show", () => {
@@ -978,7 +1010,8 @@ app.whenReady().then(() => {
               integrationToken: notionToken,
               parentPageId: settings.notion.parentPageId,
               libraryDatabaseId: settings.notion.libraryDatabaseId,
-              passagesDatabaseId: settings.notion.passagesDatabaseId
+              passagesDatabaseId: settings.notion.passagesDatabaseId,
+              rootIcon: loadNotionRootIcon()
             });
 
             const onNotionProgress = (event: NotionSyncBatchProgressEvent): void => {
