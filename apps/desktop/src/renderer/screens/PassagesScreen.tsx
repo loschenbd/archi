@@ -40,7 +40,9 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
     getItemKey: (index) => filtered[index].id
   });
 
-  // When filters change, the result set may shift entirely; reset to the top.
+  // Reset scroll when the user changes filters. `passages` is intentionally
+  // omitted: a background sync appending more rows shouldn't yank the user's
+  // scroll back to the top.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [query, workFilter]);
