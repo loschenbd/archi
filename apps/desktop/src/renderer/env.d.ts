@@ -50,6 +50,7 @@ declare global {
       forceFullKindleSync: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
       refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
       cancelSync: () => Promise<{ requested: boolean; message: string }>;
+      openSupportLink: () => Promise<void>;
       listWorks: () => Promise<
         Array<{
           id: string;

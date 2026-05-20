@@ -1860,3 +1860,51 @@ select {
     transform: rotate(360deg);
   }
 }
+
+.support-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--ink-700);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.support-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-soft) 56%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+  color: var(--accent-strong);
+}
+
+.support-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.support-button:hover .support-button-icon {
+  opacity: 1;
+}
+
+.support-button-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layout.sidebar-collapsed .support-button {
+  justify-content: center;
+  padding: 8px;
+}
+}
