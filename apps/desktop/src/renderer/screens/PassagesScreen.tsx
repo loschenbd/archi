@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 type Passage = {
   id: string;
@@ -17,7 +18,10 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
   const [workFilter, setWorkFilter] = useState("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const works = useMemo(() => Array.from(new Set(passages.map((passage) => passage.workTitle))).sort(), [passages]);
+  const works = useMemo(
+    () => Array.from(new Set(passages.map((passage) => passage.workTitle))).sort(),
+    [passages]
+  );
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     return passages.filter((passage) => {
@@ -26,6 +30,20 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
       return workMatches && textMatches;
     });
   }, [passages, query, workFilter]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 180,
+    overscan: 6,
+    getItemKey: (index) => filtered[index].id
+  });
+
+  // When filters change, the result set may shift entirely; reset to the top.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [query, workFilter]);
 
   const copyPassage = async (passage: Passage): Promise<void> => {
     try {
@@ -39,6 +57,8 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
     }
   };
 
+  const virtualItems = virtualizer.getVirtualItems();
+
   return (
     <section className="passages-screen">
       <header className="screen-intro">
@@ -51,7 +71,11 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <select className="select-input" value={workFilter} onChange={(event) => setWorkFilter(event.target.value)}>
+        <select
+          className="select-input"
+          value={workFilter}
+          onChange={(event) => setWorkFilter(event.target.value)}
+        >
           <option value="all">All works</option>
           {works.map((work) => (
             <option key={work} value={work}>
@@ -66,50 +90,68 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
       {filtered.length === 0 ? (
         <p>No passages synced yet.</p>
       ) : (
-        <ul className="passages-list">
-          {filtered.map((passage) => (
-            <li key={passage.id} className="passage-card">
-              <span className="passage-card-mark" aria-hidden="true">
-                &ldquo;
-              </span>
-              <blockquote className="passage-card-body">{passage.body}</blockquote>
-              <footer className="passage-card-footer">
-                <p className="passage-card-attribution">
-                  <span className="passage-card-dash" aria-hidden="true">
-                    —
-                  </span>
-                  <span className="passage-card-title">{passage.workTitle}</span>
-                </p>
-                <div className="passage-card-actions">
-                  <button
-                    type="button"
-                    className="passage-card-action"
-                    onClick={() => onOpenWork(passage.workId)}
-                    title="Open this book in Library"
-                  >
-                    <span className="passage-card-action-icon" aria-hidden="true">
-                      ↗
+        <div ref={scrollRef} className="passages-list-scroll">
+          <div
+            className="passages-list-inner"
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
+            {virtualItems.map((virtualItem) => {
+              const passage = filtered[virtualItem.index];
+              return (
+                <div
+                  key={virtualItem.key}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  className="passages-list-row"
+                  style={{ transform: `translateY(${virtualItem.start}px)` }}
+                >
+                  <article className="passage-card">
+                    <span className="passage-card-mark" aria-hidden="true">
+                      &ldquo;
                     </span>
-                    Open book
-                  </button>
-                  <button
-                    type="button"
-                    className={`passage-card-action ${copiedId === passage.id ? "passage-card-action-success" : ""}`}
-                    onClick={() => {
-                      void copyPassage(passage);
-                    }}
-                    title="Copy quote to clipboard"
-                  >
-                    <span className="passage-card-action-icon" aria-hidden="true">
-                      {copiedId === passage.id ? "✓" : "⎘"}
-                    </span>
-                    {copiedId === passage.id ? "Copied" : "Copy"}
-                  </button>
+                    <blockquote className="passage-card-body">{passage.body}</blockquote>
+                    <footer className="passage-card-footer">
+                      <p className="passage-card-attribution">
+                        <span className="passage-card-dash" aria-hidden="true">
+                          —
+                        </span>
+                        <span className="passage-card-title">{passage.workTitle}</span>
+                      </p>
+                      <div className="passage-card-actions">
+                        <button
+                          type="button"
+                          className="passage-card-action"
+                          onClick={() => onOpenWork(passage.workId)}
+                          title="Open this book in Library"
+                        >
+                          <span className="passage-card-action-icon" aria-hidden="true">
+                            ↗
+                          </span>
+                          Open book
+                        </button>
+                        <button
+                          type="button"
+                          className={`passage-card-action ${
+                            copiedId === passage.id ? "passage-card-action-success" : ""
+                          }`}
+                          onClick={() => {
+                            void copyPassage(passage);
+                          }}
+                          title="Copy quote to clipboard"
+                        >
+                          <span className="passage-card-action-icon" aria-hidden="true">
+                            {copiedId === passage.id ? "✓" : "⎘"}
+                          </span>
+                          {copiedId === passage.id ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                    </footer>
+                  </article>
                 </div>
-              </footer>
-            </li>
-          ))}
-        </ul>
+              );
+            })}
+          </div>
+        </div>
       )}
     </section>
   );
