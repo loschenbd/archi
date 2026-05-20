@@ -1,0 +1,52 @@
+---
+const archiPassages = [
+  "The medium is the message.",
+  "All media exist to invest our lives with artificial perceptions.",
+  "Societies have always been shaped more by the nature of the media…",
+];
+
+const notionLibraryRows = [
+  { title: "Understanding Media", author: "Marshall McLuhan", count: 84 },
+  { title: "The Shallows", author: "Nicholas Carr", count: 41 },
+  { title: "Amusing Ourselves to Death", author: "Neil Postman", count: 22 },
+];
+---
+<section id="notion" class="mx-auto max-w-[1080px] px-6 py-20 md:py-28">
+  <p class="text-xs uppercase tracking-[0.18em] text-ink-500 mb-3">In Notion</p>
+  <h2 class="font-serif text-[28px] md:text-[40px] tracking-[-0.015em] text-ink-900 mb-4 max-w-[26ch]">Send any book to Notion. The structure comes with it.</h2>
+  <p class="text-base text-ink-500 mb-12 max-w-[60ch]">Archi writes two clean databases — a <em>Library</em> of books and a <em>Passages</em> store of highlights linked back to them. Searchable, sortable, yours.</p>
+
+  <div class="grid gap-4 md:grid-cols-2">
+    <div class="bg-paper-white border border-ink-100 rounded-[14px] p-5">
+      <div class="text-xs uppercase tracking-[0.12em] text-ink-500 mb-3">Archi · Understanding Media</div>
+      <ul class="space-y-3">
+        {archiPassages.map((p) => (
+          <li class="font-serif text-[15px] text-ink-900 leading-snug border-l-2 border-accent pl-3">{p}</li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="bg-paper-white border border-ink-100 rounded-[14px] p-5">
+      <div class="text-xs uppercase tracking-[0.12em] text-ink-500 mb-3">Notion · Library</div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-ink-500 text-xs">
+            <th class="text-left font-medium py-2 border-b border-ink-100">Title</th>
+            <th class="text-left font-medium py-2 border-b border-ink-100">Author</th>
+            <th class="text-right font-medium py-2 border-b border-ink-100">Passages</th>
+          </tr>
+        </thead>
+        <tbody>
+          {notionLibraryRows.map((row) => (
+            <tr class="border-b border-paper-200">
+              <td class="py-2 text-ink-900">{row.title}</td>
+              <td class="py-2 text-ink-500">{row.author}</td>
+              <td class="py-2 text-right text-ink-500">{row.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="text-xs text-ink-500 mt-4">→ Each Library row links to its rows in the Passages database.</p>
+    </div>
+  </div>
+</section>

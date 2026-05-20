@@ -1,0 +1,49 @@
+---
+const rows = [
+  {
+    quote: '"The medium is the message" because it is the medium that shapes and controls the scale and form of human association.',
+    book: "Understanding Media",
+    author: "Marshall McLuhan",
+    loc: "loc. 412",
+  },
+  {
+    quote: "In a culture like ours, long accustomed to splitting and dividing all things as a means of control, it is sometimes a bit of a shock to be reminded that, in operational and practical fact, the medium is the message.",
+    book: "Understanding Media",
+    author: "Marshall McLuhan",
+    loc: "loc. 418",
+  },
+  {
+    quote: "… for what we call architecture is, in fact, a series of choices about what to keep — and the medium is the archive.",
+    book: "The Shape of Reading",
+    author: "—",
+    loc: "loc. 1042",
+  },
+];
+const QUERY = "the medium is the";
+
+function highlight(text: string, query: string): string {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(escaped, "gi"), (m) => `<mark>${m}</mark>`);
+}
+---
+<div class="rounded-[14px] border border-ink-100 bg-paper-white p-4 shadow-[0_1px_0_rgba(42,37,32,0.03),0_24px_60px_-28px_rgba(42,37,32,0.18)]">
+  <div class="flex items-center gap-2.5 rounded-[12px] border border-ink-100 bg-paper-50 px-3.5 py-2.5 text-sm mb-3.5">
+    <span class="text-ink-300" aria-hidden="true">⌕</span>
+    <span class="text-ink-900">{QUERY}</span>
+    <span class="ml-auto text-[11px] text-ink-500 bg-paper-100 border border-ink-100 px-2.5 py-0.5 rounded-full">{rows.length} results</span>
+  </div>
+
+  {rows.map((row, i) => (
+    <div class={`px-1 py-3.5 ${i === 0 ? "" : "border-t border-paper-200"}`}>
+      <p class="font-serif text-[17px] leading-[1.45] text-ink-900 mb-2" set:html={highlight(row.quote, QUERY)} />
+      <p class="text-xs text-ink-500 flex gap-2.5 items-center">
+        <span>{row.book}</span>
+        <span class="w-[3px] h-[3px] bg-ink-300 rounded-full" aria-hidden="true"></span>
+        <span>{row.author}</span>
+        <span class="w-[3px] h-[3px] bg-ink-300 rounded-full" aria-hidden="true"></span>
+        <span>{row.loc}</span>
+      </p>
+    </div>
+  ))}
+</div>
+

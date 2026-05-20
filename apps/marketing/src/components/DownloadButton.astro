@@ -1,0 +1,19 @@
+---
+interface Props {
+  variant?: "primary" | "secondary";
+  label?: string;
+  class?: string;
+}
+
+const { variant = "primary", label = "Download for macOS", class: extraClass = "" } = Astro.props;
+const RELEASE_URL = "https://github.com/loschenbd/archi/releases/latest/download/Archi-arm64.dmg";
+
+const base = "inline-flex items-center justify-center rounded-[12px] px-5 py-2.5 text-sm font-semibold transition-colors";
+const styles =
+  variant === "primary"
+    ? "bg-ink-900 text-paper-white border border-ink-900 hover:bg-[#1c1814]"
+    : "bg-paper-100 text-ink-700 border border-ink-100 hover:bg-paper-200";
+---
+<a class={`${base} ${styles} ${extraClass}`} href={RELEASE_URL} rel="noopener">
+  {label}
+</a>

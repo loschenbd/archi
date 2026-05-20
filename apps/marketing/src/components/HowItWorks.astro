@@ -1,0 +1,30 @@
+---
+const steps = [
+  {
+    title: "Connect your accounts.",
+    body: "Just connect your accounts and Archi takes it from there.",
+  },
+  {
+    title: "Archi imports and dedupes locally.",
+    body: "Highlights and notes land in a local SQLite store. No servers. No upload.",
+  },
+  {
+    title: "Search instantly — or send to Notion.",
+    body: "Full-text search across every book. One click sends any book (or your whole library) to Notion.",
+  },
+];
+---
+<section id="how-it-works" class="mx-auto max-w-[1080px] px-6 py-20 md:py-28">
+  <p class="text-xs uppercase tracking-[0.18em] text-ink-500 mb-3">How it works</p>
+  <h2 class="font-serif text-[28px] md:text-[40px] tracking-[-0.015em] text-ink-900 mb-12 max-w-[20ch]">Three steps, then it's just there.</h2>
+
+  <ol class="grid gap-6 md:grid-cols-3">
+    {steps.map((step, i) => (
+      <li class="bg-paper-white border border-ink-100 rounded-[14px] p-6">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-paper-200 text-ink-700 font-serif text-sm mb-4">{i + 1}</span>
+        <h3 class="font-serif text-[20px] text-ink-900 mb-2 leading-tight">{step.title}</h3>
+        <p class="text-sm text-ink-500 leading-relaxed">{step.body}</p>
+      </li>
+    ))}
+  </ol>
+</section>
