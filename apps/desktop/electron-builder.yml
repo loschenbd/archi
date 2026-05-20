@@ -11,8 +11,6 @@ files:
   - "!node_modules/@archi/*/tsconfig*.json"
 asarUnpack:
   - "**/*.node"
-afterSign: scripts/notarize.mjs
-afterAllArtifactBuild: scripts/staple-dmg.mjs
 mac:
   category: public.app-category.productivity
   icon: assets/icon.icns
@@ -20,7 +18,8 @@ mac:
   gatekeeperAssess: false
   entitlements: assets/entitlements.mac.plist
   entitlementsInherit: assets/entitlements.mac.plist
-  notarize: false
+  notarize:
+    teamId: "74KV536J36"
   target:
     - dmg
 publish:
