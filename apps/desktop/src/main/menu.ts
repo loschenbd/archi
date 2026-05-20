@@ -1,6 +1,6 @@
 import { Menu, shell, type MenuItemConstructorOptions } from "electron";
 
-export const SUPPORT_URL = "https://buymeacoffee.com/<your-handle>";
+export const SUPPORT_URL = "https://buymeacoffee.com/benjlos";
 
 type MenuActions = {
   onCheckForUpdates: () => void;
