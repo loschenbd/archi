@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { applyPageMedia, chooseMedia, emojiFor, isMediaUrlRejection, type MediaNotionClient } from "../src/media.js";
+import {
+  applyPageMedia,
+  chooseMedia,
+  emojiFor,
+  isMediaUrlRejection,
+  upgradeAmazonImageUrl,
+  type MediaNotionClient
+} from "../src/media.js";
 
 const baseWork = {
   displayTitle: "Book Title",
@@ -52,6 +59,59 @@ describe("chooseMedia", () => {
   it("uses the article emoji for article work type", () => {
     const result = chooseMedia({ ...baseWork, workType: "article", coverImageUrl: undefined });
     expect(result.icon).toEqual({ type: "emoji", emoji: "📰" });
+  });
+
+  it("strips Amazon thumbnail size tokens so Notion gets the full-res cover", () => {
+    const result = chooseMedia({
+      ...baseWork,
+      coverImageUrl: "https://m.media-amazon.com/images/I/71J5JKvLAL._SY425_.jpg"
+    });
+    expect(result).toEqual({
+      icon: { type: "external_url", url: "https://m.media-amazon.com/images/I/71J5JKvLAL.jpg" },
+      coverUrl: "https://m.media-amazon.com/images/I/71J5JKvLAL.jpg"
+    });
+  });
+});
+
+describe("upgradeAmazonImageUrl", () => {
+  it("strips a single _SY425_ token", () => {
+    expect(upgradeAmazonImageUrl("https://m.media-amazon.com/images/I/71J5JKvLAL._SY425_.jpg")).toEqual(
+      "https://m.media-amazon.com/images/I/71J5JKvLAL.jpg"
+    );
+  });
+
+  it("strips stacked tokens like _AC_UF1000,1000_QL80_", () => {
+    expect(
+      upgradeAmazonImageUrl("https://m.media-amazon.com/images/I/91xJ5xZl5RL._AC_UF1000,1000_QL80_.jpg")
+    ).toEqual("https://m.media-amazon.com/images/I/91xJ5xZl5RL.jpg");
+  });
+
+  it("strips tokens from images-na.ssl-images-amazon.com", () => {
+    expect(
+      upgradeAmazonImageUrl("https://images-na.ssl-images-amazon.com/images/I/abc._SX160_SY237_.jpg")
+    ).toEqual("https://images-na.ssl-images-amazon.com/images/I/abc.jpg");
+  });
+
+  it("preserves dots within the image id (e.g. .01)", () => {
+    expect(
+      upgradeAmazonImageUrl("https://m.media-amazon.com/images/P/B07RTVNL4P.01._SCLZZZZZZZ_SX500_.jpg")
+    ).toEqual("https://m.media-amazon.com/images/P/B07RTVNL4P.01.jpg");
+  });
+
+  it("returns Amazon URLs without size tokens unchanged", () => {
+    expect(upgradeAmazonImageUrl("https://m.media-amazon.com/images/I/71J5JKvLAL.jpg")).toEqual(
+      "https://m.media-amazon.com/images/I/71J5JKvLAL.jpg"
+    );
+  });
+
+  it("leaves non-Amazon URLs untouched even if they share the pattern", () => {
+    expect(upgradeAmazonImageUrl("https://example.com/images/abc._SY425_.jpg")).toEqual(
+      "https://example.com/images/abc._SY425_.jpg"
+    );
+  });
+
+  it("returns undefined for undefined input", () => {
+    expect(upgradeAmazonImageUrl(undefined)).toBeUndefined();
   });
 });
 

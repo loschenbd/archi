@@ -21,8 +21,21 @@ export function emojiFor(workType: string): string {
   return EMOJI_BY_TYPE[workType] ?? "📌";
 }
 
+// Amazon serves cover images with size-restriction tokens baked into the URL
+// (e.g. `._SY425_.jpg`, `._AC_UF1000,1000_QL80_.jpg`). Stripping the token block
+// returns the original full-resolution image — Notion stretches covers wide, so
+// the thumbnail variants look grainy.
+const AMAZON_IMAGE_HOST = /^https:\/\/(?:[a-z0-9-]+\.)*(?:media-amazon|ssl-images-amazon|images-amazon)\.com\//i;
+const AMAZON_SIZE_TOKEN = /\._[A-Z0-9,_]+_(\.[A-Za-z0-9]+)$/;
+
+export function upgradeAmazonImageUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  if (!AMAZON_IMAGE_HOST.test(url)) return url;
+  return url.replace(AMAZON_SIZE_TOKEN, "$1");
+}
+
 export function chooseMedia(work: Pick<NotionWorkInput, "workType" | "coverImageUrl">): DesiredMedia {
-  const url = work.coverImageUrl?.trim();
+  const url = upgradeAmazonImageUrl(work.coverImageUrl?.trim());
   if (url) {
     return {
       icon: { type: "external_url", url },
