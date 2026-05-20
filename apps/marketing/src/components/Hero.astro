@@ -2,25 +2,29 @@
 import DownloadButton from "./DownloadButton.astro";
 import SearchDemo from "./SearchDemo.astro";
 ---
-<section id="hero" class="mx-auto max-w-[1080px] px-6 pt-12 pb-16 md:pt-20 md:pb-24">
-  <h1 class="font-serif text-[42px] leading-[1.06] md:text-[64px] tracking-[-0.02em] text-ink-900 max-w-[14ch] mb-5">
-    Every Kindle highlight you've ever made. Finally searchable.
-  </h1>
-  <p class="text-base md:text-lg text-ink-500 leading-relaxed max-w-[55ch] mb-8">
-    Archi is a quiet macOS app that pulls your Kindle highlights into a local library you can actually search. Send any book to Notion when you want it there.
-  </p>
+<section id="hero" class="mx-auto max-w-[1200px] px-6 pt-12 pb-16 md:pt-20 md:pb-24">
+  <div class="grid gap-10 md:gap-12 md:grid-cols-2 md:items-center">
+    <div>
+      <h1 class="font-serif text-[42px] leading-[1.06] md:text-[56px] lg:text-[64px] tracking-[-0.02em] text-ink-900 mb-5">
+        Every Kindle highlight you've ever made. Finally searchable.
+      </h1>
+      <p class="text-base md:text-lg text-ink-500 leading-relaxed mb-8 max-w-[50ch]">
+        Archi is a quiet macOS app that pulls your Kindle highlights into a local library you can actually search. Send any book to Notion when you want it there.
+      </p>
 
-  <div class="flex flex-wrap items-center gap-3 mb-12">
-    <DownloadButton variant="primary" />
-    <a
-      class="inline-flex items-center justify-center rounded-[12px] px-5 py-2.5 text-sm font-semibold bg-paper-100 text-ink-700 border border-ink-100 hover:bg-paper-200"
-      href="https://github.com/loschenbd/archi"
-      rel="noopener"
-    >View on GitHub</a>
-    <span class="text-xs text-ink-500 ml-1">v0.1 · macOS 12+ · free &amp; open source</span>
-  </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <DownloadButton variant="primary" />
+        <a
+          class="inline-flex items-center justify-center rounded-[12px] px-5 py-2.5 text-sm font-semibold bg-paper-100 text-ink-700 border border-ink-100 hover:bg-paper-200"
+          href="https://github.com/loschenbd/archi"
+          rel="noopener"
+        >View on GitHub</a>
+      </div>
+      <p class="text-xs text-ink-500 mt-4">v0.1 · macOS 12+ · free &amp; open source</p>
+    </div>
 
-  <div class="max-w-[760px]">
-    <SearchDemo />
+    <div>
+      <SearchDemo />
+    </div>
   </div>
 </section>
