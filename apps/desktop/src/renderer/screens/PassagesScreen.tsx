@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 
 type Passage = {
   id: string;
@@ -37,7 +37,7 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 180,
     overscan: 6,
-    getItemKey: (index) => filtered[index]?.id ?? index
+    getItemKey: (index: number) => filtered[index]?.id ?? index
   });
 
   // Reset scroll when the user changes filters. `passages` is intentionally
@@ -97,7 +97,7 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
             className="passages-list-inner"
             style={{ height: `${virtualizer.getTotalSize()}px` }}
           >
-            {virtualItems.map((virtualItem) => {
+            {virtualItems.map((virtualItem: VirtualItem) => {
               const passage = filtered[virtualItem.index];
               if (!passage) {
                 return null;
