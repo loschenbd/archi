@@ -45,11 +45,11 @@ Clicking a search result navigates the user to the Passages tab but doesn't
 scroll to or highlight the specific passage. PassagesScreen has no
 `selectedPassageId` concept yet; deep-linking is a follow-up enhancement.
 
-### GlobalSearchBar typecheck error
-`apps/desktop/src/renderer/components/GlobalSearchBar.tsx:49` has a
-`TS2532: Object is possibly 'undefined'` error introduced during the UI tasks.
-Functionally works (`useState(0)` is initialized) but typecheck reports this
-1 error. Fix by adding a guard or non-null assertion.
+### GlobalSearchBar typecheck (resolved)
+`apps/desktop/src/renderer/components/GlobalSearchBar.tsx:49` originally
+had a `TS2532: Object is possibly 'undefined'` from `noUncheckedIndexedAccess`.
+Fixed by destructuring `results[highlighted]` into a `target` variable with
+a truthy guard. Typecheck now exits 0 on a clean run.
 
 ### Bundle size grew ~38 MB
 The DMG grew from 154 MB → 192 MB because `onnxruntime-node` ships native
