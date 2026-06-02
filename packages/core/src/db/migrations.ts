@@ -121,6 +121,8 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
         VALUES ('delete', old.rowid, old.body, old.reader_note);
         INSERT INTO passages_fts(rowid, body, reader_note)
         VALUES (new.rowid, new.body, new.reader_note);
+        -- Explicit DELETE required: FK CASCADE only fires on DELETE of the parent row,
+        -- not on UPDATE. Without these, embeddings go stale after a body/note edit.
         DELETE FROM embedding_state WHERE passage_id = new.id;
         DELETE FROM passage_embeddings WHERE passage_id = new.id;
       END;
