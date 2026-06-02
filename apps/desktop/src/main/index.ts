@@ -1211,6 +1211,7 @@ app.whenReady().then(() => {
       inFlightRunStartedAtMs = null;
       cancelSyncRequested = false;
       cancelSyncController = null;
+      searchModule.indexer.tick();
     });
     return inFlightSync;
   };
