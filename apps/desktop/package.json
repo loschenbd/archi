@@ -30,6 +30,7 @@
   "dependencies": {
     "@archi/core": "workspace:*",
     "@archi/destination-notion": "workspace:*",
+    "@archi/search": "workspace:*",
     "@archi/source-cloud-notebook": "workspace:*",
     "@archi/source-device-export": "workspace:*",
     "@archi/ui": "workspace:*",
@@ -62,6 +63,9 @@
       "injected": true
     },
     "@archi/destination-notion": {
+      "injected": true
+    },
+    "@archi/search": {
       "injected": true
     },
     "@archi/source-cloud-notebook": {

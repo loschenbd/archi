@@ -36,6 +36,9 @@ importers:
       '@archi/destination-notion':
         specifier: workspace:*
         version: link:../../packages/destination-notion
+      '@archi/search':
+        specifier: workspace:*
+        version: link:../../packages/search
       '@archi/source-cloud-notebook':
         specifier: workspace:*
         version: link:../../packages/source-cloud-notebook
@@ -118,6 +121,8 @@ importers:
       '@archi/core':
         injected: true
       '@archi/destination-notion':
+        injected: true
+      '@archi/search':
         injected: true
       '@archi/source-cloud-notebook':
         injected: true
