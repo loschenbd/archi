@@ -45,8 +45,9 @@ export function GlobalSearchBar({ onOpenPassage, onOpenSearchScreen }: Props) {
   }, [text, open]);
 
   const submit = useCallback(() => {
-    if (results.length > 0) {
-      onOpenPassage(results[highlighted].passageId);
+    const target = results[highlighted];
+    if (target) {
+      onOpenPassage(target.passageId);
       setOpen(false);
     }
   }, [results, highlighted, onOpenPassage]);
