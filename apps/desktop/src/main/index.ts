@@ -1218,7 +1218,16 @@ app.whenReady().then(() => {
     }
     backgroundSyncStarted = true;
     schedule();
-    void runSync();
+    runSync().catch((error) => {
+      try {
+        fs.appendFileSync(
+          logPath,
+          `${new Date().toISOString()} background_sync_failed error=${getErrorMessage(error)}\n`
+        );
+      } catch {
+        // best effort — never let a logging failure unbalance the boot path
+      }
+    });
   };
 
   const schedule = (): void => {
@@ -1708,38 +1717,59 @@ type AppSettings = {
 };
 
 function loadSettings(settingsPath: string): AppSettings {
+  const createDefaults = (): AppSettings => ({
+    deviceExportPath: path.join(process.env.HOME ?? ".", "Documents", "My Clippings.txt"),
+    syncIntervalHours: Number(process.env.SYNC_INTERVAL_HOURS ?? "6"),
+    onboarding: {
+      completed: false
+    },
+    cloud: {
+      enabled: process.env.CLOUD_SYNC_ENABLED === "true",
+      notebookUrl: process.env.CLOUD_NOTEBOOK_URL ?? "https://read.amazon.com/notebook",
+      storageStatePath: path.join(process.env.HOME ?? ".", ".archi-cloud-storage-state.json"),
+      profilePath: path.join(process.env.HOME ?? ".", ".archi-cloud-profile"),
+      fullSweepIntervalDays: 30
+    },
+    notion: {
+      integrationToken: process.env.NOTION_INTEGRATION_TOKEN ?? undefined,
+      parentPageId: process.env.NOTION_PARENT_PAGE_ID,
+      libraryDatabaseId: process.env.NOTION_LIBRARY_DB_ID,
+      passagesDatabaseId: process.env.NOTION_PASSAGES_DB_ID
+    }
+  });
+
   if (!fs.existsSync(settingsPath)) {
-    const defaults: AppSettings = {
-      deviceExportPath: path.join(process.env.HOME ?? ".", "Documents", "My Clippings.txt"),
-      syncIntervalHours: Number(process.env.SYNC_INTERVAL_HOURS ?? "6"),
-      onboarding: {
-        completed: false
-      },
-      cloud: {
-        enabled: process.env.CLOUD_SYNC_ENABLED === "true",
-        notebookUrl: process.env.CLOUD_NOTEBOOK_URL ?? "https://read.amazon.com/notebook",
-        storageStatePath: path.join(process.env.HOME ?? ".", ".archi-cloud-storage-state.json"),
-        profilePath: path.join(process.env.HOME ?? ".", ".archi-cloud-profile"),
-        fullSweepIntervalDays: 30
-      },
-      notion: {
-        integrationToken: process.env.NOTION_INTEGRATION_TOKEN ?? undefined,
-        parentPageId: process.env.NOTION_PARENT_PAGE_ID,
-        libraryDatabaseId: process.env.NOTION_LIBRARY_DB_ID,
-        passagesDatabaseId: process.env.NOTION_PASSAGES_DB_ID
-      }
-    };
+    const defaults = createDefaults();
     fs.writeFileSync(settingsPath, JSON.stringify(defaults, null, 2));
     return defaults;
   }
 
-  const parsed = JSON.parse(fs.readFileSync(settingsPath, "utf8")) as Partial<AppSettings> & {
+  type ParsedSettings = Partial<AppSettings> & {
     onboarding?: {
       completed?: boolean;
       completedAt?: string;
       completedSteps?: string[];
     };
   };
+  let parsed: ParsedSettings;
+  try {
+    parsed = JSON.parse(fs.readFileSync(settingsPath, "utf8")) as ParsedSettings;
+  } catch {
+    // Corrupt or unreadable settings.json — preserve it for forensics and
+    // fall back to defaults so the app can still boot.
+    try {
+      fs.renameSync(settingsPath, `${settingsPath}.corrupt-${Date.now()}.bak`);
+    } catch {
+      // best effort — if the rename fails the writeFileSync below will overwrite
+    }
+    const defaults = createDefaults();
+    try {
+      fs.writeFileSync(settingsPath, JSON.stringify(defaults, null, 2));
+    } catch {
+      // best effort — in-memory defaults still let the app boot
+    }
+    return defaults;
+  }
   const resolved: AppSettings = {
     deviceExportPath: parsed.deviceExportPath ?? path.join(process.env.HOME ?? ".", "Documents", "My Clippings.txt"),
     syncIntervalHours: Number(parsed.syncIntervalHours ?? process.env.SYNC_INTERVAL_HOURS ?? "6"),
@@ -1777,6 +1807,24 @@ function loadSettings(settingsPath: string): AppSettings {
       ? parsed.onboarding?.completedAt ?? new Date().toISOString()
       : undefined;
     saveSettings(settingsPath, resolved);
+  } else if (parsed.onboarding === undefined) {
+    // Settings file predates the onboarding flag entirely. If there's evidence the user
+    // already configured the app (Notion token/IDs, cloud enabled, custom export path),
+    // mark onboarding complete so the upgrade doesn't push them back through the welcome
+    // gate. A truly-empty settings file (manual reset) still falls through to onboarding.
+    const defaultDeviceExportPath = path.join(process.env.HOME ?? ".", "Documents", "My Clippings.txt");
+    const hasUpgradeEvidence =
+      typeof parsed.notion?.integrationToken === "string" ||
+      typeof parsed.notion?.parentPageId === "string" ||
+      typeof parsed.notion?.libraryDatabaseId === "string" ||
+      typeof parsed.notion?.passagesDatabaseId === "string" ||
+      parsed.cloud?.enabled === true ||
+      (typeof parsed.deviceExportPath === "string" && parsed.deviceExportPath !== defaultDeviceExportPath);
+    if (hasUpgradeEvidence) {
+      resolved.onboarding.completed = true;
+      resolved.onboarding.completedAt = new Date().toISOString();
+      saveSettings(settingsPath, resolved);
+    }
   }
 
   return resolved;
