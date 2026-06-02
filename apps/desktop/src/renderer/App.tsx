@@ -6,13 +6,14 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { PassagesScreen } from "./screens/PassagesScreen";
+import { SearchScreen } from "./screens/SearchScreen";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Connections", "Library", "Passages", "Logs"] as const;
+const screens = ["Home", "Connections", "Library", "Passages", "Search", "Logs"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -43,6 +44,12 @@ const screenIcons: Record<Screen, JSX.Element> = {
       <path d="M8.5 6c0-1.4 1-2.5 2.5-2.5" />
       <path d="M8.5 6v2c0 1 .8 2 2 2" />
       <path d="M8.5 6h2.8v4H8.5z" />
+    </svg>
+  ),
+  Search: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="7" cy="7" r="4" />
+      <path d="M10 10l3 3" />
     </svg>
   ),
   Logs: (
@@ -692,6 +699,14 @@ export function App(): JSX.Element {
             onOpenWork={(workId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Search":
+        return (
+          <SearchScreen
+            onOpenPassage={() => {
+              setActiveScreen("Passages");
             }}
           />
         );
