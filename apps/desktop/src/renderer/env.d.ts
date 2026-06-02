@@ -1,5 +1,7 @@
 export {};
 
+import type { IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
+
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
 type SyncProgressPhase =
@@ -201,6 +203,10 @@ declare global {
       >;
       onSyncProgress: (listener: (event: SyncProgressEvent) => void) => void;
       offSyncProgress: (listener: (event: SyncProgressEvent) => void) => void;
+      search: {
+        query: (q: SearchQuery) => Promise<SearchResponse>;
+        indexerStatus: () => Promise<IndexerStatus>;
+      };
     };
   }
 }

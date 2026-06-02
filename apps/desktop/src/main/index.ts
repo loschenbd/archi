@@ -24,6 +24,8 @@ import {
   type NotionAuthStore
 } from "./connections.js";
 import { CredentialStore } from "./credentialStore.js";
+import { createSearchModule, type SearchModule } from "./searchModule.js";
+import { registerSearchIpc } from "./ipc/searchIpc.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -207,6 +209,8 @@ app.whenReady().then(() => {
   if (backfilledPositions > 0) {
     console.log(`[archi] Backfilled position for ${backfilledPositions} cloud passages from external_passage_id.`);
   }
+
+  const searchModule: SearchModule = createSearchModule(db);
 
   const emitSyncProgress = (
     params: Omit<SyncProgressEvent, "at" | "elapsedMs"> & { startedAtMs: number; persist?: boolean }
@@ -1651,6 +1655,8 @@ app.whenReady().then(() => {
   ipcMain.handle("archi:set-preference", (_event, { key, value }: { key: string; value: unknown }) => {
     preferences.set(key, value);
   });
+
+  registerSearchIpc(searchModule);
 
   createWindow();
 

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import type { IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
 
 type SyncState = {
   status: string;
@@ -210,6 +211,12 @@ const api = {
       ipcRenderer.invoke("archi:get-preference", { key, fallback }),
     set: (key: string, value: unknown): Promise<void> =>
       ipcRenderer.invoke("archi:set-preference", { key, value })
+  },
+  search: {
+    query: (q: SearchQuery): Promise<SearchResponse> =>
+      ipcRenderer.invoke("archi:search:query", q),
+    indexerStatus: (): Promise<IndexerStatus> =>
+      ipcRenderer.invoke("archi:search:indexerStatus")
   }
 };
 
