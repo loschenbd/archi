@@ -13,3 +13,7 @@ test-results
 apps/desktop/release
 apps/desktop/.packaged-app-test
 apps/desktop/release-deploytest
+
+# Bundled embedding model assets (fetched at build time)
+apps/desktop/resources/models/bge-small-en-v1.5/
+!apps/desktop/resources/models/.gitkeep
