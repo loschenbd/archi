@@ -216,7 +216,9 @@ const api = {
     query: (q: SearchQuery): Promise<SearchResponse> =>
       ipcRenderer.invoke("archi:search:query", q),
     indexerStatus: (): Promise<IndexerStatus> =>
-      ipcRenderer.invoke("archi:search:indexerStatus")
+      ipcRenderer.invoke("archi:search:indexerStatus"),
+    startIndexing: (): Promise<{ started: boolean }> =>
+      ipcRenderer.invoke("archi:search:startIndexing")
   }
 };
 

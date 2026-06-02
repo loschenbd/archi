@@ -206,6 +206,7 @@ declare global {
       search: {
         query: (q: SearchQuery) => Promise<SearchResponse>;
         indexerStatus: () => Promise<IndexerStatus>;
+        startIndexing: () => Promise<{ started: boolean }>;
       };
     };
   }

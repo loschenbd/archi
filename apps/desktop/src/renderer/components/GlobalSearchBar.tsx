@@ -61,9 +61,10 @@ export function GlobalSearchBar({ onOpenPassage, onOpenSearchScreen }: Props) {
     <div className="global-search-bar">
       <input
         ref={inputRef}
+        className="global-search-bar__input"
         type="search"
         value={text}
-        placeholder="Search highlights… (⌘K)"
+        placeholder="Search highlights…"
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onChange={(e) => setText(e.target.value)}
@@ -76,6 +77,7 @@ export function GlobalSearchBar({ onOpenPassage, onOpenSearchScreen }: Props) {
         }}
         aria-label="Global search"
       />
+      <span className="global-search-bar__shortcut" aria-hidden="true">⌘K</span>
       {open && results.length > 0 && (
         <div className="global-search-bar__dropdown" role="listbox">
           {results.map((r, i) => (
@@ -94,7 +96,8 @@ export function GlobalSearchBar({ onOpenPassage, onOpenSearchScreen }: Props) {
             </div>
           ))}
           <button type="button" className="global-search-bar__see-all" onMouseDown={(e) => { e.preventDefault(); escalate(); }}>
-            ⌘↵ See all results
+            <span>See all results</span>
+            <kbd>⌘↵</kbd>
           </button>
         </div>
       )}

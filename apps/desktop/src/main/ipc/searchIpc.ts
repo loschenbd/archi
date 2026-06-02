@@ -10,4 +10,12 @@ export function registerSearchIpc(module: SearchModule): void {
   ipcMain.handle("archi:search:indexerStatus", async () => {
     return module.indexer.getStatus();
   });
+
+  // Manual trigger: kicks the indexer. Returns immediately; work happens in background.
+  // Useful for v1 where automatic startup-tick is disabled to avoid main-thread freeze
+  // during the initial model load.
+  ipcMain.handle("archi:search:startIndexing", async () => {
+    module.indexer.tick();
+    return { started: true };
+  });
 }

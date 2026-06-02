@@ -175,7 +175,7 @@ function hydrateResult(
     passageId: String(row.passage_id),
     body,
     readerNote: (row.reader_note as string | null) ?? undefined,
-    snippet: body.length > 240 ? `${body.slice(0, 240)}…` : body,
+    snippet: body,
     work: {
       id: String(row.work_id),
       displayTitle: String(row.display_title),
