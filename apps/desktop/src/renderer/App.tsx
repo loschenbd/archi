@@ -715,6 +715,7 @@ export function App(): JSX.Element {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
             }}
+            onOpenSearchScreen={openSearchScreenWithQuery}
           />
         );
       case "Search":
@@ -739,6 +740,7 @@ export function App(): JSX.Element {
     isSyncing,
     logs,
     openPassageFromSearch,
+    openSearchScreenWithQuery,
     passages,
     recentActivity,
     searchInitialQuery,

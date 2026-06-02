@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
+import { FindSimilarButton } from "../components/FindSimilarButton";
 
 type Passage = {
   id: string;
@@ -11,6 +12,7 @@ type Passage = {
 type Props = {
   passages: Passage[];
   onOpenWork: (workId: string) => void;
+  onOpenSearchScreen: (initialQuery: string) => void;
 };
 
 function highlightMatches(text: string, query: string): ReactNode {
@@ -27,7 +29,7 @@ function highlightMatches(text: string, query: string): ReactNode {
   );
 }
 
-export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
+export function PassagesScreen({ passages, onOpenWork, onOpenSearchScreen }: Props): JSX.Element {
   const [query, setQuery] = useState("");
   const [workFilter, setWorkFilter] = useState("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -139,6 +141,10 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
                         <span className="passage-card-title">{passage.workTitle}</span>
                       </p>
                       <div className="passage-card-actions">
+                        <FindSimilarButton
+                          passageBody={passage.body}
+                          onOpenSearchScreen={onOpenSearchScreen}
+                        />
                         <button
                           type="button"
                           className="passage-card-action"
