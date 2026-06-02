@@ -189,6 +189,9 @@ importers:
       better-sqlite3:
         specifier: ^11.10.0
         version: 11.10.0
+      sqlite-vec:
+        specifier: ^0.1.6
+        version: 0.1.9
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.12

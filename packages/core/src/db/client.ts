@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import * as sqliteVec from "sqlite-vec";
 import { MIGRATIONS } from "./migrations.js";
 
 export type CoreDatabase = Database.Database;
@@ -7,6 +8,7 @@ export function openCoreDatabase(path: string): CoreDatabase {
   const db = new Database(path);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  sqliteVec.load(db);
   applyMigrations(db);
   return db;
 }
