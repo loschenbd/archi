@@ -11,9 +11,12 @@ files:
   - "!node_modules/@archi/*/tsconfig*.json"
 asarUnpack:
   - "**/*.node"
+  - "**/*.dylib"
   - "node_modules/sqlite-vec/**"
   - "node_modules/sqlite-vec-darwin-arm64/**"
   - "node_modules/sqlite-vec-darwin-x64/**"
+  - "node_modules/onnxruntime-node/**"
+  - "node_modules/@xenova/**"
 extraResources:
   - from: resources/models
     to: models
