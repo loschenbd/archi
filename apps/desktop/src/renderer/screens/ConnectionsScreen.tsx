@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { IndexerStatus } from "@archi/search";
 
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
@@ -52,6 +53,77 @@ type Props = {
   onRefreshNotionMedia: () => void;
   isSyncing: boolean;
 };
+
+function SearchSettingsPanel(): JSX.Element {
+  const [status, setStatus] = useState<IndexerStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const next = await window.archi.search.indexerStatus();
+        if (!cancelled) setStatus(next);
+      } catch {
+        /* ignore — search may be unavailable in some environments */
+      }
+    };
+    void load();
+    const interval = setInterval(() => void load(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const indexLabel = ((): string => {
+    if (!status) return "Loading…";
+    if (status.status === "unavailable") return "Unavailable on this device";
+    return `${status.indexed} of ${status.total} highlights indexed`;
+  })();
+
+  const runtimeLabel = ((): string => {
+    if (!status) return "—";
+    if (status.status === "running") return "Indexing…";
+    if (status.status === "failed") return "Failed";
+    if (status.status === "unavailable") return "Unavailable";
+    return "Idle";
+  })();
+
+  return (
+    <article className="connection-card">
+      <header>
+        <h3>Search</h3>
+        <span className={`status-pill status-${status?.status ?? "configuring"}`}>
+          {(status?.status ?? "loading").replace("_", " ")}
+        </span>
+      </header>
+      <dl className="diagnostics-latest">
+        <dt>Index status</dt>
+        <dd>{indexLabel}</dd>
+        <dt>Runtime</dt>
+        <dd>{runtimeLabel}</dd>
+        <dt>Embedding model</dt>
+        <dd>bge-small-en-v1.5 — managed by Archi</dd>
+        {status?.failed ? (
+          <>
+            <dt>Failed</dt>
+            <dd>{status.failed}</dd>
+          </>
+        ) : null}
+        {status?.lastError ? (
+          <>
+            <dt>Last error</dt>
+            <dd className="error">{status.lastError}</dd>
+          </>
+        ) : null}
+      </dl>
+      {/*
+        TODO: add "Include archived" and "Include hidden" toggles; persist via preferences
+              and pass into SearchService options.
+      */}
+    </article>
+  );
+}
 
 export function ConnectionsScreen({
   connections,
@@ -286,6 +358,8 @@ export function ConnectionsScreen({
             ) : null}
           </div>
         </article>
+
+        <SearchSettingsPanel />
       </div>
     </section>
   );
