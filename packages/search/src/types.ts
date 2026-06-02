@@ -1,14 +1,14 @@
 export type SearchFilters = {
-  work_ids?: string[];
+  workIds?: string[];
   creator?: string;
   labels?: string[];
-  is_starred?: boolean;
-  is_archived?: boolean;
-  is_hidden?: boolean;
-  marker_color?: string;
-  work_type?: string;
-  marked_after?: string;
-  marked_before?: string;
+  isStarred?: boolean;
+  isArchived?: boolean;
+  isHidden?: boolean;
+  markerColor?: string;
+  workType?: string;
+  markedAfter?: string;
+  markedBefore?: string;
 };
 
 export type SearchQuery = {
@@ -18,34 +18,34 @@ export type SearchQuery = {
 };
 
 export type SearchResult = {
-  passage_id: string;
+  passageId: string;
   body: string;
-  reader_note?: string;
+  readerNote?: string;
   snippet: string;
   work: {
     id: string;
-    display_title: string;
+    displayTitle: string;
     creator?: string;
-    cover_image_url?: string;
+    coverImageUrl?: string;
   };
   position?: string;
-  marked_at?: string;
+  markedAt?: string;
   labels: string[];
-  is_starred: boolean;
+  isStarred: boolean;
   scores: {
     fused: number;
-    vector_distance?: number;
+    vectorDistance?: number;
     bm25?: number;
   };
-  matched_via: "vector" | "fts5" | "both";
+  matchedVia: "vector" | "fts5" | "both";
 };
 
 export type SearchResponse = {
   query: string;
   filters: SearchFilters;
   results: SearchResult[];
-  total_candidates: number;
-  duration_ms: number;
+  totalCandidates: number;
+  durationMs: number;
 };
 
 export type IndexerStatus = {
@@ -57,4 +57,14 @@ export type IndexerStatus = {
 };
 
 export const EMBEDDING_DIM = 384;
+
+/**
+ * Identifier for the embedding model + schema version currently in use.
+ * The `@vN` suffix is the embedding *schema* version — bump it any time
+ * the embedding input or normalization changes in a way that should
+ * invalidate existing vectors. The IndexerService scans for rows in
+ * `embedding_state` whose `model_id` does not match this constant and
+ * re-embeds them; if you change models without bumping the suffix,
+ * stale vectors will silently coexist with new ones.
+ */
 export const EMBEDDING_MODEL_ID = "bge-small-en-v1.5@v1";

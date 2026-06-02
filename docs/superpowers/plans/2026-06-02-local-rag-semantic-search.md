@@ -117,16 +117,16 @@ cp packages/core/tsconfig.json packages/search/tsconfig.json
 
 ```ts
 export type SearchFilters = {
-  work_ids?: string[];
+  workIds?: string[];
   creator?: string;
   labels?: string[];
-  is_starred?: boolean;
-  is_archived?: boolean;
-  is_hidden?: boolean;
-  marker_color?: string;
-  work_type?: string;
-  marked_after?: string;
-  marked_before?: string;
+  isStarred?: boolean;
+  isArchived?: boolean;
+  isHidden?: boolean;
+  markerColor?: string;
+  workType?: string;
+  markedAfter?: string;
+  markedBefore?: string;
 };
 
 export type SearchQuery = {
@@ -136,34 +136,34 @@ export type SearchQuery = {
 };
 
 export type SearchResult = {
-  passage_id: string;
+  passageId: string;
   body: string;
-  reader_note?: string;
+  readerNote?: string;
   snippet: string;
   work: {
     id: string;
-    display_title: string;
+    displayTitle: string;
     creator?: string;
-    cover_image_url?: string;
+    coverImageUrl?: string;
   };
   position?: string;
-  marked_at?: string;
+  markedAt?: string;
   labels: string[];
-  is_starred: boolean;
+  isStarred: boolean;
   scores: {
     fused: number;
-    vector_distance?: number;
+    vectorDistance?: number;
     bm25?: number;
   };
-  matched_via: "vector" | "fts5" | "both";
+  matchedVia: "vector" | "fts5" | "both";
 };
 
 export type SearchResponse = {
   query: string;
   filters: SearchFilters;
   results: SearchResult[];
-  total_candidates: number;
-  duration_ms: number;
+  totalCandidates: number;
+  durationMs: number;
 };
 
 export type IndexerStatus = {
@@ -175,6 +175,16 @@ export type IndexerStatus = {
 };
 
 export const EMBEDDING_DIM = 384;
+
+/**
+ * Identifier for the embedding model + schema version currently in use.
+ * The `@vN` suffix is the embedding *schema* version — bump it any time
+ * the embedding input or normalization changes in a way that should
+ * invalidate existing vectors. The IndexerService scans for rows in
+ * `embedding_state` whose `model_id` does not match this constant and
+ * re-embeds them; if you change models without bumping the suffix,
+ * stale vectors will silently coexist with new ones.
+ */
 export const EMBEDDING_MODEL_ID = "bge-small-en-v1.5@v1";
 ```
 
@@ -1415,8 +1425,8 @@ export function buildCandidateSql(filters: SearchFilters): CandidateSql {
   const where: string[] = [];
   const params: unknown[] = [];
 
-  const includeArchived = filters.is_archived === true;
-  const includeHidden = filters.is_hidden === true;
+  const includeArchived = filters.isArchived === true;
+  const includeHidden = filters.isHidden === true;
   if (!includeArchived) {
     where.push("p.is_archived = 0");
   }
@@ -1428,28 +1438,28 @@ export function buildCandidateSql(filters: SearchFilters): CandidateSql {
     where.push("w.creator = ?");
     params.push(filters.creator);
   }
-  if (filters.work_type !== undefined) {
+  if (filters.workType !== undefined) {
     where.push("w.work_type = ?");
-    params.push(filters.work_type);
+    params.push(filters.workType);
   }
-  if (filters.work_ids !== undefined && filters.work_ids.length > 0) {
-    where.push(`p.work_id IN (${filters.work_ids.map(() => "?").join(",")})`);
-    params.push(...filters.work_ids);
+  if (filters.workIds !== undefined && filters.workIds.length > 0) {
+    where.push(`p.work_id IN (${filters.workIds.map(() => "?").join(",")})`);
+    params.push(...filters.workIds);
   }
-  if (filters.is_starred === true) {
+  if (filters.isStarred === true) {
     where.push("p.is_starred = 1");
   }
-  if (filters.marker_color !== undefined) {
+  if (filters.markerColor !== undefined) {
     where.push("p.marker_color = ?");
-    params.push(filters.marker_color);
+    params.push(filters.markerColor);
   }
-  if (filters.marked_after !== undefined) {
+  if (filters.markedAfter !== undefined) {
     where.push("p.marked_at >= ?");
-    params.push(filters.marked_after);
+    params.push(filters.markedAfter);
   }
-  if (filters.marked_before !== undefined) {
+  if (filters.markedBefore !== undefined) {
     where.push("p.marked_at <= ?");
-    params.push(filters.marked_before);
+    params.push(filters.markedBefore);
   }
   if (filters.labels !== undefined && filters.labels.length > 0) {
     // passages.labels_json is a TEXT JSON array. Intersect via json_each.
@@ -1564,7 +1574,7 @@ describe("SearchService", () => {
       limit: 5
     });
     expect(res.results.length).toBeGreaterThan(0);
-    expect(res.results[0].passage_id.startsWith("p-anger")).toBe(true);
+    expect(res.results[0].passageId.startsWith("p-anger")).toBe(true);
     expect(res.results.every((r) => r.work.creator === "Marcus Aurelius")).toBe(true);
   }, 30_000);
 
@@ -1649,16 +1659,16 @@ export class SearchService {
       query: q.text,
       filters,
       results,
-      total_candidates: candidateIds.length,
-      duration_ms: Date.now() - start
+      totalCandidates: candidateIds.length,
+      durationMs: Date.now() - start
     };
   }
 
   private resolveDefaults(filters: SearchFilters): SearchFilters {
     return {
       ...filters,
-      is_archived: filters.is_archived ?? this.options.defaultIncludeArchived ?? false,
-      is_hidden: filters.is_hidden ?? this.options.defaultIncludeHidden ?? false
+      isArchived: filters.isArchived ?? this.options.defaultIncludeArchived ?? false,
+      isHidden: filters.isHidden ?? this.options.defaultIncludeHidden ?? false
     };
   }
 
@@ -1727,13 +1737,13 @@ export class SearchService {
       .map((fhit) => {
         const row = rowsById.get(fhit.key);
         if (!row) return null;
-        const matchedVia: SearchResult["matched_via"] =
+        const matchedVia: SearchResult["matchedVia"] =
           fhit.sourceIndices.length === 2 ? "both" : fhit.sourceIndices[0] === 0 ? "vector" : "fts5";
         return hydrateResult(
           row,
           {
             fused: fhit.score,
-            vector_distance: vecScoreById.get(fhit.key),
+            vectorDistance: vecScoreById.get(fhit.key),
             bm25: ftsScoreById.get(fhit.key)
           },
           matchedVia
@@ -1756,26 +1766,26 @@ export class SearchService {
 function hydrateResult(
   row: Record<string, unknown>,
   scores: SearchResult["scores"],
-  matchedVia: SearchResult["matched_via"]
+  matchedVia: SearchResult["matchedVia"]
 ): SearchResult {
   const body = String(row.body);
   return {
-    passage_id: String(row.passage_id),
+    passageId: String(row.passage_id),
     body,
-    reader_note: (row.reader_note as string | null) ?? undefined,
+    readerNote: (row.reader_note as string | null) ?? undefined,
     snippet: body.length > 240 ? `${body.slice(0, 240)}…` : body,
     work: {
       id: String(row.work_id),
-      display_title: String(row.display_title),
+      displayTitle: String(row.display_title),
       creator: (row.creator as string | null) ?? undefined,
-      cover_image_url: (row.cover_image_url as string | null) ?? undefined
+      coverImageUrl: (row.cover_image_url as string | null) ?? undefined
     },
     position: formatPosition(row.position_start, row.position_end),
-    marked_at: (row.marked_at as string | null) ?? undefined,
+    markedAt: (row.marked_at as string | null) ?? undefined,
     labels: parseLabels(row.labels_json),
-    is_starred: Number(row.is_starred) === 1,
+    isStarred: Number(row.is_starred) === 1,
     scores,
-    matched_via: matchedVia
+    matchedVia: matchedVia
   };
 }
 
@@ -2059,29 +2069,29 @@ type Props = {
 
 export function SearchResultCard({ result, showMatchSource, onOpen }: Props) {
   return (
-    <article className="search-result-card" onClick={() => onOpen(result.passage_id)}>
+    <article className="search-result-card" onClick={() => onOpen(result.passageId)}>
       <header className="search-result-card__header">
-        {result.is_starred && <span aria-label="starred" title="Starred">★</span>}
+        {result.isStarred && <span aria-label="starred" title="Starred">★</span>}
         <span className="search-result-card__source">
           {result.work.creator ? `${result.work.creator} · ` : ""}
-          {result.work.display_title}
+          {result.work.displayTitle}
           {result.position ? ` · ${result.position}` : ""}
         </span>
         {showMatchSource && (
           <span className="search-result-card__match-source" title="How this result was found">
-            {result.matched_via === "vector" ? "⚡ meaning" : result.matched_via === "fts5" ? "🔤 keyword" : "⚡+🔤 both"}
+            {result.matchedVia === "vector" ? "⚡ meaning" : result.matchedVia === "fts5" ? "🔤 keyword" : "⚡+🔤 both"}
           </span>
         )}
       </header>
       <p className="search-result-card__body">{result.snippet}</p>
-      {result.reader_note && (
+      {result.readerNote && (
         <p className="search-result-card__note">
-          <strong>Note:</strong> {result.reader_note}
+          <strong>Note:</strong> {result.readerNote}
         </p>
       )}
-      {result.marked_at && (
+      {result.markedAt && (
         <footer className="search-result-card__footer">
-          Marked {new Date(result.marked_at).toLocaleDateString()}
+          Marked {new Date(result.markedAt).toLocaleDateString()}
         </footer>
       )}
     </article>
@@ -2120,16 +2130,16 @@ export function SearchFilterChips({ filters, onChange, availableCreators }: Prop
           <button type="button" onClick={() => removeFilter("creator")} aria-label="Remove author filter">✕</button>
         </span>
       )}
-      {filters.is_starred && (
+      {filters.isStarred && (
         <span className="search-filter-chip">
           ★ Starred only
-          <button type="button" onClick={() => removeFilter("is_starred")} aria-label="Remove starred filter">✕</button>
+          <button type="button" onClick={() => removeFilter("isStarred")} aria-label="Remove starred filter">✕</button>
         </span>
       )}
-      {filters.marker_color && (
+      {filters.markerColor && (
         <span className="search-filter-chip">
-          Color: {filters.marker_color}
-          <button type="button" onClick={() => removeFilter("marker_color")} aria-label="Remove color filter">✕</button>
+          Color: {filters.markerColor}
+          <button type="button" onClick={() => removeFilter("markerColor")} aria-label="Remove color filter">✕</button>
         </span>
       )}
 
@@ -2140,7 +2150,7 @@ export function SearchFilterChips({ filters, onChange, availableCreators }: Prop
       ) : (
         <div className="search-filter-chip-menu">
           <button type="button" onClick={() => { setAddingDim("creator"); }}>Author</button>
-          <button type="button" onClick={() => { onChange({ ...filters, is_starred: true }); setAddingDim(null); }}>Starred</button>
+          <button type="button" onClick={() => { onChange({ ...filters, isStarred: true }); setAddingDim(null); }}>Starred</button>
           <button type="button" onClick={() => setAddingDim("color")}>Color</button>
           <button type="button" onClick={() => setAddingDim(null)}>Cancel</button>
         </div>
@@ -2161,7 +2171,7 @@ export function SearchFilterChips({ filters, onChange, availableCreators }: Prop
       {addingDim === "color" && (
         <select
           autoFocus
-          onChange={(e) => { onChange({ ...filters, marker_color: e.target.value }); setAddingDim(null); }}
+          onChange={(e) => { onChange({ ...filters, markerColor: e.target.value }); setAddingDim(null); }}
           onBlur={() => setAddingDim(null)}
           defaultValue=""
         >
@@ -2290,7 +2300,7 @@ export function SearchScreen({ initialQuery = "", onOpenPassage, showMatchSource
 
   const summary = useMemo(() => {
     if (!response) return "";
-    return `Showing ${response.results.length} of ${response.total_candidates} candidates (${response.duration_ms} ms)`;
+    return `Showing ${response.results.length} of ${response.totalCandidates} candidates (${response.durationMs} ms)`;
   }, [response]);
 
   return (
@@ -2309,7 +2319,7 @@ export function SearchScreen({ initialQuery = "", onOpenPassage, showMatchSource
       <div className="search-screen__results">
         {response?.results.map((r) => (
           <SearchResultCard
-            key={r.passage_id}
+            key={r.passageId}
             result={r}
             showMatchSource={showMatchSource}
             onOpen={onOpenPassage}
@@ -2413,7 +2423,7 @@ export function GlobalSearchBar({ onOpenPassage, onOpenSearchScreen }: Props) {
 
   const submit = useCallback(() => {
     if (results.length > 0) {
-      onOpenPassage(results[highlighted].passage_id);
+      onOpenPassage(results[highlighted].passageId);
       setOpen(false);
     }
   }, [results, highlighted, onOpenPassage]);
@@ -2446,16 +2456,16 @@ export function GlobalSearchBar({ onOpenPassage, onOpenSearchScreen }: Props) {
         <div className="global-search-bar__dropdown" role="listbox">
           {results.map((r, i) => (
             <div
-              key={r.passage_id}
+              key={r.passageId}
               role="option"
               aria-selected={i === highlighted}
               className={`global-search-bar__row ${i === highlighted ? "is-highlighted" : ""}`}
-              onMouseDown={(e) => { e.preventDefault(); onOpenPassage(r.passage_id); setOpen(false); }}
+              onMouseDown={(e) => { e.preventDefault(); onOpenPassage(r.passageId); setOpen(false); }}
               onMouseEnter={() => setHighlighted(i)}
             >
               <div className="global-search-bar__row-body">{r.snippet}</div>
               <div className="global-search-bar__row-meta">
-                {r.work.creator ? `${r.work.creator} · ` : ""}{r.work.display_title}
+                {r.work.creator ? `${r.work.creator} · ` : ""}{r.work.displayTitle}
               </div>
             </div>
           ))}
