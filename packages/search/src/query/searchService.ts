@@ -20,6 +20,10 @@ export type SearchServiceOptions = {
 
 const MIN_QUERY_LENGTH = 2;
 const RRF_K = 60;
+// Guard against the SQLite parameter limit on the candidate-set placeholders
+// in knnByPassageIds/ftsSearchInIds. 30k is comfortably below
+// SQLITE_MAX_VARIABLE_NUMBER (typically 32766) even on older builds.
+const MAX_CANDIDATE_IDS = 30_000;
 
 export class SearchService {
   constructor(private readonly options: SearchServiceOptions) {}
@@ -28,7 +32,9 @@ export class SearchService {
     const start = Date.now();
     const filters = this.resolveDefaults(q.filters);
     const candidate = buildCandidateSql(filters);
-    const candidateIds = this.options.repo.fetchCandidatesSql(candidate.sql, candidate.params);
+    const candidateIds = this.options.repo
+      .fetchCandidatesSql(candidate.sql, candidate.params)
+      .slice(0, MAX_CANDIDATE_IDS);
 
     const trimmed = q.text.trim();
     const isBrowse = trimmed.length < MIN_QUERY_LENGTH;
@@ -142,9 +148,17 @@ export class SearchService {
 
   private safeFts(text: string, candidateIds: string[]) {
     try {
-      // Escape FTS5 special chars by quoting unsafe tokens.
-      const safe = text.replace(/"/g, '""');
-      return this.options.repo.ftsSearchInIds(`"${safe}"`, candidateIds);
+      const tokens = text.trim().split(/\s+/).filter(Boolean);
+      if (tokens.length === 0) {
+        return [];
+      }
+      // Quote each token individually so user input can't break out of the
+      // FTS5 query syntax (escape inner `"` as `""`). Joining with spaces
+      // gives FTS5 its default implicit-AND behavior across tokens — without
+      // forcing the entire input into one phrase, which previously made
+      // multi-word natural queries return ~no hits.
+      const escaped = tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(" ");
+      return this.options.repo.ftsSearchInIds(escaped, candidateIds);
     } catch {
       return [];
     }

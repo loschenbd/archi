@@ -60,7 +60,7 @@ export class SearchRepository {
          LEFT JOIN embedding_state s
            ON s.passage_id = p.id AND s.model_id = ?
          WHERE s.passage_id IS NULL
-            OR s.status != 'ok'
+            OR (s.status != 'ok' AND s.status != 'failed')
          LIMIT ?`
       )
       .all(modelId, limit) as PendingPassage[];

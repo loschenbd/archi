@@ -49,6 +49,15 @@ export class IndexerService {
     }
     this.running = true;
     try {
+      // Probe the embedder before processing any batches. If it can't load
+      // (model missing, dylib mismatch, ONNX init failure), mark unavailable
+      // and exit — don't spin-loop re-fetching the same rows forever.
+      try {
+        await this.embedder.embedBatch(["__probe__"]);
+      } catch (err) {
+        this.markUnavailable(err instanceof Error ? err.message : String(err));
+        return;
+      }
       while (true) {
         const batch = this.repo.fetchPendingForModel(EMBEDDING_MODEL_ID, this.batchSize);
         if (batch.length === 0) {
@@ -64,11 +73,18 @@ export class IndexerService {
             this.repo.upsertEmbedding(passage.id, vector, hashBody(passage.body));
           }
         } catch (err) {
+          // Per-batch transient or input-specific error: record failures and
+          // continue. Combined with fetchPendingForModel excluding 'failed',
+          // these rows are skipped on subsequent runs (manual reindex required
+          // to retry).
           this.lastError = err instanceof Error ? err.message : String(err);
           for (const p of batch) {
             this.repo.recordEmbeddingFailure(p.id, hashBody(p.body), this.lastError);
           }
         }
+        // Yield to the event loop so IPC handlers can interleave during a
+        // long backfill.
+        await new Promise<void>((resolve) => setImmediate(resolve));
       }
     } finally {
       this.running = false;

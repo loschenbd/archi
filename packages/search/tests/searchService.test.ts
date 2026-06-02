@@ -69,4 +69,21 @@ describe("SearchService", () => {
     // With <2 chars we fall back to "browse mode" so behavior matches empty-text.
     expect(res.results.length).toBe(FIXTURE_PASSAGES.length);
   });
+
+  it("multi-word query exercises FTS5 across all tokens", async () => {
+    // Both "anger" and "fault" co-occur in p-anger-2's body. Previously the
+    // whole query was forced into one quoted phrase, which would not match
+    // because the tokens aren't adjacent — confirming FTS5 contributes here
+    // proves we tokenize per-word and apply implicit-AND.
+    const res = await service.query({
+      text: "anger fault",
+      filters: {},
+      limit: 10
+    });
+    expect(res.results.length).toBeGreaterThan(0);
+    const hasFtsContribution = res.results.some(
+      (r) => r.matchedVia === "fts5" || r.matchedVia === "both"
+    );
+    expect(hasFtsContribution).toBe(true);
+  }, 30_000);
 });
