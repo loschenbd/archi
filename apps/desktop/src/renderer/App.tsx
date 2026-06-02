@@ -7,6 +7,7 @@ import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { PassagesScreen } from "./screens/PassagesScreen";
 import { SearchScreen } from "./screens/SearchScreen";
+import { GlobalSearchBar } from "./components/GlobalSearchBar";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -206,6 +207,8 @@ function readInitialSidebarCollapsed(): boolean {
 
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
+  const [searchInitialQuery, setSearchInitialQuery] = useState<string>("");
+  const [searchScreenInstance, setSearchScreenInstance] = useState<number>(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
 
   const toggleSidebar = useCallback((): void => {
@@ -557,6 +560,18 @@ export function App(): JSX.Element {
     }
   }, [selectedLibraryWorkId, works]);
 
+  const openPassageFromSearch = useCallback((): void => {
+    setSelectedLibraryWorkId(null);
+    setActiveScreen("Passages");
+  }, []);
+
+  const openSearchScreenWithQuery = useCallback((initialQuery: string): void => {
+    setSearchInitialQuery(initialQuery);
+    setSearchScreenInstance((prev) => prev + 1);
+    setSelectedLibraryWorkId(null);
+    setActiveScreen("Search");
+  }, []);
+
   const updateConnection = (provider: ConnectionProvider, operation: Promise<ConnectionState>): void => {
     setConnections((current) => ({
       ...current,
@@ -705,9 +720,9 @@ export function App(): JSX.Element {
       case "Search":
         return (
           <SearchScreen
-            onOpenPassage={() => {
-              setActiveScreen("Passages");
-            }}
+            key={`search-${searchScreenInstance}`}
+            initialQuery={searchInitialQuery}
+            onOpenPassage={openPassageFromSearch}
           />
         );
       case "Logs":
@@ -723,8 +738,11 @@ export function App(): JSX.Element {
     isCancelingSync,
     isSyncing,
     logs,
+    openPassageFromSearch,
     passages,
     recentActivity,
+    searchInitialQuery,
+    searchScreenInstance,
     syncRunStartedAtIso,
     selectedLibraryWorkId,
     refreshNotionMedia,
@@ -850,6 +868,10 @@ export function App(): JSX.Element {
             <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
+          <GlobalSearchBar
+            onOpenPassage={openPassageFromSearch}
+            onOpenSearchScreen={openSearchScreenWithQuery}
+          />
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
         {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
