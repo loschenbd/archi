@@ -2207,8 +2207,19 @@ export function SearchScreen({
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // Auto-grow the textarea so a long find-similar seed is fully visible.
+  const resizeInput = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
+  }, []);
+  useEffect(() => {
+    resizeInput();
+  }, [text, resizeInput]);
 
   // Focus input on mount.
   useEffect(() => {
@@ -2287,13 +2298,21 @@ export function SearchScreen({
 
   return (
     <section className="search-screen">
-      <input
+      <textarea
         ref={inputRef}
         className="search-screen__input"
-        type="search"
         placeholder="Search highlights…"
         value={text}
+        rows={1}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          // Enter alone shouldn't insert a newline — query auto-runs via debounce.
+          // Shift+Enter still inserts a newline for users who genuinely want one.
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            inputRef.current?.blur();
+          }
+        }}
         aria-label="Search highlights"
       />
       <SearchFilterChips filters={filters} onChange={setFilters} />
@@ -2349,7 +2368,38 @@ export function SearchScreen({
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [ ] **Step 2: Update `.search-screen__input` CSS to support multi-line**
+
+In `apps/desktop/src/renderer/styles.css`, replace the existing `.search-screen__input` rule (lines ~2111–2125) with:
+
+```css
+.search-screen__input {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  min-height: 50px;
+  max-height: 168px;
+  padding: 13px 16px;
+  font-size: 16px;
+  font-family: Newsreader, Georgia, serif;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  color: var(--ink-900);
+  background: color-mix(in srgb, var(--surface) 88%, #fff);
+  border: 1px solid color-mix(in srgb, var(--ink-300) 42%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(88, 63, 43, 0.04);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+  resize: none;
+  overflow-y: auto;
+  field-sizing: content; /* progressive enhancement; JS resize is the canonical path */
+}
+```
+
+`field-sizing: content` is a progressive-enhancement nice-to-have (Chromium 123+; Electron 30+ includes it). The JS-driven resize in Step 1 is the authoritative behavior — `field-sizing: content` just keeps the input at its content size during the brief window before React commits the height effect, eliminating visible flicker.
+
+- [ ] **Step 3: Typecheck**
 
 ```bash
 pnpm --filter @archi/desktop typecheck
@@ -2385,14 +2435,19 @@ Remove the `searchScreenInstance` state declaration and remove `searchScreenInst
 
 Re-run typecheck. Expected: PASS.
 
-- [ ] **Step 3: Manual scenario**
+- [ ] **Step 4: Manual scenario**
 
-Start dev. Click two collapsed cards in sequence — only the second is expanded. Press Esc on an expanded card — it collapses. Press ⌘/ — input focuses and selects. Toggle "Include archived" in Settings → return to Search → results widen on next character typed.
+Start dev.
 
-- [ ] **Step 4: Commit**
+1. Click two collapsed cards in sequence — only the second is expanded. Press Esc on an expanded card — it collapses.
+2. Press ⌘/ — input focuses and selects.
+3. Toggle "Include archived" in Settings → return to Search → results widen on next character typed.
+4. From any passage, click "Find similar" — the Search input expands vertically to show the entire seeded passage (up to 4 lines), then scrolls internally. Pressing Enter does NOT insert a newline; Shift+Enter does.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add apps/desktop/src/renderer/screens/SearchScreen.tsx apps/desktop/src/renderer/App.tsx
+git add apps/desktop/src/renderer/screens/SearchScreen.tsx apps/desktop/src/renderer/App.tsx apps/desktop/src/renderer/styles.css
 git commit -m "$(cat <<'EOF'
 desktop: SearchScreen single-expand model + preferences + controlled props
 
@@ -2401,6 +2456,11 @@ pendingExpandPassageId now flow as controlled props. One expandedId at
 a time. Search settings (showMatchSource, includeArchived,
 includeHidden) merged into outgoing filters via
 SearchPreferencesProvider. ⌘/ refocuses the input.
+
+The input is now a textarea that auto-grows to fit a long find-similar
+seed (capped at ~4 lines, then scrolls). Enter blurs instead of
+inserting a newline; Shift+Enter still inserts one. Removes the
+horizontal-clip problem where long seeded queries were invisible.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
