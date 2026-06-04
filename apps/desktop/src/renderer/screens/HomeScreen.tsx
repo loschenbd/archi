@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from "react";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
+import { StatsStrip } from "./home/StatsStrip";
 import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
 
 type RecentWork = {
@@ -65,6 +66,10 @@ type Props = {
   syncRunStartedAtIso: string | null;
   works: SearchWork[];
   passages: SearchPassage[];
+  bookCount: number;
+  highlightCount: number;
+  lastRunDeltaWorks: number;
+  lastRunDeltaPassages: number;
   onOpenWork: (workId: string) => void;
   connections: SyncBannerConnection[];
   lastError: string | null;
@@ -114,6 +119,10 @@ export function HomeScreen({
   syncRunStartedAtIso,
   works,
   passages,
+  bookCount,
+  highlightCount,
+  lastRunDeltaWorks,
+  lastRunDeltaPassages,
   onOpenWork,
   connections,
   lastError,
@@ -192,6 +201,17 @@ export function HomeScreen({
         onCancelSync={onCancelSync}
         onRetrySync={onSyncNow}
         onNavigateToSettings={onNavigateToSettings}
+      />
+
+      <StatsStrip
+        bookCount={bookCount}
+        highlightCount={highlightCount}
+        lastRunAtIso={syncRunStartedAtIso}
+        lastRunDeltaWorks={lastRunDeltaWorks}
+        lastRunDeltaPassages={lastRunDeltaPassages}
+        isSyncing={isSyncing}
+        hasUnhealthyBanner={lastError !== null || noHealthySources || connections.some((c) => c.status === "needs_action")}
+        onSyncNow={onSyncNow}
       />
 
       {showActivityFeed ? (

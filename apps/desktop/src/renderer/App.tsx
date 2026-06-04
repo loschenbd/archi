@@ -596,6 +596,16 @@ export function App(): JSX.Element {
 
   const screenContent = useMemo(() => {
     const formattedLastRunAt = formatLocalDateTime(syncState.lastRunAt);
+    const recentActivityIngestedSinceMs = 10_000;
+    const nowForDeltaMs = Date.now();
+    const lastRunDeltaWorks = recentActivity.works.filter((w) => {
+      const t = Date.parse(w.ingestedAt);
+      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
+    }).length;
+    const lastRunDeltaPassages = recentActivity.passages.filter((p) => {
+      const t = Date.parse(p.ingestedAt);
+      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
+    }).length;
     switch (activeScreen) {
       case "Home":
         return (
@@ -616,6 +626,10 @@ export function App(): JSX.Element {
             syncRunStartedAtIso={syncRunStartedAtIso}
             works={works}
             passages={passages}
+            bookCount={works.length}
+            highlightCount={passages.length}
+            lastRunDeltaWorks={lastRunDeltaWorks}
+            lastRunDeltaPassages={lastRunDeltaPassages}
             onOpenWork={(workId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
