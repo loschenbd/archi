@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from "react";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
+import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
 
 type RecentWork = {
   id: string;
@@ -42,7 +43,7 @@ type Props = {
   lastRunAt: string | null;
   onSyncNow: () => void;
   onCancelSync: () => void;
-  onNavigateToConnections: () => void;
+  onNavigateToSettings: (tab: "connections" | "logs") => void;
   needsAuth: boolean;
   isSyncing: boolean;
   isCancelingSync: boolean;
@@ -65,26 +66,9 @@ type Props = {
   works: SearchWork[];
   passages: SearchPassage[];
   onOpenWork: (workId: string) => void;
-};
-
-const PHASE_LABELS: Record<string, string> = {
-  sync_start: "Starting sync",
-  sync_cancel_requested: "Cancelling",
-  source_device_read: "Reading device export",
-  source_device_upsert_works: "Saving works from device export",
-  source_device_upsert_passages: "Saving passages from device export",
-  source_cloud_fetch: "Fetching cloud highlights",
-  source_cloud_upsert: "Saving cloud highlights",
-  destination_notion_works: "Syncing works to Notion",
-  destination_notion_passages: "Syncing passages to Notion",
-  sync_complete: "Sync complete",
-  sync_error: "Sync error"
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  "cloud-notebook": "Cloud notebook",
-  "device-export": "Device export",
-  notion: "Notion"
+  connections: SyncBannerConnection[];
+  lastError: string | null;
+  noHealthySources: boolean;
 };
 
 function highlightMatch(text: string, query: string): ReactNode {
@@ -120,7 +104,7 @@ export function HomeScreen({
   lastRunAt,
   onSyncNow,
   onCancelSync,
-  onNavigateToConnections,
+  onNavigateToSettings,
   needsAuth,
   isSyncing,
   isCancelingSync,
@@ -130,9 +114,11 @@ export function HomeScreen({
   syncRunStartedAtIso,
   works,
   passages,
-  onOpenWork
+  onOpenWork,
+  connections,
+  lastError,
+  noHealthySources
 }: Props): JSX.Element {
-  const [progressBaseAtMs, setProgressBaseAtMs] = useState<number>(Date.now());
   const [tickAtMs, setTickAtMs] = useState<number>(Date.now());
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -177,7 +163,6 @@ export function HomeScreen({
     if (!syncProgress) {
       return;
     }
-    setProgressBaseAtMs(Date.now());
     setTickAtMs(Date.now());
   }, [syncProgress]);
 
@@ -191,105 +176,23 @@ export function HomeScreen({
     };
   }, [isSyncing, syncProgress]);
 
-  const displayedElapsedMs = useMemo(() => {
-    if (!syncProgress) {
-      return 0;
-    }
-    if (isSyncing && syncProgress.status === "running") {
-      return syncProgress.elapsedMs + Math.max(0, tickAtMs - progressBaseAtMs);
-    }
-    return syncProgress.elapsedMs;
-  }, [isSyncing, progressBaseAtMs, syncProgress, tickAtMs]);
-  const elapsedSeconds = Math.max(0, Math.floor(displayedElapsedMs / 1000));
-  const elapsedDisplay = formatElapsed(elapsedSeconds);
-
-  const processed = syncProgress?.counts?.processed;
-  const total = syncProgress?.counts?.total;
-  const hasDeterminate = typeof processed === "number" && typeof total === "number" && total > 0;
-  const pctComplete = hasDeterminate ? Math.min(100, Math.round((processed! / total!) * 100)) : null;
-  const booksCount = syncProgress?.counts?.works;
-  const quotesCount = syncProgress?.counts?.passages;
-
-  const phaseLabel = syncProgress ? PHASE_LABELS[syncProgress.phase] ?? syncProgress.phase : null;
-  const sourceLabel = syncProgress?.source ? SOURCE_LABELS[syncProgress.source] ?? syncProgress.source : null;
-
-  const liveModeClass = isCancelingSync ? "sync-live-cancelling" : "sync-live-running";
-
   const showActivityFeed = !trimmedQuery && (isSyncing || syncRunStartedAtIso !== null);
   const freshWorks = recentWorks.slice(0, 5);
   const freshPassages = recentPassages.slice(0, 5);
 
   return (
     <section className="home-screen">
-      {isSyncing && syncProgress ? (
-        <div className={`sync-live sync-live-header ${liveModeClass}`}>
-          <div className="sync-live-head">
-            <div className="sync-live-phase">
-              <span className="live-dot" aria-hidden="true" />
-              <div>
-                {sourceLabel ? <p className="content-eyebrow">{sourceLabel}</p> : null}
-                <h3>{phaseLabel}</h3>
-              </div>
-            </div>
-            <div className="sync-live-head-actions">
-              <p className="sync-live-elapsed" aria-label={`Elapsed ${elapsedSeconds} seconds`}>
-                {elapsedDisplay}
-              </p>
-              <button
-                type="button"
-                className="sync-live-cancel-button"
-                onClick={onCancelSync}
-                disabled={isCancelingSync}
-              >
-                {isCancelingSync ? "Cancelling…" : "Cancel"}
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={`progress-bar ${hasDeterminate ? "progress-bar-determinate" : "progress-bar-indeterminate"}`}
-            role="progressbar"
-            aria-valuemin={hasDeterminate ? 0 : undefined}
-            aria-valuemax={hasDeterminate ? 100 : undefined}
-            aria-valuenow={hasDeterminate ? pctComplete ?? undefined : undefined}
-          >
-            {hasDeterminate ? (
-              <span className="progress-bar-fill" style={{ width: `${pctComplete}%` }}>
-                <span className="progress-bar-shimmer" aria-hidden="true" />
-              </span>
-            ) : (
-              <span className="progress-bar-indeterminate-fill" aria-hidden="true" />
-            )}
-          </div>
-
-          {hasDeterminate ? (
-            <p className="progress-bar-label">
-              <span className="tabular">{processed}</span> of <span className="tabular">{total}</span>
-              <span aria-hidden="true"> · </span>
-              <span className="tabular">{pctComplete}%</span>
-            </p>
-          ) : (
-            <p className="progress-bar-label progress-bar-label-pending">Discovering work, totals not known yet…</p>
-          )}
-
-          {booksCount !== undefined || quotesCount !== undefined ? (
-            <dl className="sync-stats">
-              {booksCount !== undefined ? (
-                <div className="sync-stat">
-                  <dt>Books</dt>
-                  <dd className="tabular">{booksCount.toLocaleString()}</dd>
-                </div>
-              ) : null}
-              {quotesCount !== undefined ? (
-                <div className="sync-stat">
-                  <dt>Quotes</dt>
-                  <dd className="tabular">{quotesCount.toLocaleString()}</dd>
-                </div>
-              ) : null}
-            </dl>
-          ) : null}
-        </div>
-      ) : null}
+      <SyncBanner
+        isSyncing={isSyncing}
+        isCancelingSync={isCancelingSync}
+        syncProgress={syncProgress}
+        connections={connections}
+        lastError={lastError}
+        noHealthySources={noHealthySources}
+        onCancelSync={onCancelSync}
+        onRetrySync={onSyncNow}
+        onNavigateToSettings={onNavigateToSettings}
+      />
 
       {showActivityFeed ? (
         <div className={`activity-feed${isSyncing ? " activity-feed-live" : ""}`}>
@@ -403,7 +306,7 @@ export function HomeScreen({
               <button
                 type="button"
                 className="home-inline-link home-inline-link-accent"
-                onClick={onNavigateToConnections}
+                onClick={() => onNavigateToSettings("connections")}
               >
                 Needs authentication · Reconnect →
               </button>
@@ -554,16 +457,3 @@ function formatRelative(iso: string, nowMs: number): string {
   return `${d}d ago`;
 }
 
-function formatElapsed(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remaining = seconds % 60;
-  if (minutes < 60) {
-    return `${minutes}m ${String(remaining).padStart(2, "0")}s`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const remMinutes = minutes % 60;
-  return `${hours}h ${String(remMinutes).padStart(2, "0")}m`;
-}

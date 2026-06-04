@@ -603,8 +603,8 @@ export function App(): JSX.Element {
             lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
-            onNavigateToConnections={() => {
-              setSettingsDefaultTab("connections");
+            onNavigateToSettings={(tab: SettingsTab) => {
+              setSettingsDefaultTab(tab);
               setActiveScreen("Settings");
             }}
             needsAuth={connectionsNeedAuth}
@@ -620,6 +620,15 @@ export function App(): JSX.Element {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
             }}
+            connections={Object.values(connections).map((c) => ({
+              provider: c.provider,
+              label: c.label,
+              status: c.status
+            }))}
+            lastError={syncState.lastError}
+            noHealthySources={Object.values(connections).every(
+              (c) => c.status !== "connected"
+            )}
           />
         );
       case "Library":
@@ -723,6 +732,7 @@ export function App(): JSX.Element {
     refreshNotionMedia,
     runSyncNow,
     syncProgress,
+    syncState.lastError,
     syncState.lastRunAt,
     syncState.status,
     works
