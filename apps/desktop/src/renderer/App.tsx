@@ -208,6 +208,8 @@ export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
   const [searchInitialQuery, setSearchInitialQuery] = useState<string>("");
   const [pendingExpandPassageId, setPendingExpandPassageId] = useState<string | null>(null);
+  const [pendingScrollPassageId, setPendingScrollPassageId] = useState<string | null>(null);
+  const [breadcrumbFromSearch, setBreadcrumbFromSearch] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
 
   const toggleSidebar = useCallback((): void => {
@@ -544,6 +546,30 @@ export function App(): JSX.Element {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setActiveScreen("Search");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (activeScreen !== "Search") {
+      setPendingExpandPassageId(null);
+    }
+  }, [activeScreen]);
+
+  useEffect(() => {
+    if (activeScreen !== "Library") {
+      setPendingScrollPassageId(null);
+      setBreadcrumbFromSearch(false);
+    }
+  }, [activeScreen]);
+
   useEffect(
     () => () => {
       if (connectionsRetryTimerRef.current) {
@@ -571,6 +597,26 @@ export function App(): JSX.Element {
   const openSearchScreenWithQuery = useCallback((initialQuery: string): void => {
     setSearchInitialQuery(initialQuery);
     setPendingExpandPassageId(null);
+    setSelectedLibraryWorkId(null);
+    setActiveScreen("Search");
+  }, []);
+
+  const openSearchScreenForPassage = useCallback((query: string, expandPassageId?: string): void => {
+    setSearchInitialQuery(query);
+    setPendingExpandPassageId(expandPassageId ?? null);
+    setSelectedLibraryWorkId(null);
+    setActiveScreen("Search");
+  }, []);
+
+  const openBookAtPassage = useCallback((workId: string, passageId: string): void => {
+    setSelectedLibraryWorkId(workId);
+    setPendingScrollPassageId(passageId);
+    setBreadcrumbFromSearch(true);
+    setActiveScreen("Library");
+  }, []);
+
+  const backToSearch = useCallback((): void => {
+    setBreadcrumbFromSearch(false);
     setSelectedLibraryWorkId(null);
     setActiveScreen("Search");
   }, []);
@@ -704,7 +750,7 @@ export function App(): JSX.Element {
               <LibraryBookDetailScreen
                 work={selectedWork}
                 onOpenSearchScreen={openSearchScreenWithQuery}
-                pendingScrollPassageId={null}
+                pendingScrollPassageId={pendingScrollPassageId}
               />
             );
           }
@@ -721,10 +767,7 @@ export function App(): JSX.Element {
           <SearchScreen
             initialQuery={searchInitialQuery}
             pendingExpandPassageId={pendingExpandPassageId}
-            onOpenWork={(workId, _passageId) => {
-              setSelectedLibraryWorkId(workId);
-              setActiveScreen("Library");
-            }}
+            onOpenWork={openBookAtPassage}
             onOpenSearchScreen={openSearchScreenWithQuery}
           />
         );
@@ -743,8 +786,10 @@ export function App(): JSX.Element {
     isCancelingSync,
     isSyncing,
     logs,
+    openBookAtPassage,
     openSearchScreenWithQuery,
     pendingExpandPassageId,
+    pendingScrollPassageId,
     recentActivity,
     searchInitialQuery,
     syncRunStartedAtIso,
@@ -860,7 +905,15 @@ export function App(): JSX.Element {
       <section className="content" data-screen={activeScreen}>
         <header className="content-header">
           <div>
-            {selectedWork ? (
+            {selectedWork && breadcrumbFromSearch ? (
+              <button
+                type="button"
+                className="content-eyebrow content-eyebrow-link"
+                onClick={backToSearch}
+              >
+                <span aria-hidden="true">‹</span> Search results
+              </button>
+            ) : selectedWork ? (
               <button
                 type="button"
                 className="content-eyebrow content-eyebrow-link"
@@ -874,12 +927,7 @@ export function App(): JSX.Element {
             <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
-          <GlobalSearchBar
-            onEscalate={(query, passageId) => {
-              openSearchScreenWithQuery(query);
-              // passageId wiring lands in Task 14
-            }}
-          />
+          <GlobalSearchBar onEscalate={openSearchScreenForPassage} />
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
         {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
