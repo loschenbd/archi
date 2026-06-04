@@ -14,6 +14,7 @@ export type KnnHit = {
 export type FtsHit = {
   passage_id: string;
   bm25: number;
+  fts_snippet: string | null;
 };
 
 function vectorToBuffer(v: Float32Array): Buffer {
@@ -109,7 +110,8 @@ export class SearchRepository {
     const placeholders = candidateIds.map(() => "?").join(",");
     return this.db
       .prepare(
-        `SELECT p.id AS passage_id, bm25(passages_fts) AS bm25
+        `SELECT p.id AS passage_id, bm25(passages_fts) AS bm25,
+                snippet(passages_fts, 0, '<mark>', '</mark>', '…', 32) AS fts_snippet
          FROM passages_fts
          JOIN passages p ON p.rowid = passages_fts.rowid
          WHERE passages_fts MATCH ?

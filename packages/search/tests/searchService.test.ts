@@ -86,4 +86,26 @@ describe("SearchService", () => {
     );
     expect(hasFtsContribution).toBe(true);
   }, 30_000);
+
+  describe("snippet output", () => {
+    it("wraps matched tokens in <mark> for fts5 matches", async () => {
+      const res = await service.query({ text: "anger", filters: {}, limit: 5 });
+      const ftsHit = res.results.find((r) => r.matchedVia === "fts5" || r.matchedVia === "both");
+      expect(ftsHit).toBeDefined();
+      expect(ftsHit!.snippet).toMatch(/<mark>anger<\/mark>/i);
+    });
+
+    it("returns first 220 chars + ellipsis for vector-only matches over 220 chars long", async () => {
+      // Choose a query whose only matching mechanism is vector (synonym, not literal).
+      const res = await service.query({ text: "rage", filters: {}, limit: 5 });
+      const vectorOnly = res.results.find((r) => r.matchedVia === "vector");
+      expect(vectorOnly).toBeDefined();
+      if (vectorOnly!.body.length > 220) {
+        expect(vectorOnly!.snippet.length).toBeLessThanOrEqual(221); // 220 + ellipsis
+        expect(vectorOnly!.snippet.endsWith("…")).toBe(true);
+      } else {
+        expect(vectorOnly!.snippet).toBe(vectorOnly!.body);
+      }
+    });
+  });
 });

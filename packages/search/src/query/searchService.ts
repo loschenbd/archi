@@ -108,6 +108,7 @@ export class SearchService {
     const idsInOrder = fused.map((f) => f.key);
     const vecScoreById = new Map(vecHits.map((h) => [h.passage_id, h.distance]));
     const ftsScoreById = new Map(ftsHits.map((h) => [h.passage_id, h.bm25]));
+    const ftsSnippetById = new Map(ftsHits.map((h) => [h.passage_id, h.fts_snippet]));
 
     const placeholders = idsInOrder.map(() => "?").join(",");
     const rowsById = new Map<string, Record<string, unknown>>();
@@ -123,7 +124,9 @@ export class SearchService {
         )
         .all(...idsInOrder) as Array<Record<string, unknown>>;
       for (const row of rows) {
-        rowsById.set(String(row.passage_id), row);
+        const pid = String(row.passage_id);
+        row.fts_snippet = ftsSnippetById.get(pid) ?? null;
+        rowsById.set(pid, row);
       }
     }
 
@@ -165,17 +168,33 @@ export class SearchService {
   }
 }
 
+function buildSnippet(
+  body: string,
+  ftsSnippet: string | null,
+  matchedVia: SearchResult["matchedVia"]
+): string {
+  if ((matchedVia === "fts5" || matchedVia === "both") && ftsSnippet && ftsSnippet.length > 0) {
+    return ftsSnippet;
+  }
+  // Vector-only or no FTS5 snippet available — body-slice fallback.
+  if (body.length <= 220) {
+    return body;
+  }
+  return `${body.slice(0, 220)}…`;
+}
+
 function hydrateResult(
   row: Record<string, unknown>,
   scores: SearchResult["scores"],
   matchedVia: SearchResult["matchedVia"]
 ): SearchResult {
   const body = String(row.body);
+  const ftsSnippet = (row.fts_snippet as string | null) ?? null;
   return {
     passageId: String(row.passage_id),
     body,
     readerNote: (row.reader_note as string | null) ?? undefined,
-    snippet: body,
+    snippet: buildSnippet(body, ftsSnippet, matchedVia),
     work: {
       id: String(row.work_id),
       displayTitle: String(row.display_title),
@@ -187,7 +206,7 @@ function hydrateResult(
     labels: parseLabels(row.labels_json),
     isStarred: Number(row.is_starred) === 1,
     scores,
-    matchedVia: matchedVia
+    matchedVia
   };
 }
 
