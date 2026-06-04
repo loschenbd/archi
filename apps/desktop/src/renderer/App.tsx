@@ -207,7 +207,7 @@ function readInitialSidebarCollapsed(): boolean {
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
   const [searchInitialQuery, setSearchInitialQuery] = useState<string>("");
-  const [searchScreenInstance, setSearchScreenInstance] = useState<number>(0);
+  const [pendingExpandPassageId, setPendingExpandPassageId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
 
   const toggleSidebar = useCallback((): void => {
@@ -568,14 +568,9 @@ export function App(): JSX.Element {
     }
   }, [selectedLibraryWorkId, works]);
 
-  const openPassageFromSearch = useCallback((): void => {
-    setSelectedLibraryWorkId(null);
-    setActiveScreen("Search");
-  }, []);
-
   const openSearchScreenWithQuery = useCallback((initialQuery: string): void => {
     setSearchInitialQuery(initialQuery);
-    setSearchScreenInstance((prev) => prev + 1);
+    setPendingExpandPassageId(null);
     setSelectedLibraryWorkId(null);
     setActiveScreen("Search");
   }, []);
@@ -718,14 +713,13 @@ export function App(): JSX.Element {
       case "Search":
         return (
           <SearchScreen
-            key={`search-${searchScreenInstance}`}
             initialQuery={searchInitialQuery}
-            onOpenPassage={openPassageFromSearch}
-            onOpenWork={(workId) => {
+            pendingExpandPassageId={pendingExpandPassageId}
+            onOpenWork={(workId, _passageId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
             }}
-            onFindSimilar={openSearchScreenWithQuery}
+            onOpenSearchScreen={openSearchScreenWithQuery}
           />
         );
       case "Logs":
@@ -743,11 +737,10 @@ export function App(): JSX.Element {
     isCancelingSync,
     isSyncing,
     logs,
-    openPassageFromSearch,
     openSearchScreenWithQuery,
+    pendingExpandPassageId,
     recentActivity,
     searchInitialQuery,
-    searchScreenInstance,
     syncRunStartedAtIso,
     selectedLibraryWorkId,
     refreshNotionMedia,

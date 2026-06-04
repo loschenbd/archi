@@ -2108,12 +2108,16 @@ select {
 }
 
 .search-screen__input {
+  display: block;
   width: 100%;
   max-width: 720px;
+  min-height: 50px;
+  max-height: 168px;
   padding: 13px 16px;
   font-size: 16px;
   font-family: Newsreader, Georgia, serif;
   font-weight: 500;
+  line-height: 1.45;
   letter-spacing: -0.005em;
   color: var(--ink-900);
   background: color-mix(in srgb, var(--surface) 88%, #fff);
@@ -2121,6 +2125,9 @@ select {
   border-radius: 14px;
   box-shadow: 0 1px 0 rgba(88, 63, 43, 0.04);
   transition: border-color 140ms ease, box-shadow 140ms ease;
+  resize: none;
+  overflow-y: auto;
+  field-sizing: content;
 }
 
 .search-screen__input::placeholder {
