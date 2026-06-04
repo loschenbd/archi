@@ -2910,3 +2910,20 @@ button.indexer-status-pill:hover {
 .settings-toggle.is-on .settings-toggle__thumb {
   transform: translateX(16px);
 }
+
+.library-quote-card--ringed {
+  animation: library-quote-ring 1500ms ease-out 1;
+  position: relative;
+}
+
+@keyframes library-quote-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
