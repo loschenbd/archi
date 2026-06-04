@@ -23,24 +23,12 @@ export function SearchScreen({
   const [filters, setFilters] = useState<SearchFilters>({});
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [availableCreators, setAvailableCreators] = useState<string[]>([]);
   const [totalPassages, setTotalPassages] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on mount.
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
-
-  // Load available creators once for the filter dropdown.
-  useEffect(() => {
-    void (async () => {
-      const browseRes = await window.archi.search.query({ text: "", filters: {}, limit: 200 });
-      const unique = Array.from(
-        new Set(browseRes.results.map((r) => r.work.creator).filter((c): c is string => Boolean(c)))
-      ).sort();
-      setAvailableCreators(unique);
-    })();
   }, []);
 
   // Load indexer status for the empty-state helper line.
@@ -94,7 +82,7 @@ export function SearchScreen({
         onChange={(e) => setText(e.target.value)}
         aria-label="Search highlights"
       />
-      <SearchFilterChips filters={filters} onChange={setFilters} availableCreators={availableCreators} />
+      <SearchFilterChips filters={filters} onChange={setFilters} />
       <div className="search-screen__summary">{loading ? "Searching…" : summary}</div>
       <div className="search-screen__results">
         {isEmpty ? (
