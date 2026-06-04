@@ -1837,6 +1837,11 @@ select {
   opacity: 1;
 }
 
+.search-result-card:hover .passage-card-actions,
+.search-result-card:focus-within .passage-card-actions {
+  opacity: 1;
+}
+
 .passage-card-action {
   display: inline-flex;
   align-items: center;
