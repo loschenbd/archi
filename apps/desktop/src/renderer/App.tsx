@@ -224,7 +224,6 @@ export function App(): JSX.Element {
   const [notionTokenDraft, setNotionTokenDraft] = useState("");
   const [connections, setConnections] = useState<Record<ConnectionProvider, ConnectionState>>(emptyConnections);
   const [works, setWorks] = useState<LibraryWork[]>([]);
-  const [passages, setPassages] = useState<Array<{ id: string; body: string; workId: string; workTitle: string }>>([]);
   const [selectedLibraryWorkId, setSelectedLibraryWorkId] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -312,7 +311,6 @@ export function App(): JSX.Element {
 
   const refreshLists = useCallback((): void => {
     void window.archi.listWorks().then(setWorks);
-    void window.archi.listPassages().then(setPassages);
     void window.archi.listLogs().then(setLogs);
     void window.archi.listRecentActivity(8).then(setRecentActivity).catch(() => {});
   }, []);
@@ -724,7 +722,6 @@ export function App(): JSX.Element {
     logs,
     openPassageFromSearch,
     openSearchScreenWithQuery,
-    passages,
     recentActivity,
     searchInitialQuery,
     searchScreenInstance,
