@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { FindSimilarButton } from "../components/FindSimilarButton";
 
 type PositionKind = "page" | "location" | "offset" | "order" | "unknown";
 
@@ -33,6 +34,7 @@ type LocationGroup = {
 
 type Props = {
   work: LibraryWork;
+  onOpenSearchScreen: (initialQuery: string) => void;
 };
 
 function parseNumber(text?: string): number {
@@ -170,12 +172,13 @@ function createNotebookFallbackUrl(baseUrl: string, work: LibraryWork, passage: 
   }
 }
 
-export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
+export function LibraryBookDetailScreen({ work, onOpenSearchScreen }: Props): JSX.Element {
   const [passages, setPassages] = useState<LibraryPassage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [kindleErrorMessage, setKindleErrorMessage] = useState<string | null>(null);
   const [openingPassageId, setOpeningPassageId] = useState<string | null>(null);
+  const [copiedPassageId, setCopiedPassageId] = useState<string | null>(null);
   const [notebookUrl, setNotebookUrl] = useState("https://read.amazon.com/notebook");
 
   useEffect(() => {
@@ -228,6 +231,18 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
     [groups]
   );
 
+  const copyPassage = async (passage: LibraryPassage): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(passage.body);
+      setCopiedPassageId(passage.id);
+      window.setTimeout(() => {
+        setCopiedPassageId((current) => (current === passage.id ? null : current));
+      }, 1400);
+    } catch {
+      // Clipboard write can reject in unusual sandbox states; silently swallow.
+    }
+  };
+
   const handleOpenInKindle = async (passage: LibraryPassage): Promise<void> => {
     setOpeningPassageId(passage.id);
     setKindleErrorMessage(null);
@@ -275,6 +290,25 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
                 disabled={openingPassageId === passage.id}
               >
                 {openingPassageId === passage.id ? "Opening…" : "↗ Open in Kindle"}
+              </button>
+              <FindSimilarButton
+                passageBody={passage.body}
+                onOpenSearchScreen={onOpenSearchScreen}
+              />
+              <button
+                type="button"
+                className={`passage-card-action ${
+                  copiedPassageId === passage.id ? "passage-card-action-success" : ""
+                }`}
+                onClick={() => {
+                  void copyPassage(passage);
+                }}
+                title="Copy quote to clipboard"
+              >
+                <span className="passage-card-action-icon" aria-hidden="true">
+                  {copiedPassageId === passage.id ? "✓" : "⎘"}
+                </span>
+                {copiedPassageId === passage.id ? "Copied" : "Copy"}
               </button>
             </footer>
           </li>

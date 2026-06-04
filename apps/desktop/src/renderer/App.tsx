@@ -684,7 +684,7 @@ export function App(): JSX.Element {
         if (selectedLibraryWorkId) {
           const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
           if (selectedWork) {
-            return <LibraryBookDetailScreen work={selectedWork} />;
+            return <LibraryBookDetailScreen work={selectedWork} onOpenSearchScreen={openSearchScreenWithQuery} />;
           }
         }
         return (

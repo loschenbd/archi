@@ -1785,6 +1785,11 @@ select {
   opacity: 1;
 }
 
+.library-quote-card:hover .passage-card-action,
+.library-quote-card:focus-within .passage-card-action {
+  opacity: 1;
+}
+
 .passage-card-action {
   display: inline-flex;
   align-items: center;
