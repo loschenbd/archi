@@ -131,8 +131,6 @@ const api = {
       coverImageUrl?: string;
     }>
   > => ipcRenderer.invoke("archi:list-works"),
-  listPassages: (): Promise<Array<{ id: string; body: string; workId: string; workTitle: string }>> =>
-    ipcRenderer.invoke("archi:list-passages"),
   listRecentActivity: (
     limit?: number
   ): Promise<{

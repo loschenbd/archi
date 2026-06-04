@@ -1467,15 +1467,6 @@ app.whenReady().then(() => {
       coverImageUrl: work.coverImageUrl
     }))
   );
-  ipcMain.handle("archi:list-passages", () => {
-    const worksById = new Map(repository.listWorks().map((work) => [work.id, work.displayTitle]));
-    return repository.listPassages().map((passage) => ({
-      id: passage.id,
-      body: passage.body,
-      workId: passage.workId,
-      workTitle: worksById.get(passage.workId) ?? "Unknown Work"
-    }));
-  });
   ipcMain.handle("archi:list-recent-activity", (_event, limit?: number) => {
     const max = typeof limit === "number" && limit > 0 ? Math.min(limit, 50) : 8;
     const allWorks = repository.listWorks();
