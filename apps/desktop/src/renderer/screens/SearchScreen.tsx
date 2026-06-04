@@ -7,28 +7,51 @@ import { IndexingBanner } from "../components/IndexingBanner";
 type Props = {
   initialQuery?: string;
   onOpenPassage: (passageId: string) => void;
+  onOpenWork: (workId: string) => void;
+  onFindSimilar: (passageBody: string) => void;
   showMatchSource?: boolean;
 };
 
-export function SearchScreen({ initialQuery = "", onOpenPassage, showMatchSource = true }: Props) {
+export function SearchScreen({
+  initialQuery = "",
+  onOpenPassage,
+  onOpenWork,
+  onFindSimilar,
+  showMatchSource = true
+}: Props) {
   const [text, setText] = useState(initialQuery);
   const [filters, setFilters] = useState<SearchFilters>({});
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [availableCreators, setAvailableCreators] = useState<string[]>([]);
+  const [totalPassages, setTotalPassages] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on mount.
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // Load available creators once for the filter dropdown.
   useEffect(() => {
     void (async () => {
       const browseRes = await window.archi.search.query({ text: "", filters: {}, limit: 200 });
-      const unique = Array.from(new Set(
-        browseRes.results.map((r) => r.work.creator).filter((c): c is string => Boolean(c))
-      )).sort();
+      const unique = Array.from(
+        new Set(browseRes.results.map((r) => r.work.creator).filter((c): c is string => Boolean(c)))
+      ).sort();
       setAvailableCreators(unique);
+    })();
+  }, []);
+
+  // Load indexer status for the empty-state helper line.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const status = await window.archi.search.indexerStatus();
+        setTotalPassages(status.total);
+      } catch {
+        setTotalPassages(null);
+      }
     })();
   }, []);
 
@@ -44,7 +67,9 @@ export function SearchScreen({ initialQuery = "", onOpenPassage, showMatchSource
 
   // Debounced live query.
   useEffect(() => {
-    const handle = setTimeout(() => { void runQuery(text, filters); }, 150);
+    const handle = setTimeout(() => {
+      void runQuery(text, filters);
+    }, 150);
     return () => clearTimeout(handle);
   }, [text, filters, runQuery]);
 
@@ -52,6 +77,11 @@ export function SearchScreen({ initialQuery = "", onOpenPassage, showMatchSource
     if (!response) return "";
     return `Showing ${response.results.length} of ${response.totalCandidates} candidates (${response.durationMs} ms)`;
   }, [response]);
+
+  const hasQuery = text.trim().length > 0;
+  const isEmpty = !hasQuery && !loading;
+  const helperCorpusLabel =
+    totalPassages !== null ? `${totalPassages.toLocaleString()} highlights` : "your highlights";
 
   return (
     <section className="search-screen">
@@ -67,18 +97,29 @@ export function SearchScreen({ initialQuery = "", onOpenPassage, showMatchSource
       <SearchFilterChips filters={filters} onChange={setFilters} availableCreators={availableCreators} />
       <div className="search-screen__summary">{loading ? "Searching…" : summary}</div>
       <div className="search-screen__results">
-        {response?.results.map((r) => (
-          <SearchResultCard
-            key={r.passageId}
-            result={r}
-            showMatchSource={showMatchSource}
-            onOpen={onOpenPassage}
-          />
-        ))}
-        {response && response.results.length === 0 && !loading && (
-          <div className="search-screen__empty">
-            No matches. Try fewer filters or different words.
-          </div>
+        {isEmpty ? (
+          <p className="search-screen__hint">
+            Type to search {helperCorpusLabel} · <kbd>⌘K</kbd> from anywhere · click a book in
+            Library to browse one.
+          </p>
+        ) : (
+          <>
+            {response?.results.map((r) => (
+              <SearchResultCard
+                key={r.passageId}
+                result={r}
+                showMatchSource={showMatchSource}
+                onOpen={onOpenPassage}
+                onOpenWork={onOpenWork}
+                onFindSimilar={onFindSimilar}
+              />
+            ))}
+            {response && response.results.length === 0 && !loading && (
+              <div className="search-screen__empty">
+                No matches. Try fewer filters or different words.
+              </div>
+            )}
+          </>
         )}
       </div>
       <IndexingBanner />

@@ -2223,6 +2223,24 @@ select {
   line-height: 1.5;
 }
 
+.search-screen__hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary, #8a857a);
+  font-style: italic;
+  padding: 48px 16px 8px;
+  margin: 0;
+}
+
+.search-screen__hint kbd {
+  font-family: inherit;
+  background: var(--surface-2, #f0ebe0);
+  border: 1px solid var(--border, #d8d2c6);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+}
+
 /* ---- Search result card ---- */
 
 .search-result-card {

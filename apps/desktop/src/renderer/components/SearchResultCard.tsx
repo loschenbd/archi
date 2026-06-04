@@ -1,9 +1,12 @@
+import { useState } from "react";
 import type { SearchResult } from "@archi/search";
 
 type Props = {
   result: SearchResult;
   showMatchSource: boolean;
   onOpen: (passageId: string) => void;
+  onOpenWork: (workId: string) => void;
+  onFindSimilar: (passageBody: string) => void;
 };
 
 const matchLabel: Record<SearchResult["matchedVia"], string> = {
@@ -12,7 +15,25 @@ const matchLabel: Record<SearchResult["matchedVia"], string> = {
   both: "meaning + keyword"
 };
 
-export function SearchResultCard({ result, showMatchSource, onOpen }: Props) {
+export function SearchResultCard({
+  result,
+  showMatchSource,
+  onOpen,
+  onOpenWork,
+  onFindSimilar
+}: Props) {
+  const [copied, setCopied] = useState(false);
+
+  const copyBody = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(result.body);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      // Clipboard write can reject in unusual sandbox states; silently swallow.
+    }
+  };
+
   return (
     <article
       className="search-result-card"
@@ -62,6 +83,41 @@ export function SearchResultCard({ result, showMatchSource, onOpen }: Props) {
           {result.readerNote}
         </p>
       )}
+      <div
+        className="passage-card-actions"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="passage-card-action"
+          onClick={() => onFindSimilar(result.body)}
+          title="Find passages similar to this one"
+        >
+          <span className="passage-card-action-icon" aria-hidden="true">≈</span>
+          Find similar
+        </button>
+        <button
+          type="button"
+          className="passage-card-action"
+          onClick={() => onOpenWork(result.work.id)}
+          title="Open this book in Library"
+        >
+          <span className="passage-card-action-icon" aria-hidden="true">↗</span>
+          Open book
+        </button>
+        <button
+          type="button"
+          className={`passage-card-action ${copied ? "passage-card-action-success" : ""}`}
+          onClick={() => {
+            void copyBody();
+          }}
+          title="Copy quote to clipboard"
+        >
+          <span className="passage-card-action-icon" aria-hidden="true">{copied ? "✓" : "⎘"}</span>
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
       {result.markedAt && (
         <footer className="search-result-card__footer">
           Marked {new Date(result.markedAt).toLocaleDateString()}

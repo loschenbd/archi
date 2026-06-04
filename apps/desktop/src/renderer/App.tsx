@@ -562,7 +562,7 @@ export function App(): JSX.Element {
 
   const openPassageFromSearch = useCallback((): void => {
     setSelectedLibraryWorkId(null);
-    setActiveScreen("Passages");
+    setActiveScreen("Search");
   }, []);
 
   const openSearchScreenWithQuery = useCallback((initialQuery: string): void => {
@@ -724,6 +724,11 @@ export function App(): JSX.Element {
             key={`search-${searchScreenInstance}`}
             initialQuery={searchInitialQuery}
             onOpenPassage={openPassageFromSearch}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+            onFindSimilar={openSearchScreenWithQuery}
           />
         );
       case "Logs":
