@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ConnectionsScreen, type ConnectionState } from "./screens/ConnectionsScreen";
+import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { PassagesScreen } from "./screens/PassagesScreen";
+import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Connections", "Library", "Passages", "Logs"] as const;
+const screens = ["Home", "Library", "Passages", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -20,13 +20,6 @@ const screenIcons: Record<Screen, JSX.Element> = {
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2.5 7L8 2.5L13.5 7v6a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V7z" />
       <path d="M6 14V9.5h4V14" />
-    </svg>
-  ),
-  Connections: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.5 6.5l-3 3" />
-      <path d="M6.5 9.5a2.5 2.5 0 1 1-2-2L6 6" />
-      <path d="M9.5 6.5a2.5 2.5 0 1 1 2 2L10 10" />
     </svg>
   ),
   Library: (
@@ -45,11 +38,10 @@ const screenIcons: Record<Screen, JSX.Element> = {
       <path d="M8.5 6h2.8v4H8.5z" />
     </svg>
   ),
-  Logs: (
+  Settings: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 4h10" />
-      <path d="M3 8h10" />
-      <path d="M3 12h7" />
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
     </svg>
   )
 };
@@ -199,6 +191,7 @@ function readInitialSidebarCollapsed(): boolean {
 
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
 
   const toggleSidebar = useCallback((): void => {
@@ -361,7 +354,7 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (activeScreen !== "Connections") {
+    if (activeScreen !== "Settings") {
       return;
     }
     if (!onboardingCompleted) {
@@ -610,7 +603,10 @@ export function App(): JSX.Element {
             lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
-            onNavigateToConnections={() => setActiveScreen("Connections")}
+            onNavigateToConnections={() => {
+              setSettingsDefaultTab("connections");
+              setActiveScreen("Settings");
+            }}
             needsAuth={connectionsNeedAuth}
             isSyncing={isSyncing}
             isCancelingSync={isCancelingSync}
@@ -626,9 +622,34 @@ export function App(): JSX.Element {
             }}
           />
         );
-      case "Connections":
+      case "Library":
+        if (selectedLibraryWorkId) {
+          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
+          if (selectedWork) {
+            return <LibraryBookDetailScreen work={selectedWork} />;
+          }
+        }
         return (
-          <ConnectionsScreen
+          <LibraryScreen
+            works={works}
+            selectedWorkId={selectedLibraryWorkId ?? undefined}
+            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
+          />
+        );
+      case "Passages":
+        return (
+          <PassagesScreen
+            passages={passages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Settings":
+        return (
+          <SettingsScreen
+            defaultTab={settingsDefaultTab}
             connections={connections}
             cloudEnabled={cloudEnabled}
             notionTokenDraft={notionTokenDraft}
@@ -679,34 +700,9 @@ export function App(): JSX.Element {
             }}
             onRefreshNotionMedia={refreshNotionMedia}
             isSyncing={isSyncing}
+            logs={logs}
           />
         );
-      case "Library":
-        if (selectedLibraryWorkId) {
-          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
-          if (selectedWork) {
-            return <LibraryBookDetailScreen work={selectedWork} />;
-          }
-        }
-        return (
-          <LibraryScreen
-            works={works}
-            selectedWorkId={selectedLibraryWorkId ?? undefined}
-            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
-          />
-        );
-      case "Passages":
-        return (
-          <PassagesScreen
-            passages={passages}
-            onOpenWork={(workId) => {
-              setSelectedLibraryWorkId(workId);
-              setActiveScreen("Library");
-            }}
-          />
-        );
-      case "Logs":
-        return <LogsScreen entries={logs} />;
       default:
         return <p>Unknown screen.</p>;
     }
@@ -721,6 +717,7 @@ export function App(): JSX.Element {
     logs,
     passages,
     recentActivity,
+    settingsDefaultTab,
     syncRunStartedAtIso,
     selectedLibraryWorkId,
     refreshNotionMedia,
@@ -765,7 +762,8 @@ export function App(): JSX.Element {
                 .completeOnboarding()
                 .then((result) => {
                   setOnboardingCompleted(result.onboardingCompleted);
-                  setActiveScreen("Connections");
+                  setSettingsDefaultTab("connections");
+                  setActiveScreen("Settings");
                   refreshConnections();
                   refreshLists();
                   void window.archi.getSyncState().then(setSyncState);
