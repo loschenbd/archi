@@ -6,16 +6,18 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { SearchScreen } from "./screens/SearchScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { GlobalSearchBar } from "./components/GlobalSearchBar";
 import { IndexerStatusPill } from "./components/IndexerStatusPill";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { IndexerStatusProvider } from "./state/IndexerStatusContext";
+import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Library", "Search", "Connections", "Logs"] as const;
+const screens = ["Home", "Library", "Search", "Connections", "Logs", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -50,7 +52,13 @@ const screenIcons: Record<Screen, JSX.Element> = {
       <path d="M3 8h10" />
       <path d="M3 12h7" />
     </svg>
-  )
+  ),
+  Settings: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1.5v2 M8 12.5v2 M1.5 8h2 M12.5 8h2 M3.05 3.05l1.42 1.42 M11.53 11.53l1.42 1.42 M3.05 12.95l1.42-1.42 M11.53 4.47l1.42-1.42" />
+    </svg>
+  ),
 };
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 
@@ -525,6 +533,17 @@ export function App(): JSX.Element {
       });
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        setActiveScreen("Settings");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   useEffect(
     () => () => {
       if (connectionsRetryTimerRef.current) {
@@ -711,6 +730,8 @@ export function App(): JSX.Element {
         );
       case "Logs":
         return <LogsScreen entries={logs} />;
+      case "Settings":
+        return <SettingsScreen />;
       default:
         return <p>Unknown screen.</p>;
     }
@@ -794,6 +815,7 @@ export function App(): JSX.Element {
 
   return (
     <IndexerStatusProvider>
+      <SearchPreferencesProvider>
       <UpdateBanner />
       <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <WindowTitleBar />
@@ -866,6 +888,7 @@ export function App(): JSX.Element {
       </section>
     </main>
     <SupportPromptModal open={supportPromptOpen} onClose={() => setSupportPromptOpen(false)} />
+      </SearchPreferencesProvider>
     </IndexerStatusProvider>
   );
 }
