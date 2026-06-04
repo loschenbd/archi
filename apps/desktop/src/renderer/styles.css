@@ -2947,3 +2947,50 @@ details.activity-column:not([open]) {
   color: var(--ink-500);
   font-style: italic;
 }
+
+.content-header-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.content-header-search-input {
+  width: 100%;
+  font-size: 13px;
+  padding: 7px 32px 7px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ink-300) 36%, transparent);
+  background: var(--surface);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.content-header-search-input:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.content-header-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: color-mix(in srgb, var(--ink-300) 22%, transparent);
+  color: var(--ink-700);
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content-header-search-clear:hover {
+  background: color-mix(in srgb, var(--ink-300) 40%, transparent);
+}

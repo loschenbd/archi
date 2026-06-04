@@ -193,6 +193,7 @@ export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
+  const [homeSearchQuery, setHomeSearchQuery] = useState("");
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -643,6 +644,7 @@ export function App(): JSX.Element {
             noHealthySources={Object.values(connections).every(
               (c) => c.status !== "connected" && c.status !== "configuring"
             )}
+            homeSearchQuery={homeSearchQuery}
           />
         );
       case "Library":
@@ -735,6 +737,7 @@ export function App(): JSX.Element {
     cloudEnabled,
     connections,
     connectionsNeedAuth,
+    homeSearchQuery,
     isCancelingSync,
     isSyncing,
     logs,
@@ -868,6 +871,36 @@ export function App(): JSX.Element {
             <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
+          {activeScreen === "Home" ? (
+            <div className="content-header-search">
+              <input
+                type="search"
+                className="content-header-search-input"
+                placeholder="Search your library…"
+                value={homeSearchQuery}
+                onChange={(event) => setHomeSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && homeSearchQuery) {
+                    event.preventDefault();
+                    setHomeSearchQuery("");
+                  }
+                }}
+                aria-label="Search your library"
+                autoFocus
+              />
+              {homeSearchQuery ? (
+                <button
+                  type="button"
+                  className="content-header-search-clear"
+                  onClick={() => setHomeSearchQuery("")}
+                  aria-label="Clear search"
+                  tabIndex={-1}
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
         {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
