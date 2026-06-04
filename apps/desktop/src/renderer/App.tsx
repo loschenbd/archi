@@ -627,7 +627,7 @@ export function App(): JSX.Element {
             }))}
             lastError={syncState.lastError}
             noHealthySources={Object.values(connections).every(
-              (c) => c.status !== "connected"
+              (c) => c.status !== "connected" && c.status !== "configuring"
             )}
           />
         );

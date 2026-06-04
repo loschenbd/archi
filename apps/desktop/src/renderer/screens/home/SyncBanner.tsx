@@ -101,7 +101,9 @@ export function SyncBanner(props: Props): JSX.Element | null {
   const phaseLabel = syncProgress ? PHASE_LABELS[syncProgress.phase] ?? syncProgress.phase : null;
   const needsAuthConnection = connections.find((c) => c.status === "needs_action");
 
-  // Priority: Running > Cancelling > NoHealthySources > NeedsAuth > Failed > Hidden
+  // Priority: Cancelling > Running > NoHealthySources > NeedsAuth > Failed > Hidden
+  // (Cancelling must short-circuit Running because isSyncing is still true while
+  // a cancel propagates.)
   if (isCancelingSync) {
     return (
       <div className="sync-banner sync-banner-cancelling" role="status" aria-live="polite">
