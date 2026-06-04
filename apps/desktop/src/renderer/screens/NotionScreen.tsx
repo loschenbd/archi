@@ -7,7 +7,7 @@ export function NotionScreen({ connectionStatus }: Props): JSX.Element {
     <>
       <h2>Notion</h2>
       <p>Connection: {connectionStatus}</p>
-      <p>On first run, Archi auto-creates Library and Passages databases.</p>
+      <p>On first run, Archi auto-creates your Library database in Notion and syncs your highlights as related entries.</p>
     </>
   );
 }
