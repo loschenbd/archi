@@ -1665,66 +1665,9 @@ select {
   cursor: progress;
 }
 
-.passages-screen,
 .logs-screen {
   display: grid;
   gap: 12px;
-}
-
-/* Passages screen: pin filters/count, scroll the list inside its own box. */
-.content[data-screen="Passages"] {
-  overflow: hidden;
-  grid-template-rows: auto 1fr;
-  align-content: stretch;
-}
-
-.content[data-screen="Passages"] .screen-card {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.passages-screen {
-  /* Override the original `display: grid; gap: 12px;` so the list region can flex. */
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  height: 100%;
-}
-
-.passages-list-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  /* Leave a sliver so the bottom-most card's shadow isn't clipped. */
-  padding-bottom: 4px;
-}
-
-.passages-list-inner {
-  position: relative;
-  width: 100%;
-}
-
-.passages-list-row {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  /* Replaces the original `.passages-list` grid gap. */
-  padding-bottom: 8px;
-  box-sizing: border-box;
-}
-
-.passages-filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
-  gap: 10px;
-}
-
-.select-input {
-  max-width: 220px;
 }
 
 .logs-list {
@@ -1941,10 +1884,6 @@ select {
 
   .content-header h1 {
     font-size: 36px;
-  }
-
-  .passages-filters {
-    grid-template-columns: 1fr;
   }
 }
 
