@@ -1,12 +1,15 @@
 import { useState } from "react";
 import type { SearchResult } from "@archi/search";
+import { HighlightedText } from "./HighlightedText";
+import { FindSimilarButton } from "./FindSimilarButton";
 
 type Props = {
   result: SearchResult;
   showMatchSource: boolean;
-  onOpen: (passageId: string) => void;
-  onOpenWork: (workId: string) => void;
-  onFindSimilar: (passageBody: string) => void;
+  expanded: boolean;
+  onToggle: () => void;
+  onOpenWork: (workId: string, passageId: string) => void;
+  onOpenSearchScreen: (query: string) => void;
 };
 
 const matchLabel: Record<SearchResult["matchedVia"], string> = {
@@ -18,10 +21,11 @@ const matchLabel: Record<SearchResult["matchedVia"], string> = {
 export function SearchResultCard({
   result,
   showMatchSource,
-  onOpen,
+  expanded,
+  onToggle,
   onOpenWork,
-  onFindSimilar
-}: Props) {
+  onOpenSearchScreen
+}: Props): JSX.Element {
   const [copied, setCopied] = useState(false);
 
   const copyBody = async (): Promise<void> => {
@@ -34,19 +38,22 @@ export function SearchResultCard({
     }
   };
 
+  const cardId = `search-result-${result.passageId}`;
+  const bodyId = `${cardId}-body`;
+
   return (
     <article
-      className="search-result-card"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(result.passageId)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen(result.passageId);
-        }
-      }}
+      className={`search-result-card${expanded ? " search-result-card--expanded" : ""}`}
+      id={cardId}
     >
+      <button
+        type="button"
+        className="search-result-card__expand-toggle"
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+        onClick={onToggle}
+        aria-label={expanded ? "Collapse result" : "Expand result"}
+      />
       <header className="search-result-card__header">
         {result.isStarred && (
           <span className="search-result-card__starred" aria-label="Starred" title="Starred">
@@ -76,48 +83,50 @@ export function SearchResultCard({
           </span>
         )}
       </header>
-      <p className="search-result-card__body">{result.snippet}</p>
-      {result.readerNote && (
+      <p
+        id={bodyId}
+        className={`search-result-card__body${expanded ? "" : " search-result-card__body--collapsed"}`}
+      >
+        <HighlightedText snippet={expanded ? result.body : result.snippet} />
+      </p>
+      {expanded && result.readerNote && (
         <p className="search-result-card__note">
           <strong>Note</strong>
           {result.readerNote}
         </p>
       )}
-      <div
-        className="passage-card-actions"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="passage-card-action"
-          onClick={() => onFindSimilar(result.body)}
-          title="Find passages similar to this one"
+      {expanded && (
+        <div
+          className="passage-card-actions"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
         >
-          <span className="passage-card-action-icon" aria-hidden="true">≈</span>
-          Find similar
-        </button>
-        <button
-          type="button"
-          className="passage-card-action"
-          onClick={() => onOpenWork(result.work.id)}
-          title="Open this book in Library"
-        >
-          <span className="passage-card-action-icon" aria-hidden="true">↗</span>
-          Open book
-        </button>
-        <button
-          type="button"
-          className={`passage-card-action ${copied ? "passage-card-action-success" : ""}`}
-          onClick={() => {
-            void copyBody();
-          }}
-          title="Copy quote to clipboard"
-        >
-          <span className="passage-card-action-icon" aria-hidden="true">{copied ? "✓" : "⎘"}</span>
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
+          <FindSimilarButton
+            passageBody={result.body}
+            onOpenSearchScreen={onOpenSearchScreen}
+          />
+          <button
+            type="button"
+            className="passage-card-action"
+            onClick={() => onOpenWork(result.work.id, result.passageId)}
+            title="Open this book in Library"
+          >
+            <span className="passage-card-action-icon" aria-hidden="true">↗</span>
+            Open book
+          </button>
+          <button
+            type="button"
+            className={`passage-card-action ${copied ? "passage-card-action-success" : ""}`}
+            onClick={() => {
+              void copyBody();
+            }}
+            title="Copy quote to clipboard"
+          >
+            <span className="passage-card-action-icon" aria-hidden="true">{copied ? "✓" : "⎘"}</span>
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      )}
       {result.markedAt && (
         <footer className="search-result-card__footer">
           Marked {new Date(result.markedAt).toLocaleDateString()}

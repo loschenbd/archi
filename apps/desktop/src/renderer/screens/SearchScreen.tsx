@@ -109,9 +109,10 @@ export function SearchScreen({
                 key={r.passageId}
                 result={r}
                 showMatchSource={showMatchSource}
-                onOpen={onOpenPassage}
-                onOpenWork={onOpenWork}
-                onFindSimilar={onFindSimilar}
+                expanded={false}
+                onToggle={() => {}}
+                onOpenWork={(workId) => onOpenWork(workId)}
+                onOpenSearchScreen={onFindSimilar}
               />
             ))}
             {response && response.results.length === 0 && !loading && (
