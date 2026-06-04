@@ -5,7 +5,6 @@ import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
-import { PassagesScreen } from "./screens/PassagesScreen";
 import { SearchScreen } from "./screens/SearchScreen";
 import { GlobalSearchBar } from "./components/GlobalSearchBar";
 import { SupportButton } from "./components/SupportButton";
@@ -14,7 +13,7 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Connections", "Library", "Passages", "Search", "Logs"] as const;
+const screens = ["Home", "Library", "Search", "Connections", "Logs"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -35,16 +34,6 @@ const screenIcons: Record<Screen, JSX.Element> = {
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 3h4.5a1.5 1.5 0 0 1 1.5 1.5v8.5a1 1 0 0 0-1-1H3z" />
       <path d="M13 3H8.5A1.5 1.5 0 0 0 7 4.5v8.5a1 1 0 0 1 1-1h5z" />
-    </svg>
-  ),
-  Passages: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 6c0-1.4 1-2.5 2.5-2.5" />
-      <path d="M3 6v2c0 1 .8 2 2 2" />
-      <path d="M3 6h2.8v4H3z" />
-      <path d="M8.5 6c0-1.4 1-2.5 2.5-2.5" />
-      <path d="M8.5 6v2c0 1 .8 2 2 2" />
-      <path d="M8.5 6h2.8v4H8.5z" />
     </svg>
   ),
   Search: (
@@ -705,17 +694,6 @@ export function App(): JSX.Element {
             works={works}
             selectedWorkId={selectedLibraryWorkId ?? undefined}
             onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
-          />
-        );
-      case "Passages":
-        return (
-          <PassagesScreen
-            passages={passages}
-            onOpenWork={(workId) => {
-              setSelectedLibraryWorkId(workId);
-              setActiveScreen("Library");
-            }}
-            onOpenSearchScreen={openSearchScreenWithQuery}
           />
         );
       case "Search":
