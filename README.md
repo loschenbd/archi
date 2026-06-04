@@ -11,6 +11,9 @@ Archi is a local-first macOS desktop app that syncs Kindle highlights and notes 
 - Unified connection manager for provider setup and status.
 - Scheduled sync loop and manual "Sync now".
 - Cloud notebook connector scaffolding with Playwright and auth state tracking.
+- Local semantic search over passages: hybrid retrieval (vec0 KNN + FTS5)
+  fused with RRF, embedded with a bundled bge-small-en-v1.5 ONNX model.
+  No network calls; works offline. See [Local semantic search](#local-semantic-search).
 
 ## Monorepo layout
 
@@ -19,7 +22,77 @@ Archi is a local-first macOS desktop app that syncs Kindle highlights and notes 
 - `packages/source-device-export`: parser and normalization for local export files.
 - `packages/source-cloud-notebook`: cloud notebook connector.
 - `packages/destination-notion`: Notion database setup and upsert workflow.
+- `packages/search`: embedder, indexer, hybrid query service.
 - `packages/ui`: shared React UI pieces.
+
+## Local semantic search
+
+Hybrid retrieval over your synced passages. A bundled
+`bge-small-en-v1.5` ONNX model (~32 MB, INT8 quantized) embeds passages
+into 384-dim vectors stored in a sqlite-vec `vec0` virtual table alongside
+the canonical `passages` table. Queries fan out to both vec0 KNN and FTS5
+in parallel and a Reciprocal Rank Fusion combines the rankings. Results
+are tagged `KEYWORD`, `VECTOR`, or `BOTH` so you can tell what matched.
+
+```mermaid
+flowchart LR
+    subgraph Indexing ["Indexing &nbsp;·&nbsp; background after every sync"]
+        direction TB
+        P[("passages
+        (canonical SQLite)")] --> I[Indexer]
+        I --> E["bge-small-en-v1.5
+        ONNX · CPU"]
+        E --> V[("passage_embeddings
+        vec0 · 384-dim")]
+        P -. SQLite trigger .-> F[("passages_fts
+        FTS5 porter")]
+    end
+
+    subgraph Query ["Query &nbsp;·&nbsp; per keystroke"]
+        direction TB
+        Q(["query text
+        + filter chips"]) --> S["SQL pre-filter
+        (author, label, starred, …)"]
+        S --> QE["embed query"]
+        S --> FT["sanitize for FTS5"]
+        QE --> KNN["vec0 KNN
+        top 100"]
+        FT --> FTM["FTS5 match
+        top 100"]
+        KNN --> R["Reciprocal
+        Rank Fusion"]
+        FTM --> R
+        R --> O(["top 50
+        KEYWORD · VECTOR · BOTH"])
+    end
+
+    V -.-> KNN
+    F -.-> FTM
+```
+
+**Why hybrid:** vec0 catches paraphrases (a query for *frustration* surfaces
+passages about *anger* and *impatience*); FTS5 catches proper nouns and exact
+phrases that embeddings underrank. The SQL pre-filter step is the win over
+FAISS-style stores — KNN runs *within* the filtered subspace, so recall
+stays 1.0 even on very selective filter combinations.
+
+**Three ways to use it:**
+
+- `⌘K` anywhere in the app — global search bar, top 5 hits in a dropdown,
+  `↵` opens the full Search screen, `⌘↵` opens with filters expanded.
+- The Search screen (sidebar icon) — empty box browses all passages,
+  typing triggers hybrid ranking, `+ Add filter` chips for author/book/
+  label/starred/date.
+- **Find similar** button on any passage — KNN nearest neighbors of that
+  passage's embedding, no query text needed.
+
+**Indexing:** ticks automatically after every sync and on the
+`passages_au` trigger when a body is edited. Initial backfill is one-shot
+and runs on the Electron main thread (~1 minute per ~3k passages on
+Apple Silicon). Manual "Start indexing" button lives in Search settings.
+
+See `docs/superpowers/specs/2026-06-02-local-rag-semantic-search-design.md`
+for the full design and tradeoff log.
 
 ## Environment
 

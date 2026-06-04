@@ -23,7 +23,17 @@ export class EmbeddingService {
       return [];
     }
     const pipe = await this.ensureLoaded();
-    const result = await pipe(texts, { pooling: "mean", normalize: true });
+    // truncation + max_length cap token sequences to the model's 512-position
+    // limit. Without them, a long passage produces a tensor shape that
+    // exceeds bge-small-en-v1.5's max_position_embeddings, causing ONNX's
+    // CPUAllocator to fail mid-Run with SIGTRAP (uncatchable from JS) — see
+    // BFCArena trace in Electron crash report 2026-06-04.
+    const result = await pipe(texts, {
+      pooling: "mean",
+      normalize: true,
+      truncation: true,
+      max_length: 512
+    });
     const batch = result.dims[0];
     const dim = result.dims[1];
     if (typeof batch !== "number" || typeof dim !== "number") {

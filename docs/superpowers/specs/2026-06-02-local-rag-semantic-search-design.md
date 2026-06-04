@@ -223,7 +223,13 @@ class IndexerService {
 }
 ```
 
-- Batch size 32: optimal for bge-small INT8 on Apple Silicon CPU (~150 ms per batch).
+- Batch size 1 (down from the originally-planned 32): batches ≥4 trigger an
+  uncatchable SIGTRAP inside `onnxruntime::BFCArena::Extend` on Apple Silicon
+  with the ORT 1.14 pinned by `@xenova/transformers` v2. Single-call
+  inference still backfills ~3k passages in ~2 minutes. Raise once we either
+  migrate to `@huggingface/transformers` v4 (which bundles ORT ≥1.24) or
+  move the embedder to a utility process where ORT crashes can be recovered
+  from. See "Risks & mitigations" in the implementation plan.
 - Transactional per-batch: crash leaves no half-state.
 - Resumable: the "pending" query is reentrant.
 - Yields between batches: doesn't starve IPC or UI.
