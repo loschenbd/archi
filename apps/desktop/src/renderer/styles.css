@@ -2777,3 +2777,43 @@ select {
 .indexing-banner button:hover {
   background: color-mix(in srgb, var(--warning) 22%, transparent);
 }
+
+.indexer-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 24%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ink-300) 30%, transparent);
+  color: var(--ink-700);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: default;
+}
+
+.indexer-status-pill--error {
+  background: color-mix(in srgb, var(--error, #c84c3c) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--error, #c84c3c) 36%, transparent);
+  color: var(--accent-strong);
+}
+
+button.indexer-status-pill {
+  cursor: pointer;
+}
+
+button.indexer-status-pill:hover {
+  background: color-mix(in srgb, var(--accent-soft) 48%, var(--surface));
+}
+
+.indexer-status-pill__dot {
+  font-size: 11px;
+}
+
+.sidebar-collapsed .indexer-status-pill {
+  padding: 6px;
+  margin: 4px;
+  justify-content: center;
+}

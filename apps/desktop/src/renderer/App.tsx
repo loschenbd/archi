@@ -7,9 +7,11 @@ import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { SearchScreen } from "./screens/SearchScreen";
 import { GlobalSearchBar } from "./components/GlobalSearchBar";
+import { IndexerStatusPill } from "./components/IndexerStatusPill";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { IndexerStatusProvider } from "./state/IndexerStatusContext";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
@@ -791,7 +793,7 @@ export function App(): JSX.Element {
   }
 
   return (
-    <>
+    <IndexerStatusProvider>
       <UpdateBanner />
       <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <WindowTitleBar />
@@ -819,6 +821,7 @@ export function App(): JSX.Element {
           ))}
         </nav>
         <div className="sidebar-divider" aria-hidden="true" />
+        <IndexerStatusPill collapsed={sidebarCollapsed} />
         <SupportButton collapsed={sidebarCollapsed} />
         <button
           type="button"
@@ -863,6 +866,6 @@ export function App(): JSX.Element {
       </section>
     </main>
     <SupportPromptModal open={supportPromptOpen} onClose={() => setSupportPromptOpen(false)} />
-    </>
+    </IndexerStatusProvider>
   );
 }
