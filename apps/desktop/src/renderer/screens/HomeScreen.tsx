@@ -9,6 +9,8 @@ import {
 } from "react";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 import { BooksRail } from "./home/BooksRail";
+import { LatestHighlights } from "./home/LatestHighlights";
+import { RandomHighlight } from "./home/RandomHighlight";
 import { StatsStrip } from "./home/StatsStrip";
 import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
 
@@ -25,6 +27,7 @@ type RecentPassage = {
   body: string;
   workTitle: string;
   ingestedAt: string;
+  workId?: string;
 };
 
 type SearchWork = {
@@ -129,7 +132,6 @@ export function HomeScreen({
   lastError,
   noHealthySources
 }: Props): JSX.Element {
-  const [tickAtMs, setTickAtMs] = useState<number>(Date.now());
   const [searchQuery, setSearchQuery] = useState("");
 
   // useDeferredValue lets the input update at high priority while filtering /
@@ -169,27 +171,6 @@ export function HomeScreen({
     passagesScrollRef.current?.scrollTo({ top: 0 });
   }, [trimmedQuery]);
 
-  useEffect(() => {
-    if (!syncProgress) {
-      return;
-    }
-    setTickAtMs(Date.now());
-  }, [syncProgress]);
-
-  useEffect(() => {
-    const activeIntervalMs = isSyncing && syncProgress?.status === "running" ? 1000 : 15000;
-    const interval = setInterval(() => {
-      setTickAtMs(Date.now());
-    }, activeIntervalMs);
-    return () => {
-      clearInterval(interval);
-    };
-  }, [isSyncing, syncProgress]);
-
-  const showActivityFeed = !trimmedQuery && (isSyncing || syncRunStartedAtIso !== null);
-  const freshWorks = recentWorks.slice(0, 5);
-  const freshPassages = recentPassages.slice(0, 5);
-
   return (
     <section className="home-screen">
       <SyncBanner
@@ -221,82 +202,17 @@ export function HomeScreen({
         onOpenWork={onOpenWork}
       />
 
-      {showActivityFeed ? (
-        <div className={`activity-feed${isSyncing ? " activity-feed-live" : ""}`}>
-          <details className="activity-column" open>
-            <summary className="activity-column-head">
-              <p className="content-eyebrow">New books{isSyncing ? "" : " · this run"}</p>
-              <span className="activity-column-chevron" aria-hidden="true">▾</span>
-            </summary>
-            {freshWorks.length === 0 ? (
-              <p className="activity-empty">
-                {isSyncing ? "Waiting for the first book of this run…" : "No new books from the last run."}
-              </p>
-            ) : (
-              <ul className="activity-list">
-                {freshWorks.map((work, index) => (
-                  <li
-                    key={work.id}
-                    className="activity-item activity-item-work"
-                    style={{ animationDelay: `${Math.min(index, 4) * 35}ms` }}
-                  >
-                    <span className="activity-cover" aria-hidden="true">
-                      {work.coverImageUrl ? (
-                        <img src={work.coverImageUrl} alt="" loading="lazy" />
-                      ) : (
-                        <span className="activity-cover-letter">{(work.title[0] ?? "?").toUpperCase()}</span>
-                      )}
-                    </span>
-                    <div className="activity-body">
-                      <p className="activity-title">{work.title}</p>
-                      {work.creator ? <p className="activity-meta">{work.creator}</p> : null}
-                      <p className="activity-meta activity-meta-soft tabular">
-                        {formatRelative(work.ingestedAt, tickAtMs)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </details>
-
-          <details className="activity-column" open>
-            <summary className="activity-column-head">
-              <p className="content-eyebrow">New highlights{isSyncing ? "" : " · this run"}</p>
-              <span className="activity-column-chevron" aria-hidden="true">▾</span>
-            </summary>
-            {freshPassages.length === 0 ? (
-              <p className="activity-empty">
-                {isSyncing ? "Waiting for the first highlight of this run…" : "No new highlights from the last run."}
-              </p>
-            ) : (
-              <ul className="activity-list">
-                {freshPassages.map((passage, index) => (
-                  <li
-                    key={passage.id}
-                    className="activity-item activity-item-passage"
-                    style={{ animationDelay: `${Math.min(index, 4) * 35}ms` }}
-                  >
-                    <span className="activity-quote-mark" aria-hidden="true">
-                      &ldquo;
-                    </span>
-                    <div className="activity-body">
-                      <p className="activity-quote">{excerptOf(passage.body, 160)}</p>
-                      <p className="activity-meta">
-                        <span className="activity-attribution">{passage.workTitle}</span>
-                        <span aria-hidden="true"> · </span>
-                        <span className="activity-meta-soft tabular">
-                          {formatRelative(passage.ingestedAt, tickAtMs)}
-                        </span>
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </details>
-        </div>
-      ) : null}
+      <div className="highlights-split">
+        <RandomHighlight
+          passages={passages}
+          onOpenWork={onOpenWork}
+        />
+        <LatestHighlights
+          passages={recentPassages}
+          deltaCount={lastRunDeltaPassages}
+          onOpenWork={onOpenWork}
+        />
+      </div>
 
       <div className="home-search home-search-hero">
         <div className={`home-search-input-wrap${isSearchPending ? " is-pending" : ""}`}>
@@ -459,28 +375,3 @@ export function HomeScreen({
     </section>
   );
 }
-
-function excerptOf(body: string, max: number): string {
-  const trimmed = body.replace(/\s+/g, " ").trim();
-  if (trimmed.length <= max) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, max - 1).trimEnd()}…`;
-}
-
-function formatRelative(iso: string, nowMs: number): string {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) {
-    return "";
-  }
-  const diff = Math.max(0, Math.floor((nowMs - t) / 1000));
-  if (diff < 5) return "just now";
-  if (diff < 60) return `${diff}s ago`;
-  const m = Math.floor(diff / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-

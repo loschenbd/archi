@@ -228,7 +228,7 @@ export function App(): JSX.Element {
   const [supportPromptOpen, setSupportPromptOpen] = useState<boolean>(false);
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
-    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
+    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
   }>({ works: [], passages: [] });
   const [syncRunStartedAtIso, setSyncRunStartedAtIso] = useState<string | null>(null);
   const activeSyncRunIdRef = useRef<string | null>(null);

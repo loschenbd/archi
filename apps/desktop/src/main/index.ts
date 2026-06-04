@@ -1531,6 +1531,7 @@ app.whenReady().then(() => {
         .map((passage) => ({
           id: passage.id,
           body: passage.body,
+          workId: passage.workId,
           workTitle: worksById.get(passage.workId)?.displayTitle ?? "Unknown Work",
           ingestedAt: passage.markedAt ?? passage.ingestedAt
         }));
@@ -1552,6 +1553,7 @@ app.whenReady().then(() => {
       .map((passage) => ({
         id: passage.id,
         body: passage.body,
+        workId: passage.workId,
         workTitle: worksById.get(passage.workId)?.displayTitle ?? "Unknown Work",
         ingestedAt: passage.markedAt ?? passage.ingestedAt
       }));
