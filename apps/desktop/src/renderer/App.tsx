@@ -811,6 +811,11 @@ export function App(): JSX.Element {
     );
   }
 
+  const sidebarUnhealthy =
+    !isSyncing &&
+    (Object.values(connections).some((c) => c.status === "needs_action") ||
+      syncState.lastError !== null);
+
   return (
     <>
       <UpdateBanner />
@@ -825,7 +830,7 @@ export function App(): JSX.Element {
           {screens.map((screen) => (
             <button
               key={screen}
-              className={activeScreen === screen ? "active" : ""}
+              className={`${activeScreen === screen ? "active" : ""}${screen === "Settings" && sidebarUnhealthy ? " sidebar-nav-has-warning" : ""}`}
               title={sidebarCollapsed ? screen : undefined}
               onClick={() => {
                 setActiveScreen(screen);
@@ -836,6 +841,9 @@ export function App(): JSX.Element {
             >
               <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
               <span className="sidebar-nav-label">{screen}</span>
+              {screen === "Settings" && sidebarUnhealthy ? (
+                <span className="sidebar-nav-warning-dot" aria-label="Needs attention" />
+              ) : null}
             </button>
           ))}
         </nav>

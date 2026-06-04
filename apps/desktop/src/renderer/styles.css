@@ -2994,3 +2994,23 @@ details.activity-column:not([open]) {
 .content-header-search-clear:hover {
   background: color-mix(in srgb, var(--ink-300) 40%, transparent);
 }
+
+.sidebar button {
+  position: relative;
+}
+
+.sidebar-nav-warning-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #c98a2a;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.layout.sidebar-collapsed .sidebar-nav-warning-dot {
+  top: 4px;
+  right: 4px;
+}
