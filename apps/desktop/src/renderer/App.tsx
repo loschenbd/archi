@@ -851,8 +851,10 @@ export function App(): JSX.Element {
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
           <GlobalSearchBar
-            onOpenPassage={openPassageFromSearch}
-            onOpenSearchScreen={openSearchScreenWithQuery}
+            onEscalate={(query, passageId) => {
+              openSearchScreenWithQuery(query);
+              // passageId wiring lands in Task 14
+            }}
           />
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
