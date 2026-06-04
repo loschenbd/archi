@@ -68,3 +68,8 @@ export const EMBEDDING_DIM = 384;
  * stale vectors will silently coexist with new ones.
  */
 export const EMBEDDING_MODEL_ID = "bge-small-en-v1.5@v1";
+
+export type Facets = {
+  creators: string[];
+  labels: string[];
+};

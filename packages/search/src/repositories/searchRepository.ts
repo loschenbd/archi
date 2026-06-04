@@ -1,5 +1,6 @@
 import type { CoreDatabase } from "@archi/core";
 import { EMBEDDING_MODEL_ID } from "../types.js";
+import type { Facets } from "../types.js";
 
 export type PendingPassage = {
   id: string;
@@ -124,5 +125,30 @@ export class SearchRepository {
   // Used to build the candidate set when the user has filters but no free-text query.
   fetchCandidatesSql(sql: string, params: unknown[]): string[] {
     return (this.db.prepare(sql).all(...params) as Array<{ id: string }>).map((r) => r.id);
+  }
+
+  getFacets(): Facets {
+    const creatorRows = this.db
+      .prepare(
+        `SELECT DISTINCT creator
+           FROM works
+          WHERE creator IS NOT NULL AND creator != ''
+          ORDER BY creator COLLATE NOCASE`
+      )
+      .all() as { creator: string }[];
+
+    const labelRows = this.db
+      .prepare(
+        `SELECT DISTINCT value
+           FROM passages, json_each(passages.labels_json)
+          WHERE passages.labels_json IS NOT NULL
+          ORDER BY value COLLATE NOCASE`
+      )
+      .all() as { value: string }[];
+
+    return {
+      creators: creatorRows.map((r) => r.creator),
+      labels: labelRows.map((r) => r.value)
+    };
   }
 }

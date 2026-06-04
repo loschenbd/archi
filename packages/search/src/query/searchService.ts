@@ -4,6 +4,7 @@ import type { SearchRepository } from "../repositories/searchRepository.js";
 import { buildCandidateSql } from "./filterSql.js";
 import { fuseRrf } from "./rrf.js";
 import type {
+  Facets,
   SearchFilters,
   SearchQuery,
   SearchResponse,
@@ -27,6 +28,10 @@ const MAX_CANDIDATE_IDS = 30_000;
 
 export class SearchService {
   constructor(private readonly options: SearchServiceOptions) {}
+
+  getFacets(): Facets {
+    return this.options.repo.getFacets();
+  }
 
   async query(q: SearchQuery): Promise<SearchResponse> {
     const start = Date.now();
