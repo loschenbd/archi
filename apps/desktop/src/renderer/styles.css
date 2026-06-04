@@ -515,8 +515,10 @@ select {
 }
 
 .home-screen {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
+  min-height: calc(100vh - 240px);
 }
 
 .onboarding-screen {
@@ -540,6 +542,129 @@ select {
 
 .home-header h2 {
   font-size: 32px;
+}
+
+.home-search-hero {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+  margin-top: clamp(40px, 12vh, 140px);
+  display: grid;
+  gap: 18px;
+}
+
+/* When the active-sync card sits above the search, tighten the top spacing
+   so the search stays visually anchored near the page center. */
+.sync-live-header + .home-search-hero {
+  margin-top: clamp(24px, 5vh, 64px);
+}
+
+.home-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.home-search-input-large {
+  width: 100%;
+  font-size: 18px;
+  padding: 18px 44px 18px 22px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--ink-300) 36%, transparent);
+  background: var(--surface);
+  box-shadow:
+    0 8px 28px rgba(72, 53, 41, 0.08),
+    0 2px 6px rgba(72, 53, 41, 0.04);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+/* Center placeholder; left-align typed text. Uses :placeholder-shown so the
+   visual shift to left-aligned only happens once the user has typed. */
+.home-search-input-large:placeholder-shown {
+  text-align: center;
+  padding-right: 22px;
+}
+
+.home-search-input-large:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow:
+    0 8px 28px rgba(72, 53, 41, 0.10),
+    0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Subtle "thinking" state while React defers the heavy result render. */
+.home-search-input-wrap.is-pending .home-search-input-large {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.home-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: color-mix(in srgb, var(--ink-300) 22%, transparent);
+  color: var(--ink-700);
+  border-radius: 999px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.home-search-clear:hover {
+  background: color-mix(in srgb, var(--ink-300) 40%, transparent);
+}
+
+.home-search-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.home-search-inline-action {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-500);
+  margin-top: 4px;
+}
+
+.home-inline-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-700);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.home-inline-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.home-inline-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.home-inline-link-accent {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.home-inline-meta {
+  color: var(--ink-500);
 }
 
 .home-metadata {
@@ -602,6 +727,132 @@ select {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.home-search {
+  display: grid;
+  gap: 10px;
+}
+
+.home-search-empty {
+  color: var(--ink-500);
+  font-size: 14px;
+}
+
+.home-search-results {
+  display: grid;
+  gap: 10px;
+}
+
+.home-search-count {
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.home-search-scroll {
+  display: grid;
+  gap: 14px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Virtualized passages list — a fixed-height inner scroller with absolutely
+   positioned rows. Only ~6 rows render at a time, keeping per-keystroke
+   re-renders cheap even with thousands of matches. */
+.home-search-passages-scroll {
+  position: relative;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.home-search-passages-inner {
+  position: relative;
+  width: 100%;
+}
+
+.home-search-passages-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+.home-search-passages-row .home-search-item {
+  width: 100%;
+}
+
+.home-search-group {
+  display: grid;
+  gap: 6px;
+}
+
+.home-search-list {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-search-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--ink-300) 32%, transparent);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--surface-subtle) 70%, var(--surface));
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.home-search-item:hover {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.home-search-item:active {
+  transform: translateY(1px);
+}
+
+.home-search-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.home-search-item-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.home-search-item-title {
+  font-weight: 600;
+  color: var(--ink-700);
+}
+
+.home-search-item-quote {
+  color: var(--ink-700);
+  line-height: 1.45;
+}
+
+.home-search-item-meta {
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.home-search-item mark {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
 }
 
 .sync-live {
@@ -692,6 +943,35 @@ select {
 .sync-live-cancelling .live-dot::before {
   border-color: color-mix(in srgb, var(--warning) 60%, transparent);
   animation-duration: 1.1s;
+}
+
+.sync-live-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.sync-live-cancel-button {
+  border: 1px solid color-mix(in srgb, var(--ink-300) 38%, transparent);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  color: var(--ink-700);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.sync-live-cancel-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border-color: color-mix(in srgb, var(--ink-300) 60%, transparent);
+}
+
+.sync-live-cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .sync-live-elapsed {
@@ -881,14 +1161,35 @@ select {
 
 .activity-column-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin: 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.activity-column-head::-webkit-details-marker {
+  display: none;
 }
 
 .activity-column-head .content-eyebrow {
   margin: 0;
+}
+
+.activity-column-chevron {
+  font-size: 11px;
+  color: var(--ink-500);
+  transition: transform 160ms ease;
+}
+
+details.activity-column[open] .activity-column-chevron {
+  transform: rotate(-180deg);
+}
+
+details.activity-column:not([open]) {
+  padding-bottom: 14px;
 }
 
 .activity-count {

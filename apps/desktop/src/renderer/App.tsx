@@ -597,23 +597,33 @@ export function App(): JSX.Element {
     });
   };
 
+  const connectionsNeedAuth = Object.values(connections).some(
+    (connection) => connection.status === "needs_action"
+  );
+
   const screenContent = useMemo(() => {
     const formattedLastRunAt = formatLocalDateTime(syncState.lastRunAt);
     switch (activeScreen) {
       case "Home":
         return (
           <HomeScreen
-            status={syncState.status}
             lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
             onNavigateToConnections={() => setActiveScreen("Connections")}
+            needsAuth={connectionsNeedAuth}
             isSyncing={isSyncing}
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
             syncRunStartedAtIso={syncRunStartedAtIso}
+            works={works}
+            passages={passages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
           />
         );
       case "Connections":
@@ -705,6 +715,7 @@ export function App(): JSX.Element {
     cancelSync,
     cloudEnabled,
     connections,
+    connectionsNeedAuth,
     isCancelingSync,
     isSyncing,
     logs,

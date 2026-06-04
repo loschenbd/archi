@@ -434,6 +434,18 @@ app.whenReady().then(() => {
     fs.appendFileSync(logPath, `${new Date().toISOString()} status=${state.status} error=none (cleared by notion reconnect)\n`);
   };
 
+  // The persisted `needs_auth` status is a snapshot of the last sync run, not live truth.
+  // Once the user successfully reconnects a provider, Home should stop nagging — otherwise
+  // it disagrees with Connections (which reflects live connector health).
+  const clearStaleNeedsAuthIfResolved = (): void => {
+    if (state.status !== "needs_auth") {
+      return;
+    }
+    state.status = "idle";
+    fs.writeFileSync(syncStatePath, JSON.stringify(state, null, 2));
+    fs.appendFileSync(logPath, `${new Date().toISOString()} status=idle (cleared needs_auth on successful connection action)\n`);
+  };
+
   class SyncCancelledError extends Error {
     constructor() {
       super("Sync cancelled by user.");
@@ -1319,6 +1331,7 @@ app.whenReady().then(() => {
       const result = await connectionManager.setNotionToken(token);
       if (result.status === "connected") {
         clearStaleNotionSyncErrorIfResolved();
+        clearStaleNeedsAuthIfResolved();
       }
       pushConnectionDebugEvent({
         provider: "notion",
@@ -1347,8 +1360,11 @@ app.whenReady().then(() => {
     });
     try {
       const result = await connectionManager.connect(provider);
-      if (provider === "notion" && result.status === "connected") {
-        clearStaleNotionSyncErrorIfResolved();
+      if (result.status === "connected") {
+        if (provider === "notion") {
+          clearStaleNotionSyncErrorIfResolved();
+        }
+        clearStaleNeedsAuthIfResolved();
       }
       pushConnectionDebugEvent({
         provider,
@@ -1377,8 +1393,11 @@ app.whenReady().then(() => {
     });
     try {
       const result = await connectionManager.reconnect(provider);
-      if (provider === "notion" && result.status === "connected") {
-        clearStaleNotionSyncErrorIfResolved();
+      if (result.status === "connected") {
+        if (provider === "notion") {
+          clearStaleNotionSyncErrorIfResolved();
+        }
+        clearStaleNeedsAuthIfResolved();
       }
       pushConnectionDebugEvent({
         provider,
@@ -1434,8 +1453,11 @@ app.whenReady().then(() => {
     });
     try {
       const result = await connectionManager.testConnection(provider);
-      if (provider === "notion" && result.status === "connected") {
-        clearStaleNotionSyncErrorIfResolved();
+      if (result.status === "connected") {
+        if (provider === "notion") {
+          clearStaleNotionSyncErrorIfResolved();
+        }
+        clearStaleNeedsAuthIfResolved();
       }
       pushConnectionDebugEvent({
         provider,
