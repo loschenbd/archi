@@ -1650,6 +1650,10 @@ app.whenReady().then(() => {
 
   registerSearchIpc(searchModule);
 
+  ipcMain.handle("archi:search:facets", async () => {
+    return searchModule.search.getFacets();
+  });
+
   createWindow();
 
   Menu.setApplicationMenu(

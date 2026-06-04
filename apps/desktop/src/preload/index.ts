@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
-import type { IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
+import type { Facets, IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
 
 type SyncState = {
   status: string;
@@ -216,7 +216,9 @@ const api = {
     indexerStatus: (): Promise<IndexerStatus> =>
       ipcRenderer.invoke("archi:search:indexerStatus"),
     startIndexing: (): Promise<{ started: boolean }> =>
-      ipcRenderer.invoke("archi:search:startIndexing")
+      ipcRenderer.invoke("archi:search:startIndexing"),
+    facets: (): Promise<Facets> =>
+      ipcRenderer.invoke("archi:search:facets")
   }
 };
 
