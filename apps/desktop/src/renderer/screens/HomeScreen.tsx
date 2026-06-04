@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from "react";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
+import { BooksRail } from "./home/BooksRail";
 import { StatsStrip } from "./home/StatsStrip";
 import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
 
@@ -212,6 +213,12 @@ export function HomeScreen({
         isSyncing={isSyncing}
         hasUnhealthyBanner={lastError !== null || noHealthySources || connections.some((c) => c.status === "needs_action")}
         onSyncNow={onSyncNow}
+      />
+
+      <BooksRail
+        works={recentWorks.slice(0, 12)}
+        deltaCount={lastRunDeltaWorks}
+        onOpenWork={onOpenWork}
       />
 
       {showActivityFeed ? (

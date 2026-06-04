@@ -308,7 +308,7 @@ export function App(): JSX.Element {
     void window.archi.listWorks().then(setWorks);
     void window.archi.listPassages().then(setPassages);
     void window.archi.listLogs().then(setLogs);
-    void window.archi.listRecentActivity(8).then(setRecentActivity).catch(() => {});
+    void window.archi.listRecentActivity(12).then(setRecentActivity).catch(() => {});
   }, []);
 
   const requestListRefresh = useCallback((): void => {
