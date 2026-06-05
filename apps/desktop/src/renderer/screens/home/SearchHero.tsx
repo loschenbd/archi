@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SearchFilters, SearchResponse } from "@archi/search";
-import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 import { SearchFilterChips } from "../../components/SearchFilterChips";
 import { SearchResultCard } from "../../components/SearchResultCard";
 import { useSearchPreferences } from "../../state/SearchPreferencesContext";
@@ -140,17 +139,10 @@ export function SearchHero(props: Props): JSX.Element {
     return () => clearTimeout(handle);
   }, [query, filters, findSimilarPassageId, isActive, runQuery]);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    count: response?.results.length ?? 0,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 180,
-    overscan: 4,
-    getItemKey: (index) => response?.results[index]?.passageId ?? index
-  });
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0 });
+    sectionRef.current?.closest(".content")?.scrollTo({ top: 0 });
   }, [query, findSimilarPassageId]);
 
   const handleCopy = (body: string): void => {
@@ -175,7 +167,7 @@ export function SearchHero(props: Props): JSX.Element {
     : null;
 
   return (
-    <section className={`search-hero ${isActive ? "search-hero-active" : "search-hero-resting"}`}>
+    <section ref={sectionRef} className={`search-hero ${isActive ? "search-hero-active" : "search-hero-resting"}`}>
       {!isActive ? <p className="search-hero-tagline">{tagline}</p> : null}
 
       {findSimilarPassage ? (
@@ -295,43 +287,22 @@ export function SearchHero(props: Props): JSX.Element {
               </button>
             </div>
           ) : (
-            <div className="search-hero-results" ref={scrollRef}>
-              <div
-                className="search-hero-results-inner"
-                style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}
-              >
-                {virtualizer.getVirtualItems().map((virtualItem: VirtualItem) => {
-                  const r = response?.results[virtualItem.index];
-                  if (!r) return null;
-                  return (
-                    <div
-                      key={virtualItem.key}
-                      data-index={virtualItem.index}
-                      ref={virtualizer.measureElement}
-                      className="search-hero-results-row"
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${virtualItem.start}px)`
-                      }}
-                    >
-                      <SearchResultCard
-                        result={r}
-                        showMatchSource={prefs.showMatchSource}
-                        expanded={expandedId === r.passageId}
-                        onToggle={() =>
-                          setExpandedId((current) => (current === r.passageId ? null : r.passageId))
-                        }
-                        onOpenWork={(workId) => onOpenWork(workId, r.passageId)}
-                        onCopy={() => handleCopy(r.body)}
-                        onFindSimilar={() => onFindSimilar({ id: r.passageId, body: r.body })}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="search-hero-results">
+              {response?.results.map((r) => (
+                <div key={r.passageId} className="search-hero-results-row">
+                  <SearchResultCard
+                    result={r}
+                    showMatchSource={prefs.showMatchSource}
+                    expanded={expandedId === r.passageId}
+                    onToggle={() =>
+                      setExpandedId((current) => (current === r.passageId ? null : r.passageId))
+                    }
+                    onOpenWork={(workId) => onOpenWork(workId, r.passageId)}
+                    onCopy={() => handleCopy(r.body)}
+                    onFindSimilar={() => onFindSimilar({ id: r.passageId, body: r.body })}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </>

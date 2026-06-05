@@ -2957,8 +2957,6 @@ select {
 
 .search-hero-results {
   position: relative;
-  max-height: 60vh;
-  overflow-y: auto;
   padding-bottom: 4px;
 }
 
