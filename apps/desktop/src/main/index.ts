@@ -272,13 +272,6 @@ app.whenReady().then(() => {
     notebookUrl: settings.cloud.notebookUrl,
     storageStatePath: settings.cloud.storageStatePath,
     profilePath: settings.cloud.profilePath,
-    // Amazon's anti-bot detects headless Chromium and redirects to signin
-    // even when valid at-main/ubid-main cookies are present. Use a real
-    // non-headless browser positioned off-screen so the window is invisible
-    // to the user but indistinguishable from a normal Chrome session to
-    // Amazon. Reconnect (interactive=true) still uses headed_visible so
-    // the user can complete sign-in.
-    chromiumMode: "offscreen_headed",
     onValidation: (report) => cloudValidationLog.record(report),
     onNeedsAuth: async () => {
       state.status = "needs_auth";
