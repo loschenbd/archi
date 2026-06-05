@@ -6,6 +6,12 @@ import { useSearchPreferences } from "../../state/SearchPreferencesContext";
 
 type Props = {
   query: string;
+  /**
+   * When set, the IPC call asks the search service to find vector-only
+   * neighbors of this passage instead of using `query` as the text input.
+   * The component's debounce re-fires whenever this id changes.
+   */
+  findSimilarPassageId: string | null;
   filters: SearchFilters;
   onFiltersChange: (next: SearchFilters) => void;
   onOpenWork: (workId: string, passageId: string) => void;
@@ -23,6 +29,7 @@ function formatMatchSourceCounts(
 
 export function HomeSearchResults({
   query,
+  findSimilarPassageId,
   filters,
   onFiltersChange,
   onOpenWork,
@@ -34,7 +41,7 @@ export function HomeSearchResults({
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const runQuery = useCallback(
-    async (q: string, f: SearchFilters): Promise<void> => {
+    async (q: string, f: SearchFilters, similarToId: string | null): Promise<void> => {
       setLoading(true);
       try {
         const mergedFilters: SearchFilters = {
@@ -42,7 +49,12 @@ export function HomeSearchResults({
           isArchived: prefs.includeArchived ? true : f.isArchived,
           isHidden: prefs.includeHidden ? true : f.isHidden
         };
-        const res = await window.archi.search.query({ text: q, filters: mergedFilters, limit: 50 });
+        const res = await window.archi.search.query({
+          text: q,
+          filters: mergedFilters,
+          limit: 50,
+          findSimilarPassageId: similarToId ?? undefined
+        });
         setResponse(res);
       } finally {
         setLoading(false);
@@ -53,10 +65,10 @@ export function HomeSearchResults({
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      void runQuery(query, filters);
+      void runQuery(query, filters, findSimilarPassageId);
     }, 150);
     return () => clearTimeout(handle);
-  }, [query, filters, runQuery]);
+  }, [query, filters, findSimilarPassageId, runQuery]);
 
   const summary = response
     ? prefs.showMatchSource

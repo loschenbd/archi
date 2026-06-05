@@ -170,7 +170,12 @@ export function App(): JSX.Element {
   const [findSimilarPassage, setFindSimilarPassage] = useState<{ id: string; body: string } | null>(
     null
   );
-  const effectiveSearchQuery = findSimilarPassage?.body ?? homeSearchQuery;
+  // In find-similar mode, the IPC query text is empty — the search service
+  // uses the source passage's stored embedding for a vector-only KNN lookup.
+  // HomeScreen receives both `effectiveSearchQuery` and `findSimilarPassageId`
+  // and renders results when either is set.
+  const effectiveSearchQuery = findSimilarPassage ? "" : homeSearchQuery;
+  const findSimilarPassageId = findSimilarPassage?.id ?? null;
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -625,6 +630,7 @@ export function App(): JSX.Element {
               (c) => c.status !== "connected" && c.status !== "configuring"
             )}
             effectiveSearchQuery={effectiveSearchQuery}
+            findSimilarPassageId={findSimilarPassageId}
             homeSearchFilters={homeSearchFilters}
             onFiltersChange={setHomeSearchFilters}
             onFindSimilar={(passage) => setFindSimilarPassage(passage)}
@@ -725,6 +731,7 @@ export function App(): JSX.Element {
     cloudEnabled,
     connections,
     effectiveSearchQuery,
+    findSimilarPassageId,
     homeSearchFilters,
     isCancelingSync,
     isSyncing,

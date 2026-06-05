@@ -87,6 +87,25 @@ export class SearchRepository {
     return Number(row.c);
   }
 
+  /**
+   * Read back a previously-indexed embedding for a single passage. Returns
+   * null if the passage has no embedding row (not yet indexed, or the vector
+   * was invalidated by an edit). Used by the find-similar mode to seed a
+   * vector-only KNN without re-embedding the passage body.
+   */
+  getEmbeddingForPassage(passageId: string): Float32Array | null {
+    const row = this.db
+      .prepare("SELECT embedding FROM passage_embeddings WHERE passage_id = ?")
+      .get(passageId) as { embedding: Buffer | Uint8Array } | undefined;
+    if (!row || !row.embedding) {
+      return null;
+    }
+    // vec0 returns the embedding column as a raw byte blob; reconstruct the
+    // Float32Array view over the same underlying memory.
+    const buf = row.embedding;
+    return new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+  }
+
   knnByPassageIds(query: Float32Array, candidateIds: string[], k: number): KnnHit[] {
     if (candidateIds.length === 0) {
       return [];

@@ -36,6 +36,38 @@ export class SearchService {
   async query(q: SearchQuery): Promise<SearchResponse> {
     const start = Date.now();
     const filters = this.resolveDefaults(q.filters);
+
+    // Find-similar mode: skip text/FTS5 entirely; do vector-only KNN against
+    // the source passage's already-indexed embedding and exclude the source
+    // id from results. `q.text` is ignored. If the source passage has no
+    // embedding yet (not indexed, or invalidated by an edit), return empty.
+    if (q.findSimilarPassageId) {
+      const sourceEmbedding = this.options.repo.getEmbeddingForPassage(q.findSimilarPassageId);
+      if (!sourceEmbedding) {
+        return {
+          query: "",
+          filters,
+          results: [],
+          totalCandidates: 0,
+          durationMs: Date.now() - start
+        };
+      }
+      const candidate = buildCandidateSql(filters);
+      const candidateIds = this.options.repo
+        .fetchCandidatesSql(candidate.sql, candidate.params)
+        .slice(0, MAX_CANDIDATE_IDS)
+        .filter((id) => id !== q.findSimilarPassageId);
+
+      const results = this.findSimilarMode(sourceEmbedding, candidateIds, q.limit);
+      return {
+        query: "",
+        filters,
+        results,
+        totalCandidates: candidateIds.length,
+        durationMs: Date.now() - start
+      };
+    }
+
     const candidate = buildCandidateSql(filters);
     const candidateIds = this.options.repo
       .fetchCandidatesSql(candidate.sql, candidate.params)
@@ -58,6 +90,47 @@ export class SearchService {
       totalCandidates: candidateIds.length,
       durationMs: Date.now() - start
     };
+  }
+
+  private findSimilarMode(
+    sourceEmbedding: Float32Array,
+    candidateIds: string[],
+    limit: number
+  ): SearchResult[] {
+    if (candidateIds.length === 0) {
+      return [];
+    }
+    const vecHits = this.options.repo.knnByPassageIds(sourceEmbedding, candidateIds, limit);
+    if (vecHits.length === 0) {
+      return [];
+    }
+    const idsInOrder = vecHits.map((h) => h.passage_id);
+    const placeholders = idsInOrder.map(() => "?").join(",");
+    const rows = this.options.db
+      .prepare(
+        `SELECT p.id AS passage_id, p.body, p.reader_note, p.position_start, p.position_end,
+                p.marked_at, p.is_starred, p.labels_json,
+                w.id AS work_id, w.display_title, w.creator, w.cover_image_url
+         FROM passages p
+         JOIN works w ON p.work_id = w.id
+         WHERE p.id IN (${placeholders})`
+      )
+      .all(...idsInOrder) as Array<Record<string, unknown>>;
+    const rowsById = new Map<string, Record<string, unknown>>();
+    for (const row of rows) {
+      rowsById.set(String(row.passage_id), row);
+    }
+    return vecHits
+      .map((hit) => {
+        const row = rowsById.get(hit.passage_id);
+        if (!row) return null;
+        return hydrateResult(
+          row,
+          { fused: 1 / (1 + hit.distance), vectorDistance: hit.distance },
+          "vector"
+        );
+      })
+      .filter((r): r is SearchResult => r !== null);
   }
 
   private resolveDefaults(filters: SearchFilters): SearchFilters {

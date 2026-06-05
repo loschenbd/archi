@@ -15,6 +15,12 @@ export type SearchQuery = {
   text: string;
   filters: SearchFilters;
   limit: number;
+  /**
+   * When set, perform a vector-only KNN lookup over the passage's existing
+   * embedding instead of a hybrid text search. Excludes the source id from
+   * results. `text` is ignored in this mode.
+   */
+  findSimilarPassageId?: string;
 };
 
 export type SearchResult = {

@@ -87,6 +87,39 @@ describe("SearchService", () => {
     expect(hasFtsContribution).toBe(true);
   }, 30_000);
 
+  describe("findSimilarPassageId mode", () => {
+    it("returns vector-only neighbors excluding the source passage", async () => {
+      const res = await service.query({
+        text: "",
+        filters: {},
+        limit: 5,
+        findSimilarPassageId: "p-anger-1"
+      });
+      expect(res.results.length).toBeGreaterThan(0);
+      // Source passage must not appear in its own neighbors.
+      expect(res.results.every((r) => r.passageId !== "p-anger-1")).toBe(true);
+      // Every hit comes from the vector index — no text/FTS5 path was taken.
+      expect(res.results.every((r) => r.matchedVia === "vector")).toBe(true);
+      // Top neighbor should be another anger-themed passage (sanity check that
+      // the embedding-only similarity ranking still makes sense).
+      expect(res.results[0].passageId.startsWith("p-anger")).toBe(true);
+      // Response query field is empty in this mode.
+      expect(res.query).toBe("");
+    }, 30_000);
+
+    it("returns empty when the source passage has no embedding", async () => {
+      const res = await service.query({
+        text: "",
+        filters: {},
+        limit: 5,
+        findSimilarPassageId: "does-not-exist"
+      });
+      expect(res.results).toEqual([]);
+      expect(res.totalCandidates).toBe(0);
+      expect(res.durationMs).toBeGreaterThanOrEqual(0);
+    });
+  });
+
   describe("snippet output", () => {
     it("wraps matched tokens in <mark> for fts5 matches", async () => {
       const res = await service.query({ text: "anger", filters: {}, limit: 5 });

@@ -62,6 +62,7 @@ type Props = {
   lastError: string | null;
   noHealthySources: boolean;
   effectiveSearchQuery: string;
+  findSimilarPassageId: string | null;
   homeSearchFilters: SearchFilters;
   onFiltersChange: (next: SearchFilters) => void;
   onFindSimilar: (passage: { id: string; body: string }) => void;
@@ -87,6 +88,7 @@ export function HomeScreen({
   lastError,
   noHealthySources,
   effectiveSearchQuery,
+  findSimilarPassageId,
   homeSearchFilters,
   onFiltersChange,
   onFindSimilar
@@ -111,9 +113,10 @@ export function HomeScreen({
         onNavigateToSettings={onNavigateToSettings}
       />
 
-      {trimmedQuery ? (
+      {trimmedQuery || findSimilarPassageId ? (
         <HomeSearchResults
           query={trimmedQuery}
+          findSimilarPassageId={findSimilarPassageId}
           filters={homeSearchFilters}
           onFiltersChange={onFiltersChange}
           onOpenWork={(workId, passageId) => onOpenWork(workId, passageId)}
