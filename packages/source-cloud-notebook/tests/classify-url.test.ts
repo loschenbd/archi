@@ -5,6 +5,14 @@ describe("classifyUrl", () => {
   it("returns notebook for the notebook path", () => {
     expect(classifyUrl("https://read.amazon.com/kp/notebook")).toBe("notebook");
     expect(classifyUrl("https://read.amazon.com/kp/notebook?asin=B01FPGY5T0")).toBe("notebook");
+    // Amazon also serves the notebook at /notebook (current URL).
+    expect(classifyUrl("https://read.amazon.com/notebook")).toBe("notebook");
+    expect(classifyUrl("https://read.amazon.com/notebook?asin=B01FPGY5T0")).toBe("notebook");
+    expect(classifyUrl("https://read.amazon.com/notebook/foo")).toBe("notebook");
+  });
+
+  it("does not classify lookalike paths as notebook", () => {
+    expect(classifyUrl("https://www.amazon.com/notebooks")).toBe("interstitial_other");
   });
 
   it("detects sign-in pages", () => {
