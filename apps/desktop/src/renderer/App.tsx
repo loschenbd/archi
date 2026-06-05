@@ -624,8 +624,8 @@ export function App(): JSX.Element {
             return (
               <LibraryBookDetailScreen
                 work={selectedWork}
-                onOpenSearchScreen={(initialQuery: string) => {
-                  setHomeSearchQuery(initialQuery);
+                onFindSimilar={(passage) => {
+                  setFindSimilarPassage(passage);
                   setSelectedLibraryWorkId(null);
                   setActiveScreen("Home");
                 }}

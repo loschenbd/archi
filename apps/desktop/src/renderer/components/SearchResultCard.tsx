@@ -9,15 +9,8 @@ type Props = {
   onToggle: () => void;
   onOpenWork: (workId: string, passageId: string) => void;
   /**
-   * Legacy callback used by the (soon-to-be-deleted) SearchScreen.
-   * Kept optional so that screens which still pass it compile; new
-   * call sites should pass `onFindSimilar` instead. Removed alongside
-   * the SearchScreen in Task 11.
-   */
-  onOpenSearchScreen?: (query: string) => void;
-  /**
-   * Modern hybrid-search "Find similar" callback. When provided the
-   * card renders a Find similar button that delegates entirely to the
+   * Hybrid-search "Find similar" callback. When provided the card
+   * renders a Find similar button that delegates entirely to the
    * caller (typically HomeSearchResults), which feeds the passage body
    * back into the home search input as a sentinel chip.
    */
@@ -42,7 +35,6 @@ export function SearchResultCard({
   expanded,
   onToggle,
   onOpenWork,
-  onOpenSearchScreen,
   onFindSimilar,
   onCopy
 }: Props): JSX.Element {
@@ -134,21 +126,6 @@ export function SearchResultCard({
               onClick={(e) => {
                 e.stopPropagation();
                 onFindSimilar();
-              }}
-              aria-label="Find similar passages"
-              title="Find passages semantically similar to this one"
-            >
-              <span className="passage-card-action-icon" aria-hidden="true">⚡</span>
-              Find similar
-            </button>
-          ) : onOpenSearchScreen ? (
-            <button
-              type="button"
-              className="passage-card-action"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Cap query length to avoid awkward search-screen UX.
-                onOpenSearchScreen(result.body.slice(0, 240));
               }}
               aria-label="Find similar passages"
               title="Find passages semantically similar to this one"

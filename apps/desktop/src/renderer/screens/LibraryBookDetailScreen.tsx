@@ -34,7 +34,7 @@ type LocationGroup = {
 
 type Props = {
   work: LibraryWork;
-  onOpenSearchScreen: (initialQuery: string) => void;
+  onFindSimilar: (passage: { id: string; body: string }) => void;
   pendingScrollPassageId?: string | null;
   breadcrumbFromSearch?: boolean;
   onBackToSearch?: () => void;
@@ -175,7 +175,7 @@ function createNotebookFallbackUrl(baseUrl: string, work: LibraryWork, passage: 
   }
 }
 
-export function LibraryBookDetailScreen({ work, onOpenSearchScreen, pendingScrollPassageId }: Props): JSX.Element {
+export function LibraryBookDetailScreen({ work, onFindSimilar, pendingScrollPassageId }: Props): JSX.Element {
   const [passages, setPassages] = useState<LibraryPassage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -315,8 +315,7 @@ export function LibraryBookDetailScreen({ work, onOpenSearchScreen, pendingScrol
                 {openingPassageId === passage.id ? "Opening…" : "↗ Open in Kindle"}
               </button>
               <FindSimilarButton
-                passageBody={passage.body}
-                onOpenSearchScreen={onOpenSearchScreen}
+                onFindSimilar={() => onFindSimilar({ id: passage.id, body: passage.body })}
               />
               <button
                 type="button"
