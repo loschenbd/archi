@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { SearchResult } from "@archi/search";
 import { HighlightedText } from "./HighlightedText";
-import { FindSimilarButton } from "./FindSimilarButton";
 
 type Props = {
   result: SearchResult;
@@ -9,7 +8,26 @@ type Props = {
   expanded: boolean;
   onToggle: () => void;
   onOpenWork: (workId: string, passageId: string) => void;
-  onOpenSearchScreen: (query: string) => void;
+  /**
+   * Legacy callback used by the (soon-to-be-deleted) SearchScreen.
+   * Kept optional so that screens which still pass it compile; new
+   * call sites should pass `onFindSimilar` instead. Removed alongside
+   * the SearchScreen in Task 11.
+   */
+  onOpenSearchScreen?: (query: string) => void;
+  /**
+   * Modern hybrid-search "Find similar" callback. When provided the
+   * card renders a Find similar button that delegates entirely to the
+   * caller (typically HomeSearchResults), which feeds the passage body
+   * back into the home search input as a sentinel chip.
+   */
+  onFindSimilar?: () => void;
+  /**
+   * Optional Copy override. When provided the card uses it instead of
+   * the built-in clipboard write — useful for callers that want their
+   * own toast / analytics around the copy action.
+   */
+  onCopy?: () => void;
 };
 
 const matchLabel: Record<SearchResult["matchedVia"], string> = {
@@ -24,11 +42,19 @@ export function SearchResultCard({
   expanded,
   onToggle,
   onOpenWork,
-  onOpenSearchScreen
+  onOpenSearchScreen,
+  onFindSimilar,
+  onCopy
 }: Props): JSX.Element {
   const [copied, setCopied] = useState(false);
 
   const copyBody = async (): Promise<void> => {
+    if (onCopy) {
+      onCopy();
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+      return;
+    }
     try {
       await navigator.clipboard.writeText(result.body);
       setCopied(true);
@@ -101,10 +127,36 @@ export function SearchResultCard({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <FindSimilarButton
-            passageBody={result.body}
-            onOpenSearchScreen={onOpenSearchScreen}
-          />
+          {onFindSimilar ? (
+            <button
+              type="button"
+              className="passage-card-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFindSimilar();
+              }}
+              aria-label="Find similar passages"
+              title="Find passages semantically similar to this one"
+            >
+              <span className="passage-card-action-icon" aria-hidden="true">⚡</span>
+              Find similar
+            </button>
+          ) : onOpenSearchScreen ? (
+            <button
+              type="button"
+              className="passage-card-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Cap query length to avoid awkward search-screen UX.
+                onOpenSearchScreen(result.body.slice(0, 240));
+              }}
+              aria-label="Find similar passages"
+              title="Find passages semantically similar to this one"
+            >
+              <span className="passage-card-action-icon" aria-hidden="true">⚡</span>
+              Find similar
+            </button>
+          ) : null}
           <button
             type="button"
             className="passage-card-action"

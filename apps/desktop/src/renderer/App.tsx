@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SearchFilters } from "@archi/search";
 import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
@@ -165,6 +166,15 @@ export function App(): JSX.Element {
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
+  const [homeSearchFilters, setHomeSearchFilters] = useState<SearchFilters>({});
+  // `findSimilarPassage` is plumbed in Task 9 so HomeSearchResults can fire the
+  // callback; Task 10 wires it through as a sentinel chip + replaces the search
+  // input contents with the passage body. The `_` prefix on the getter silences
+  // the unused-var lint until then.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_findSimilarPassage, setFindSimilarPassage] = useState<{ id: string; body: string } | null>(
+    null
+  );
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -585,7 +595,6 @@ export function App(): JSX.Element {
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
             lastRunAtIso={syncState.lastRunAt}
-            works={works}
             passages={passages}
             bookCount={works.length}
             highlightCount={passages.length}
@@ -594,6 +603,8 @@ export function App(): JSX.Element {
             onOpenWork={(workId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
+              setHomeSearchQuery("");
+              setFindSimilarPassage(null);
             }}
             connections={Object.values(connections).map((c) => ({
               provider: c.provider,
@@ -605,6 +616,9 @@ export function App(): JSX.Element {
               (c) => c.status !== "connected" && c.status !== "configuring"
             )}
             homeSearchQuery={homeSearchQuery}
+            homeSearchFilters={homeSearchFilters}
+            onFiltersChange={setHomeSearchFilters}
+            onFindSimilar={(passage) => setFindSimilarPassage(passage)}
           />
         );
       case "Library":
@@ -701,6 +715,7 @@ export function App(): JSX.Element {
     cloudEnabled,
     connections,
     homeSearchQuery,
+    homeSearchFilters,
     isCancelingSync,
     isSyncing,
     logs,

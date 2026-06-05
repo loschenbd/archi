@@ -2830,3 +2830,18 @@ select {
   opacity: 0.5;
   cursor: default;
 }
+
+.home-search-results-v2 {
+  display: grid;
+  gap: 14px;
+}
+
+.home-search-results-v2-summary {
+  font-size: 12px;
+  color: var(--ink-500);
+}
+
+.home-search-results-v2-list {
+  display: grid;
+  gap: 10px;
+}

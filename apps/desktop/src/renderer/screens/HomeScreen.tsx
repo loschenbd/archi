@@ -1,4 +1,5 @@
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue } from "react";
+import type { SearchFilters } from "@archi/search";
 import { BooksRail } from "./home/BooksRail";
 import { HomeSearchResults } from "./home/HomeSearchResults";
 import { LatestHighlights } from "./home/LatestHighlights";
@@ -20,13 +21,6 @@ type RecentPassage = {
   workTitle: string;
   ingestedAt: string;
   workId?: string;
-};
-
-type SearchWork = {
-  id: string;
-  title: string;
-  creator?: string;
-  coverImageUrl?: string;
 };
 
 type SearchPassage = {
@@ -58,17 +52,19 @@ type Props = {
   recentWorks: RecentWork[];
   recentPassages: RecentPassage[];
   lastRunAtIso: string | null;
-  works: SearchWork[];
   passages: SearchPassage[];
   bookCount: number;
   highlightCount: number;
   lastRunDeltaWorks: number;
   lastRunDeltaPassages: number;
-  onOpenWork: (workId: string) => void;
+  onOpenWork: (workId: string, passageId?: string) => void;
   connections: SyncBannerConnection[];
   lastError: string | null;
   noHealthySources: boolean;
   homeSearchQuery: string;
+  homeSearchFilters: SearchFilters;
+  onFiltersChange: (next: SearchFilters) => void;
+  onFindSimilar: (passage: { id: string; body: string }) => void;
 };
 
 export function HomeScreen({
@@ -81,7 +77,6 @@ export function HomeScreen({
   recentWorks,
   recentPassages,
   lastRunAtIso,
-  works,
   passages,
   bookCount,
   highlightCount,
@@ -91,27 +86,16 @@ export function HomeScreen({
   connections,
   lastError,
   noHealthySources,
-  homeSearchQuery
+  homeSearchQuery,
+  homeSearchFilters,
+  onFiltersChange,
+  onFindSimilar
 }: Props): JSX.Element {
-  // useDeferredValue lets the input update at high priority while filtering /
-  // rendering large result lists happens at lower priority — typing stays snappy
-  // even when a broad query matches hundreds of passages.
+  // useDeferredValue lets the input update at high priority while the heavier
+  // search-results subtree (filter chips + result cards + IPC effect) re-renders
+  // at lower priority — typing stays snappy.
   const liveTrimmedQuery = homeSearchQuery.trim();
   const trimmedQuery = useDeferredValue(liveTrimmedQuery);
-
-  const searchResults = useMemo(() => {
-    if (!trimmedQuery) {
-      return { works: [] as SearchWork[], passages: [] as SearchPassage[] };
-    }
-    const q = trimmedQuery.toLowerCase();
-    const matchedWorks = works.filter((work) =>
-      `${work.title} ${work.creator ?? ""}`.toLowerCase().includes(q)
-    );
-    const matchedPassages = passages.filter((passage) =>
-      `${passage.workTitle} ${passage.body}`.toLowerCase().includes(q)
-    );
-    return { works: matchedWorks, passages: matchedPassages };
-  }, [trimmedQuery, works, passages]);
 
   return (
     <section className="home-screen">
@@ -130,9 +114,10 @@ export function HomeScreen({
       {trimmedQuery ? (
         <HomeSearchResults
           query={trimmedQuery}
-          works={searchResults.works}
-          passages={searchResults.passages}
-          onOpenWork={onOpenWork}
+          filters={homeSearchFilters}
+          onFiltersChange={onFiltersChange}
+          onOpenWork={(workId, passageId) => onOpenWork(workId, passageId)}
+          onFindSimilar={onFindSimilar}
         />
       ) : (
         <>
@@ -150,18 +135,18 @@ export function HomeScreen({
           <BooksRail
             works={recentWorks.slice(0, 12)}
             deltaCount={lastRunDeltaWorks}
-            onOpenWork={onOpenWork}
+            onOpenWork={(workId) => onOpenWork(workId)}
           />
 
           <div className="highlights-split">
             <RandomHighlight
               passages={passages}
-              onOpenWork={onOpenWork}
+              onOpenWork={(workId) => onOpenWork(workId)}
             />
             <LatestHighlights
               passages={recentPassages}
               deltaCount={lastRunDeltaPassages}
-              onOpenWork={onOpenWork}
+              onOpenWork={(workId) => onOpenWork(workId)}
             />
           </div>
         </>

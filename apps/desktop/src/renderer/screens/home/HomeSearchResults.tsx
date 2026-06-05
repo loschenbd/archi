@@ -1,138 +1,83 @@
-import { useEffect, useRef } from "react";
-import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
-import { highlightMatch, excerptAroundMatch } from "./utils";
-
-type Work = {
-  id: string;
-  title: string;
-  creator?: string;
-  coverImageUrl?: string;
-};
-
-type Passage = {
-  id: string;
-  body: string;
-  workId: string;
-  workTitle: string;
-};
+import { useCallback, useEffect, useState } from "react";
+import type { SearchFilters, SearchResponse } from "@archi/search";
+import { SearchFilterChips } from "../../components/SearchFilterChips";
+import { SearchResultCard } from "../../components/SearchResultCard";
+import { useSearchPreferences } from "../../state/SearchPreferencesContext";
 
 type Props = {
   query: string;
-  works: Work[];
-  passages: Passage[];
-  onOpenWork: (workId: string) => void;
+  filters: SearchFilters;
+  onFiltersChange: (next: SearchFilters) => void;
+  onOpenWork: (workId: string, passageId: string) => void;
+  onFindSimilar: (passage: { id: string; body: string }) => void;
 };
 
-export function HomeSearchResults({ query, works, passages, onOpenWork }: Props): JSX.Element {
-  const passagesScrollRef = useRef<HTMLDivElement>(null);
-  const passagesVirtualizer = useVirtualizer({
-    count: passages.length,
-    getScrollElement: () => passagesScrollRef.current,
-    estimateSize: () => 110,
-    overscan: 6,
-    getItemKey: (index: number) => passages[index]?.id ?? index
-  });
-  const passagesVirtualItems = passagesVirtualizer.getVirtualItems();
+export function HomeSearchResults({
+  query,
+  filters,
+  onFiltersChange,
+  onOpenWork,
+  onFindSimilar
+}: Props): JSX.Element {
+  const prefs = useSearchPreferences();
+  const [response, setResponse] = useState<SearchResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const runQuery = useCallback(
+    async (q: string, f: SearchFilters): Promise<void> => {
+      setLoading(true);
+      try {
+        const mergedFilters: SearchFilters = {
+          ...f,
+          isArchived: prefs.includeArchived ? true : f.isArchived,
+          isHidden: prefs.includeHidden ? true : f.isHidden
+        };
+        const res = await window.archi.search.query({ text: q, filters: mergedFilters, limit: 50 });
+        setResponse(res);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [prefs.includeArchived, prefs.includeHidden]
+  );
 
   useEffect(() => {
-    passagesScrollRef.current?.scrollTo({ top: 0 });
-  }, [query]);
+    const handle = setTimeout(() => {
+      void runQuery(query, filters);
+    }, 150);
+    return () => clearTimeout(handle);
+  }, [query, filters, runQuery]);
 
-  const hasResults = works.length > 0 || passages.length > 0;
+  const summary = response
+    ? `Showing ${response.results.length} of ${response.totalCandidates} candidates (${response.durationMs} ms)`
+    : "";
 
-  if (!hasResults) {
-    return <p className="home-search-empty">No results found.</p>;
-  }
+  const handleCopy = (body: string): void => {
+    void navigator.clipboard.writeText(body);
+  };
 
   return (
-    <div className="home-search-results">
-      <p className="home-search-count">
-        {works.length} {works.length === 1 ? "book" : "books"}
-        <span aria-hidden="true"> · </span>
-        {passages.length} {passages.length === 1 ? "highlight" : "highlights"}
-      </p>
-      <div className="home-search-scroll">
-        {works.length > 0 ? (
-          <div className="home-search-group">
-            <p className="content-eyebrow">Books</p>
-            <ul className="home-search-list">
-              {works.map((work) => (
-                <li key={work.id}>
-                  <button
-                    type="button"
-                    className="home-search-item home-search-item-work"
-                    onClick={() => onOpenWork(work.id)}
-                  >
-                    <span className="home-search-cover" aria-hidden="true">
-                      {work.coverImageUrl ? (
-                        <img src={work.coverImageUrl} alt="" loading="lazy" />
-                      ) : (
-                        <span className="home-search-cover-letter">
-                          {(work.title[0] ?? "?").toUpperCase()}
-                        </span>
-                      )}
-                    </span>
-                    <span className="home-search-item-body">
-                      <span className="home-search-item-title">
-                        {highlightMatch(work.title, query)}
-                      </span>
-                      {work.creator ? (
-                        <span className="home-search-item-meta">
-                          {highlightMatch(work.creator, query)}
-                        </span>
-                      ) : null}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        {passages.length > 0 ? (
-          <div className="home-search-group">
-            <p className="content-eyebrow">Highlights</p>
-            <div ref={passagesScrollRef} className="home-search-passages-scroll">
-              <div
-                className="home-search-passages-inner"
-                style={{ height: `${passagesVirtualizer.getTotalSize()}px` }}
-              >
-                {passagesVirtualItems.map((virtualItem: VirtualItem) => {
-                  const passage = passages[virtualItem.index];
-                  if (!passage) return null;
-                  return (
-                    <div
-                      key={virtualItem.key}
-                      data-index={virtualItem.index}
-                      ref={passagesVirtualizer.measureElement}
-                      className="home-search-passages-row"
-                      style={{ transform: `translateY(${virtualItem.start}px)` }}
-                    >
-                      <button
-                        type="button"
-                        className="home-search-item home-search-item-passage"
-                        onClick={() => onOpenWork(passage.workId)}
-                      >
-                        <span className="home-search-quote-mark" aria-hidden="true">
-                          &ldquo;
-                        </span>
-                        <span className="home-search-item-body">
-                          <span className="home-search-item-quote">
-                            {highlightMatch(
-                              excerptAroundMatch(passage.body, query),
-                              query
-                            )}
-                          </span>
-                          <span className="home-search-item-meta">
-                            {highlightMatch(passage.workTitle, query)}
-                          </span>
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+    <div className="home-search-results-v2">
+      <SearchFilterChips filters={filters} onChange={onFiltersChange} />
+      <div className="home-search-results-v2-summary">{loading ? "Searching…" : summary}</div>
+      <div className="home-search-results-v2-list">
+        {response?.results.map((r) => (
+          <SearchResultCard
+            key={r.passageId}
+            result={r}
+            showMatchSource={prefs.showMatchSource}
+            expanded={expandedId === r.passageId}
+            onToggle={() =>
+              setExpandedId((current) => (current === r.passageId ? null : r.passageId))
+            }
+            onOpenWork={(workId) => onOpenWork(workId, r.passageId)}
+            onCopy={() => handleCopy(r.body)}
+            onFindSimilar={() => onFindSimilar({ id: r.passageId, body: r.body })}
+          />
+        ))}
+        {response && response.results.length === 0 && !loading ? (
+          <p className="home-search-empty">No matches.</p>
         ) : null}
       </div>
     </div>
