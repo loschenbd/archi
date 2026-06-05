@@ -1,6 +1,10 @@
 import { useIndexerStatus } from "../state/IndexerStatusContext";
 import { useSearchPreferences } from "../state/SearchPreferencesContext";
-import { EMBEDDING_MODEL_ID } from "@archi/search";
+
+// Mirrors @archi/search's EMBEDDING_MODEL_ID. Cannot import from @archi/search:
+// its barrel pulls embedding/modelPaths.ts which imports node:fs, and Vite
+// stubs node:fs in the renderer bundle (throws at module load).
+const EMBEDDING_MODEL_ID = "bge-small-en-v1.5@v1";
 
 function Toggle({
   checked,
