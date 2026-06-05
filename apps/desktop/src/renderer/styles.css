@@ -1941,6 +1941,11 @@ select {
   color: color-mix(in srgb, var(--accent-strong) 80%, var(--ink-700));
 }
 
+.sync-banner-indexing {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent-strong);
+}
+
 .sync-banner-warning {
   background: color-mix(in srgb, #c98a2a 18%, var(--surface));
   color: #7a5410;
