@@ -235,8 +235,17 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   }
 
   async getStatus(): Promise<CloudConnectorStatus> {
+    // Sync-driven status. We never launch a browser here — fetchSince()
+    // and reconnect() are the only paths that authoritatively update
+    // this.status. Routine status reads just reflect what we already
+    // know: cookies on disk → presume the prior session is intact;
+    // no cookies → needs_auth. The proof is whether the next sync
+    // works, not a speculative headless probe.
     return this.withConnectorLock(async () => {
-      await this.refreshStatusFromPersistedSession();
+      if (!this.hasPersistedAuthArtifacts()) {
+        this.status = "needs_auth";
+        this.statusValidatedAtMs = Date.now();
+      }
       return this.status;
     });
   }
