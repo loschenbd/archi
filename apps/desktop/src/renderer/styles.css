@@ -2764,3 +2764,64 @@ select {
 .library-tab-panel {
   display: block;
 }
+
+.settings-search-section {
+  display: grid;
+  gap: 18px;
+  max-width: 600px;
+}
+
+.settings-toggle {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 12px;
+  align-items: start;
+  cursor: pointer;
+}
+
+.settings-toggle input[type="checkbox"] {
+  margin-top: 3px;
+}
+
+.settings-toggle-description {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 2px;
+}
+
+.settings-search-index-status {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--ink-300) 18%, transparent);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.settings-search-index-status p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.settings-search-reindex {
+  justify-self: start;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent-strong);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.settings-search-reindex:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.settings-search-reindex:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
