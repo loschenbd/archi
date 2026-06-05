@@ -198,6 +198,7 @@ export function App(): JSX.Element {
   const [works, setWorks] = useState<LibraryWork[]>([]);
   const [passages, setPassages] = useState<Array<{ id: string; body: string; workId: string; workTitle: string }>>([]);
   const [selectedLibraryWorkId, setSelectedLibraryWorkId] = useState<string | null>(null);
+  const [pendingScrollPassageId, setPendingScrollPassageId] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCancelingSync, setIsCancelingSync] = useState(false);
@@ -596,8 +597,9 @@ export function App(): JSX.Element {
             highlightCount={passages.length}
             lastRunDeltaWorks={lastRunDeltaWorks}
             lastRunDeltaPassages={lastRunDeltaPassages}
-            onOpenWork={(workId) => {
+            onOpenWork={(workId, passageId) => {
               setSelectedLibraryWorkId(workId);
+              setPendingScrollPassageId(passageId ?? null);
               setActiveScreen("Library");
               setHomeSearchQuery("");
               setFindSimilarPassage(null);
@@ -624,6 +626,7 @@ export function App(): JSX.Element {
             return (
               <LibraryBookDetailScreen
                 work={selectedWork}
+                pendingScrollPassageId={pendingScrollPassageId}
                 onFindSimilar={(passage) => {
                   setFindSimilarPassage(passage);
                   setSelectedLibraryWorkId(null);
