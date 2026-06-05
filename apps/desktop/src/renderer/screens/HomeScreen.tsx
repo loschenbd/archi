@@ -1,11 +1,11 @@
-import { useDeferredValue } from "react";
 import type { SearchFilters } from "@archi/search";
 import { BooksRail } from "./home/BooksRail";
-import { HomeSearchResults } from "./home/HomeSearchResults";
 import { LatestHighlights } from "./home/LatestHighlights";
 import { RandomHighlight } from "./home/RandomHighlight";
+import { SearchHero } from "./home/SearchHero";
 import { StatsStrip } from "./home/StatsStrip";
 import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
+import { hasNonDefaultFilters } from "./home/utils";
 
 type RecentWork = {
   id: string;
@@ -63,9 +63,14 @@ type Props = {
   noHealthySources: boolean;
   effectiveSearchQuery: string;
   findSimilarPassageId: string | null;
+  findSimilarPassage: { id: string; body: string } | null;
   homeSearchFilters: SearchFilters;
   onFiltersChange: (next: SearchFilters) => void;
   onFindSimilar: (passage: { id: string; body: string }) => void;
+  recentSearches: string[];
+  pushRecentSearch: (q: string) => void;
+  onSearchQueryChange: (q: string) => void;
+  onClearFindSimilar: () => void;
 };
 
 export function HomeScreen({
@@ -89,15 +94,20 @@ export function HomeScreen({
   noHealthySources,
   effectiveSearchQuery,
   findSimilarPassageId,
+  findSimilarPassage,
   homeSearchFilters,
   onFiltersChange,
-  onFindSimilar
+  onFindSimilar,
+  recentSearches,
+  pushRecentSearch,
+  onSearchQueryChange,
+  onClearFindSimilar
 }: Props): JSX.Element {
-  // useDeferredValue lets the input update at high priority while the heavier
-  // search-results subtree (filter chips + result cards + IPC effect) re-renders
-  // at lower priority — typing stays snappy.
-  const liveTrimmedQuery = effectiveSearchQuery.trim();
-  const trimmedQuery = useDeferredValue(liveTrimmedQuery);
+  const trimmedQuery = effectiveSearchQuery.trim();
+  const searchActive =
+    trimmedQuery.length > 0 ||
+    findSimilarPassageId !== null ||
+    hasNonDefaultFilters(homeSearchFilters);
 
   return (
     <section className="home-screen">
@@ -113,16 +123,22 @@ export function HomeScreen({
         onNavigateToSettings={onNavigateToSettings}
       />
 
-      {trimmedQuery || findSimilarPassageId ? (
-        <HomeSearchResults
-          query={trimmedQuery}
-          findSimilarPassageId={findSimilarPassageId}
-          filters={homeSearchFilters}
-          onFiltersChange={onFiltersChange}
-          onOpenWork={(workId, passageId) => onOpenWork(workId, passageId)}
-          onFindSimilar={onFindSimilar}
-        />
-      ) : (
+      <SearchHero
+        query={effectiveSearchQuery}
+        setQuery={onSearchQueryChange}
+        filters={homeSearchFilters}
+        setFilters={onFiltersChange}
+        findSimilarPassageId={findSimilarPassageId}
+        findSimilarPassage={findSimilarPassage}
+        clearFindSimilar={onClearFindSimilar}
+        highlightCount={highlightCount}
+        recentSearches={recentSearches}
+        pushRecentSearch={pushRecentSearch}
+        onOpenWork={onOpenWork}
+        onFindSimilar={onFindSimilar}
+      />
+
+      {!searchActive ? (
         <>
           <StatsStrip
             bookCount={bookCount}
@@ -153,7 +169,7 @@ export function HomeScreen({
             />
           </div>
         </>
-      )}
+      ) : null}
     </section>
   );
 }

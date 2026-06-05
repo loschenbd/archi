@@ -198,9 +198,8 @@ export function App(): JSX.Element {
     }
   }, [recentSearches]);
 
-  // Consumed by SearchHero in Task 5; declared here so the persistence
+  // Consumed by SearchHero (via HomeScreen). Declared here so the persistence
   // useEffect and the setter live alongside other App state.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const pushRecentSearch = useCallback((query: string): void => {
     const trimmed = query.trim();
     if (!trimmed) return;
@@ -670,9 +669,14 @@ export function App(): JSX.Element {
             )}
             effectiveSearchQuery={effectiveSearchQuery}
             findSimilarPassageId={findSimilarPassageId}
+            findSimilarPassage={findSimilarPassage}
             homeSearchFilters={homeSearchFilters}
             onFiltersChange={setHomeSearchFilters}
             onFindSimilar={(passage) => setFindSimilarPassage(passage)}
+            recentSearches={recentSearches}
+            pushRecentSearch={pushRecentSearch}
+            onSearchQueryChange={setHomeSearchQuery}
+            onClearFindSimilar={() => setFindSimilarPassage(null)}
           />
         );
       case "Library":
@@ -770,13 +774,16 @@ export function App(): JSX.Element {
     cloudEnabled,
     connections,
     effectiveSearchQuery,
+    findSimilarPassage,
     findSimilarPassageId,
     homeSearchFilters,
     isCancelingSync,
     isSyncing,
     logs,
     passages,
+    pushRecentSearch,
     recentActivity,
+    recentSearches,
     settingsDefaultTab,
     selectedLibraryWorkId,
     refreshNotionMedia,
@@ -922,55 +929,6 @@ export function App(): JSX.Element {
                   <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
                   {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
                 </div>
-                {activeScreen === "Home" ? (
-                  <div className="content-header-search">
-                    {findSimilarPassage ? (
-                      <div className="content-header-search-sentinel">
-                        <span>
-                          Similar to &ldquo;{findSimilarPassage.body.slice(0, 40)}
-                          {findSimilarPassage.body.length > 40 ? "…" : ""}&rdquo;
-                        </span>
-                        <button
-                          type="button"
-                          className="content-header-search-clear"
-                          onClick={() => setFindSimilarPassage(null)}
-                          aria-label="Clear find similar"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <input
-                          type="search"
-                          className="content-header-search-input"
-                          placeholder="Search your library…"
-                          value={homeSearchQuery}
-                          onChange={(event) => setHomeSearchQuery(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Escape" && homeSearchQuery) {
-                              event.preventDefault();
-                              setHomeSearchQuery("");
-                            }
-                          }}
-                          aria-label="Search your library"
-                          autoFocus
-                        />
-                        {homeSearchQuery ? (
-                          <button
-                            type="button"
-                            className="content-header-search-clear"
-                            onClick={() => setHomeSearchQuery("")}
-                            aria-label="Clear search"
-                            tabIndex={-1}
-                          >
-                            ×
-                          </button>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                ) : null}
               </header>
               {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
               {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
