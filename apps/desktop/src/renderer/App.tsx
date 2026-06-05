@@ -739,53 +739,61 @@ export function App(): JSX.Element {
 
   if (!settingsLoaded) {
     return (
-      <main className="onboarding-layout">
-        <WindowTitleBar />
-        <section className="screen-card onboarding-card">
-          <p className="content-eyebrow">Preparing</p>
-          <h1>Loading workspace...</h1>
-        </section>
-      </main>
+      <SearchPreferencesProvider>
+        <IndexerStatusProvider>
+          <main className="onboarding-layout">
+            <WindowTitleBar />
+            <section className="screen-card onboarding-card">
+              <p className="content-eyebrow">Preparing</p>
+              <h1>Loading workspace...</h1>
+            </section>
+          </main>
+        </IndexerStatusProvider>
+      </SearchPreferencesProvider>
     );
   }
 
   if (!onboardingCompleted) {
     return (
-      <main className="onboarding-layout">
-        <WindowTitleBar />
-        <section className="screen-card onboarding-card">
-          {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
-          <OnboardingScreen
-            isCompleting={isCompletingOnboarding}
-            onContinue={() => {
-              if (isCompletingOnboarding) {
-                return;
-              }
-              setIpcError(null);
-              setIsCompletingOnboarding(true);
-              void window.archi
-                .completeOnboarding()
-                .then((result) => {
-                  setOnboardingCompleted(result.onboardingCompleted);
-                  setSettingsDefaultTab("connections");
-                  setActiveScreen("Settings");
-                  refreshConnections();
-                  refreshLists();
-                  void window.archi.getSyncState().then(setSyncState);
-                })
-                .catch((error) => {
-                  setIpcError(
-                    `Could not complete onboarding (${error instanceof Error ? error.message : "unknown error"}). ` +
-                      "The main process may not be running correctly — check the terminal output."
-                  );
-                })
-                .finally(() => {
-                  setIsCompletingOnboarding(false);
-                });
-            }}
-          />
-        </section>
-      </main>
+      <SearchPreferencesProvider>
+        <IndexerStatusProvider>
+          <main className="onboarding-layout">
+            <WindowTitleBar />
+            <section className="screen-card onboarding-card">
+              {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
+              <OnboardingScreen
+                isCompleting={isCompletingOnboarding}
+                onContinue={() => {
+                  if (isCompletingOnboarding) {
+                    return;
+                  }
+                  setIpcError(null);
+                  setIsCompletingOnboarding(true);
+                  void window.archi
+                    .completeOnboarding()
+                    .then((result) => {
+                      setOnboardingCompleted(result.onboardingCompleted);
+                      setSettingsDefaultTab("connections");
+                      setActiveScreen("Settings");
+                      refreshConnections();
+                      refreshLists();
+                      void window.archi.getSyncState().then(setSyncState);
+                    })
+                    .catch((error) => {
+                      setIpcError(
+                        `Could not complete onboarding (${error instanceof Error ? error.message : "unknown error"}). ` +
+                          "The main process may not be running correctly — check the terminal output."
+                      );
+                    })
+                    .finally(() => {
+                      setIsCompletingOnboarding(false);
+                    });
+                }}
+              />
+            </section>
+          </main>
+        </IndexerStatusProvider>
+      </SearchPreferencesProvider>
     );
   }
 
@@ -799,103 +807,103 @@ export function App(): JSX.Element {
       <UpdateBanner />
       <SearchPreferencesProvider>
         <IndexerStatusProvider>
-      <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
-      <WindowTitleBar />
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <img src={appLogo} alt="" aria-hidden="true" className="sidebar-logo" />
-          <h1>Archi</h1>
-        </div>
-        <nav className="sidebar-nav" aria-label="Primary">
-          {screens.map((screen) => (
-            <button
-              key={screen}
-              className={`${activeScreen === screen ? "active" : ""}${screen === "Settings" && sidebarUnhealthy ? " sidebar-nav-has-warning" : ""}`}
-              title={sidebarCollapsed ? screen : undefined}
-              onClick={() => {
-                setActiveScreen(screen);
-                if (screen !== "Library") {
-                  setSelectedLibraryWorkId(null);
-                }
-              }}
-            >
-              <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
-              <span className="sidebar-nav-label">{screen}</span>
-              {screen === "Settings" && sidebarUnhealthy ? (
-                <span className="sidebar-nav-warning-dot" aria-label="Needs attention" />
-              ) : null}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-divider" aria-hidden="true" />
-        <SupportButton collapsed={sidebarCollapsed} />
-        <button
-          type="button"
-          className="sidebar-collapse-toggle"
-          onClick={toggleSidebar}
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-pressed={sidebarCollapsed}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d={sidebarCollapsed ? "M6 4l4 4-4 4" : "M10 4l-4 4 4 4"} />
-          </svg>
-        </button>
-      </aside>
-      <section className="content" data-screen={activeScreen}>
-        <header className="content-header">
-          <div>
-            {selectedWork ? (
+          <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+            <WindowTitleBar />
+            <aside className="sidebar">
+              <div className="sidebar-brand">
+                <img src={appLogo} alt="" aria-hidden="true" className="sidebar-logo" />
+                <h1>Archi</h1>
+              </div>
+              <nav className="sidebar-nav" aria-label="Primary">
+                {screens.map((screen) => (
+                  <button
+                    key={screen}
+                    className={`${activeScreen === screen ? "active" : ""}${screen === "Settings" && sidebarUnhealthy ? " sidebar-nav-has-warning" : ""}`}
+                    title={sidebarCollapsed ? screen : undefined}
+                    onClick={() => {
+                      setActiveScreen(screen);
+                      if (screen !== "Library") {
+                        setSelectedLibraryWorkId(null);
+                      }
+                    }}
+                  >
+                    <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
+                    <span className="sidebar-nav-label">{screen}</span>
+                    {screen === "Settings" && sidebarUnhealthy ? (
+                      <span className="sidebar-nav-warning-dot" aria-label="Needs attention" />
+                    ) : null}
+                  </button>
+                ))}
+              </nav>
+              <div className="sidebar-divider" aria-hidden="true" />
+              <SupportButton collapsed={sidebarCollapsed} />
               <button
                 type="button"
-                className="content-eyebrow content-eyebrow-link"
-                onClick={() => setSelectedLibraryWorkId(null)}
+                className="sidebar-collapse-toggle"
+                onClick={toggleSidebar}
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-pressed={sidebarCollapsed}
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
-                <span aria-hidden="true">‹</span> Library
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d={sidebarCollapsed ? "M6 4l4 4-4 4" : "M10 4l-4 4 4 4"} />
+                </svg>
               </button>
-            ) : (
-              <p className="content-eyebrow">Workspace</p>
-            )}
-            <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
-            {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
-          </div>
-          {activeScreen === "Home" ? (
-            <div className="content-header-search">
-              <input
-                type="search"
-                className="content-header-search-input"
-                placeholder="Search your library…"
-                value={homeSearchQuery}
-                onChange={(event) => setHomeSearchQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape" && homeSearchQuery) {
-                    event.preventDefault();
-                    setHomeSearchQuery("");
-                  }
-                }}
-                aria-label="Search your library"
-                autoFocus
-              />
-              {homeSearchQuery ? (
-                <button
-                  type="button"
-                  className="content-header-search-clear"
-                  onClick={() => setHomeSearchQuery("")}
-                  aria-label="Clear search"
-                  tabIndex={-1}
-                >
-                  ×
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </header>
-        {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
-        {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
-        <div className="screen-card">{screenContent}</div>
-      </section>
-    </main>
-    <SupportPromptModal open={supportPromptOpen} onClose={() => setSupportPromptOpen(false)} />
+            </aside>
+            <section className="content" data-screen={activeScreen}>
+              <header className="content-header">
+                <div>
+                  {selectedWork ? (
+                    <button
+                      type="button"
+                      className="content-eyebrow content-eyebrow-link"
+                      onClick={() => setSelectedLibraryWorkId(null)}
+                    >
+                      <span aria-hidden="true">‹</span> Library
+                    </button>
+                  ) : (
+                    <p className="content-eyebrow">Workspace</p>
+                  )}
+                  <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
+                  {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
+                </div>
+                {activeScreen === "Home" ? (
+                  <div className="content-header-search">
+                    <input
+                      type="search"
+                      className="content-header-search-input"
+                      placeholder="Search your library…"
+                      value={homeSearchQuery}
+                      onChange={(event) => setHomeSearchQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape" && homeSearchQuery) {
+                          event.preventDefault();
+                          setHomeSearchQuery("");
+                        }
+                      }}
+                      aria-label="Search your library"
+                      autoFocus
+                    />
+                    {homeSearchQuery ? (
+                      <button
+                        type="button"
+                        className="content-header-search-clear"
+                        onClick={() => setHomeSearchQuery("")}
+                        aria-label="Clear search"
+                        tabIndex={-1}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </header>
+              {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
+              {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
+              <div className="screen-card">{screenContent}</div>
+            </section>
+          </main>
+          <SupportPromptModal open={supportPromptOpen} onClose={() => setSupportPromptOpen(false)} />
         </IndexerStatusProvider>
       </SearchPreferencesProvider>
     </>
