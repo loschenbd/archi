@@ -535,11 +535,6 @@ select {
   margin-top: 8px;
 }
 
-.home-search-empty {
-  color: var(--ink-500);
-  font-size: 14px;
-}
-
 .home-search-results {
   display: grid;
   gap: 10px;
@@ -2306,73 +2301,6 @@ select {
   font-style: italic;
 }
 
-.content-header-search {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: 280px;
-  flex-shrink: 0;
-}
-
-.content-header-search-input {
-  width: 100%;
-  font-size: 13px;
-  padding: 7px 32px 7px 14px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--ink-300) 36%, transparent);
-  background: var(--surface);
-  transition: box-shadow 160ms ease, border-color 160ms ease;
-}
-
-.content-header-search-input:focus-visible {
-  outline: none;
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.content-header-search-clear {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: color-mix(in srgb, var(--ink-300) 22%, transparent);
-  color: var(--ink-700);
-  border-radius: 999px;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.content-header-search-clear:hover {
-  background: color-mix(in srgb, var(--ink-300) 40%, transparent);
-}
-
-.content-header-search-sentinel {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-  border-radius: 999px;
-  padding: 4px 10px 4px 14px;
-  font-size: 12px;
-  color: var(--accent-strong);
-  max-width: 280px;
-}
-
-.content-header-search-sentinel > span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-style: italic;
-}
-
 .sidebar button {
   position: relative;
 }
@@ -2849,39 +2777,6 @@ select {
 .settings-search-reindex:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-.home-search-results-v2 {
-  display: grid;
-  gap: 14px;
-}
-
-.home-search-results-v2-summary {
-  font-size: 12px;
-  color: var(--ink-500);
-}
-
-.home-search-results-v2-list {
-  position: relative;
-  max-height: 60vh;
-  overflow-y: auto;
-  /* Leave a sliver so the bottom-most card's shadow isn't clipped. */
-  padding-bottom: 4px;
-}
-
-.home-search-results-v2-list-inner {
-  position: relative;
-  width: 100%;
-}
-
-.home-search-results-v2-row {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  /* Replaces the original grid gap between cards. */
-  padding-bottom: 10px;
-  box-sizing: border-box;
 }
 
 .search-hero {

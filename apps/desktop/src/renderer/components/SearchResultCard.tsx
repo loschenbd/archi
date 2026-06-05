@@ -11,7 +11,7 @@ type Props = {
   /**
    * Hybrid-search "Find similar" callback. When provided the card
    * renders a Find similar button that delegates entirely to the
-   * caller (typically HomeSearchResults), which feeds the passage body
+   * caller (typically SearchHero), which feeds the passage body
    * back into the home search input as a sentinel chip.
    */
   onFindSimilar?: () => void;
