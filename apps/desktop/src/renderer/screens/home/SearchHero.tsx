@@ -210,7 +210,6 @@ export function SearchHero(props: Props): JSX.Element {
               }
             }}
             aria-label="Search your library"
-            autoFocus
           />
           {query ? (
             <button
