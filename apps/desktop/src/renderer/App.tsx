@@ -628,6 +628,11 @@ export function App(): JSX.Element {
             works={works}
             selectedWorkId={selectedLibraryWorkId ?? undefined}
             onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
+            passages={passages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
           />
         );
       case "Settings":
