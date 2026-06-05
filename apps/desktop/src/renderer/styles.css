@@ -2353,6 +2353,26 @@ select {
   background: color-mix(in srgb, var(--ink-300) 40%, transparent);
 }
 
+.content-header-search-sentinel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 999px;
+  padding: 4px 10px 4px 14px;
+  font-size: 12px;
+  color: var(--accent-strong);
+  max-width: 280px;
+}
+
+.content-header-search-sentinel > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
 .sidebar button {
   position: relative;
 }

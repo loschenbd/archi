@@ -167,14 +167,10 @@ export function App(): JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
   const [homeSearchFilters, setHomeSearchFilters] = useState<SearchFilters>({});
-  // `findSimilarPassage` is plumbed in Task 9 so HomeSearchResults can fire the
-  // callback; Task 10 wires it through as a sentinel chip + replaces the search
-  // input contents with the passage body. The `_` prefix on the getter silences
-  // the unused-var lint until then.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_findSimilarPassage, setFindSimilarPassage] = useState<{ id: string; body: string } | null>(
+  const [findSimilarPassage, setFindSimilarPassage] = useState<{ id: string; body: string } | null>(
     null
   );
+  const effectiveSearchQuery = findSimilarPassage?.body ?? homeSearchQuery;
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -615,7 +611,7 @@ export function App(): JSX.Element {
             noHealthySources={Object.values(connections).every(
               (c) => c.status !== "connected" && c.status !== "configuring"
             )}
-            homeSearchQuery={homeSearchQuery}
+            homeSearchQuery={effectiveSearchQuery}
             homeSearchFilters={homeSearchFilters}
             onFiltersChange={setHomeSearchFilters}
             onFindSimilar={(passage) => setFindSimilarPassage(passage)}
@@ -714,7 +710,7 @@ export function App(): JSX.Element {
     cancelSync,
     cloudEnabled,
     connections,
-    homeSearchQuery,
+    effectiveSearchQuery,
     homeSearchFilters,
     isCancelingSync,
     isSyncing,
@@ -868,32 +864,51 @@ export function App(): JSX.Element {
                 </div>
                 {activeScreen === "Home" ? (
                   <div className="content-header-search">
-                    <input
-                      type="search"
-                      className="content-header-search-input"
-                      placeholder="Search your library…"
-                      value={homeSearchQuery}
-                      onChange={(event) => setHomeSearchQuery(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape" && homeSearchQuery) {
-                          event.preventDefault();
-                          setHomeSearchQuery("");
-                        }
-                      }}
-                      aria-label="Search your library"
-                      autoFocus
-                    />
-                    {homeSearchQuery ? (
-                      <button
-                        type="button"
-                        className="content-header-search-clear"
-                        onClick={() => setHomeSearchQuery("")}
-                        aria-label="Clear search"
-                        tabIndex={-1}
-                      >
-                        ×
-                      </button>
-                    ) : null}
+                    {findSimilarPassage ? (
+                      <div className="content-header-search-sentinel">
+                        <span>
+                          Similar to &ldquo;{findSimilarPassage.body.slice(0, 40)}
+                          {findSimilarPassage.body.length > 40 ? "…" : ""}&rdquo;
+                        </span>
+                        <button
+                          type="button"
+                          className="content-header-search-clear"
+                          onClick={() => setFindSimilarPassage(null)}
+                          aria-label="Clear find similar"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          type="search"
+                          className="content-header-search-input"
+                          placeholder="Search your library…"
+                          value={homeSearchQuery}
+                          onChange={(event) => setHomeSearchQuery(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape" && homeSearchQuery) {
+                              event.preventDefault();
+                              setHomeSearchQuery("");
+                            }
+                          }}
+                          aria-label="Search your library"
+                          autoFocus
+                        />
+                        {homeSearchQuery ? (
+                          <button
+                            type="button"
+                            className="content-header-search-clear"
+                            onClick={() => setHomeSearchQuery("")}
+                            aria-label="Clear search"
+                            tabIndex={-1}
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 ) : null}
               </header>
