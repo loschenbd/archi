@@ -116,7 +116,9 @@ export function SearchResultCard({
               aria-label="Find similar passages"
               title="Find similar passages"
             >
-              <span aria-hidden="true">⚡</span>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M8 1.5 L9.2 6.8 L14.5 8 L9.2 9.2 L8 14.5 L6.8 9.2 L1.5 8 L6.8 6.8 Z" />
+              </svg>
             </button>
           ) : null}
           <button
@@ -129,7 +131,11 @@ export function SearchResultCard({
             aria-label="Open book in Library"
             title="Open book in Library"
           >
-            <span aria-hidden="true">↗</span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 3 H13 V6" />
+              <path d="M13 3 L7.5 8.5" />
+              <path d="M11 9 V12 H4 V5 H7" />
+            </svg>
           </button>
           <button
             type="button"
@@ -141,7 +147,16 @@ export function SearchResultCard({
             aria-label={copied ? "Copied to clipboard" : "Copy quote to clipboard"}
             title={copied ? "Copied" : "Copy quote"}
           >
-            <span aria-hidden="true">{copied ? "✓" : "⎘"}</span>
+            {copied ? (
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 8.5 L6.5 12 L13 4" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+                <path d="M3 10.5 V4 a1.5 1.5 0 0 1 1.5 -1.5 H10.5" />
+              </svg>
+            )}
           </button>
         </div>
       </header>
