@@ -1,5 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LibraryAllHighlights } from "./library/LibraryAllHighlights";
+
+const LIBRARY_TAB_STORAGE_KEY = "archi.libraryTab";
+
+function readInitialLibraryTab(): LibraryTab {
+  if (typeof window === "undefined") {
+    return "by-book";
+  }
+  try {
+    const value = window.localStorage.getItem(LIBRARY_TAB_STORAGE_KEY);
+    return value === "all-highlights" ? "all-highlights" : "by-book";
+  } catch {
+    return "by-book";
+  }
+}
 
 type LibraryWork = {
   id: string;
@@ -69,9 +83,17 @@ export function LibraryScreen({
   passages,
   onOpenWork
 }: Props): JSX.Element {
-  const [activeTab, setActiveTab] = useState<LibraryTab>("by-book");
+  const [activeTab, setActiveTab] = useState<LibraryTab>(readInitialLibraryTab);
   const [query, setQuery] = useState("");
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LIBRARY_TAB_STORAGE_KEY, activeTab);
+    } catch {
+      // ignore — localStorage may be unavailable in some sandbox modes
+    }
+  }, [activeTab]);
 
   const availableBuckets = useMemo(() => {
     const buckets = new Set<string>();

@@ -2862,6 +2862,24 @@ select {
 }
 
 .home-search-results-v2-list {
-  display: grid;
-  gap: 10px;
+  position: relative;
+  max-height: 60vh;
+  overflow-y: auto;
+  /* Leave a sliver so the bottom-most card's shadow isn't clipped. */
+  padding-bottom: 4px;
+}
+
+.home-search-results-v2-list-inner {
+  position: relative;
+  width: 100%;
+}
+
+.home-search-results-v2-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* Replaces the original grid gap between cards. */
+  padding-bottom: 10px;
+  box-sizing: border-box;
 }

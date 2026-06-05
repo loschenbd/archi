@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 import type { SearchFilters, SearchResponse } from "@archi/search";
 import { SearchFilterChips } from "../../components/SearchFilterChips";
 import { SearchResultCard } from "../../components/SearchResultCard";
@@ -80,29 +81,68 @@ export function HomeSearchResults({
     void navigator.clipboard.writeText(body);
   };
 
+  const results = response?.results ?? [];
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: results.length,
+    getScrollElement: () => scrollRef.current,
+    // Initial guess for a collapsed card; measureElement refines on render
+    // and re-measures when expandedId toggles a row's height.
+    estimateSize: () => 180,
+    overscan: 4,
+    getItemKey: (index: number) => results[index]?.passageId ?? index
+  });
+
+  // Reset scroll to top whenever the input query or find-similar sentinel
+  // changes so the user always sees the new top result first.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [query, findSimilarPassageId]);
+
+  const virtualItems = virtualizer.getVirtualItems();
+
   return (
     <div className="home-search-results-v2">
       <SearchFilterChips filters={filters} onChange={onFiltersChange} />
       <div className="home-search-results-v2-summary">{loading ? "Searching…" : summary}</div>
-      <div className="home-search-results-v2-list">
-        {response?.results.map((r) => (
-          <SearchResultCard
-            key={r.passageId}
-            result={r}
-            showMatchSource={prefs.showMatchSource}
-            expanded={expandedId === r.passageId}
-            onToggle={() =>
-              setExpandedId((current) => (current === r.passageId ? null : r.passageId))
-            }
-            onOpenWork={(workId) => onOpenWork(workId, r.passageId)}
-            onCopy={() => handleCopy(r.body)}
-            onFindSimilar={() => onFindSimilar({ id: r.passageId, body: r.body })}
-          />
-        ))}
-        {response && response.results.length === 0 && !loading ? (
-          <p className="home-search-empty">No matches.</p>
-        ) : null}
-      </div>
+      {response && results.length === 0 && !loading ? (
+        <p className="home-search-empty">No matches.</p>
+      ) : (
+        <div ref={scrollRef} className="home-search-results-v2-list">
+          <div
+            className="home-search-results-v2-list-inner"
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
+            {virtualItems.map((virtualItem: VirtualItem) => {
+              const r = results[virtualItem.index];
+              if (!r) {
+                return null;
+              }
+              return (
+                <div
+                  key={virtualItem.key}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  className="home-search-results-v2-row"
+                  style={{ transform: `translateY(${virtualItem.start}px)` }}
+                >
+                  <SearchResultCard
+                    result={r}
+                    showMatchSource={prefs.showMatchSource}
+                    expanded={expandedId === r.passageId}
+                    onToggle={() =>
+                      setExpandedId((current) => (current === r.passageId ? null : r.passageId))
+                    }
+                    onOpenWork={(workId) => onOpenWork(workId, r.passageId)}
+                    onCopy={() => handleCopy(r.body)}
+                    onFindSimilar={() => onFindSimilar({ id: r.passageId, body: r.body })}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
