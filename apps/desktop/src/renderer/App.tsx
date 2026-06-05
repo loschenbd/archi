@@ -161,6 +161,24 @@ function readInitialSidebarCollapsed(): boolean {
   }
 }
 
+const RECENT_SEARCHES_STORAGE_KEY = "archi.recentSearches";
+const RECENT_SEARCHES_MAX = 3;
+
+function readInitialRecentSearches(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+      .slice(0, RECENT_SEARCHES_MAX);
+  } catch {
+    return [];
+  }
+}
+
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
@@ -170,6 +188,27 @@ export function App(): JSX.Element {
   const [findSimilarPassage, setFindSimilarPassage] = useState<{ id: string; body: string } | null>(
     null
   );
+  const [recentSearches, setRecentSearches] = useState<string[]>(readInitialRecentSearches);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(recentSearches));
+    } catch {
+      // localStorage may be unavailable; silent fallthrough
+    }
+  }, [recentSearches]);
+
+  // Consumed by SearchHero in Task 5; declared here so the persistence
+  // useEffect and the setter live alongside other App state.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const pushRecentSearch = useCallback((query: string): void => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    setRecentSearches((prev) => {
+      const deduped = prev.filter((entry) => entry.toLowerCase() !== trimmed.toLowerCase());
+      return [trimmed, ...deduped].slice(0, RECENT_SEARCHES_MAX);
+    });
+  }, []);
   // In find-similar mode, the IPC query text is empty — the search service
   // uses the source passage's stored embedding for a vector-only KNN lookup.
   // HomeScreen receives both `effectiveSearchQuery` and `findSimilarPassageId`
