@@ -910,23 +910,25 @@ export function App(): JSX.Element {
               </button>
             </aside>
             <section className="content" data-screen={activeScreen}>
-              <header className="content-header">
-                <div>
-                  {selectedWork ? (
-                    <button
-                      type="button"
-                      className="content-eyebrow content-eyebrow-link"
-                      onClick={() => setSelectedLibraryWorkId(null)}
-                    >
-                      <span aria-hidden="true">‹</span> Library
-                    </button>
-                  ) : (
-                    <p className="content-eyebrow">Workspace</p>
-                  )}
-                  <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
-                  {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
-                </div>
-              </header>
+              {activeScreen !== "Home" ? (
+                <header className="content-header">
+                  <div>
+                    {selectedWork ? (
+                      <button
+                        type="button"
+                        className="content-eyebrow content-eyebrow-link"
+                        onClick={() => setSelectedLibraryWorkId(null)}
+                      >
+                        <span aria-hidden="true">‹</span> Library
+                      </button>
+                    ) : (
+                      <p className="content-eyebrow">Workspace</p>
+                    )}
+                    <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
+                    {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
+                  </div>
+                </header>
+              ) : null}
               {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
               {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
               <div className="screen-card">{screenContent}</div>
