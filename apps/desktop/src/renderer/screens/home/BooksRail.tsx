@@ -12,7 +12,10 @@ type Props = {
   onOpenWork: (workId: string) => void;
 };
 
-export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element {
+export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element | null {
+  if (works.length === 0) {
+    return null;
+  }
   return (
     <section className="books-rail">
       <header className="books-rail-head">
@@ -21,35 +24,31 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
           <span className="books-rail-new-chip">+{deltaCount} new</span>
         ) : null}
       </header>
-      {works.length === 0 ? (
-        <p className="books-rail-empty">Nothing yet — run a sync to start filling your library.</p>
-      ) : (
-        <ul className="books-rail-track">
-          {works.slice(0, 12).map((work) => (
-            <li key={work.id} className="books-rail-tile">
-              <button
-                type="button"
-                className="books-rail-tile-button"
-                onClick={() => onOpenWork(work.id)}
-              >
-                <span className="books-rail-tile-cover" aria-hidden="true">
-                  {work.coverImageUrl ? (
-                    <img src={work.coverImageUrl} alt="" loading="lazy" />
-                  ) : (
-                    <span className="books-rail-tile-cover-letter">
-                      {(work.title[0] ?? "?").toUpperCase()}
-                    </span>
-                  )}
-                </span>
-                <span className="books-rail-tile-title">{work.title}</span>
-                {work.creator ? (
-                  <span className="books-rail-tile-creator">{work.creator}</span>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="books-rail-track">
+        {works.slice(0, 12).map((work) => (
+          <li key={work.id} className="books-rail-tile">
+            <button
+              type="button"
+              className="books-rail-tile-button"
+              onClick={() => onOpenWork(work.id)}
+            >
+              <span className="books-rail-tile-cover" aria-hidden="true">
+                {work.coverImageUrl ? (
+                  <img src={work.coverImageUrl} alt="" loading="lazy" />
+                ) : (
+                  <span className="books-rail-tile-cover-letter">
+                    {(work.title[0] ?? "?").toUpperCase()}
+                  </span>
+                )}
+              </span>
+              <span className="books-rail-tile-title">{work.title}</span>
+              {work.creator ? (
+                <span className="books-rail-tile-creator">{work.creator}</span>
+              ) : null}
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

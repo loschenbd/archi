@@ -3,7 +3,6 @@ import { BooksRail } from "./home/BooksRail";
 import { LatestHighlights } from "./home/LatestHighlights";
 import { RandomHighlight } from "./home/RandomHighlight";
 import { SearchHero } from "./home/SearchHero";
-import { StatsStrip } from "./home/StatsStrip";
 import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
 import { hasNonDefaultFilters } from "./home/utils";
 
@@ -51,9 +50,7 @@ type Props = {
   } | null;
   recentWorks: RecentWork[];
   recentPassages: RecentPassage[];
-  lastRunAtIso: string | null;
   passages: SearchPassage[];
-  bookCount: number;
   highlightCount: number;
   lastRunDeltaWorks: number;
   lastRunDeltaPassages: number;
@@ -82,9 +79,7 @@ export function HomeScreen({
   syncProgress,
   recentWorks,
   recentPassages,
-  lastRunAtIso,
   passages,
-  bookCount,
   highlightCount,
   lastRunDeltaWorks,
   lastRunDeltaPassages,
@@ -140,17 +135,6 @@ export function HomeScreen({
 
       {!searchActive ? (
         <>
-          <StatsStrip
-            bookCount={bookCount}
-            highlightCount={highlightCount}
-            lastRunAtIso={lastRunAtIso}
-            lastRunDeltaWorks={lastRunDeltaWorks}
-            lastRunDeltaPassages={lastRunDeltaPassages}
-            isSyncing={isSyncing}
-            hasUnhealthyBanner={lastError !== null || noHealthySources || connections.some((c) => c.status === "needs_action")}
-            onSyncNow={onSyncNow}
-          />
-
           <BooksRail
             works={recentWorks.slice(0, 12)}
             deltaCount={lastRunDeltaWorks}

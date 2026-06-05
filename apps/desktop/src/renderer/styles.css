@@ -2780,13 +2780,12 @@ select {
 }
 
 .search-hero {
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--ink-300) 22%, transparent);
-  border-radius: 16px;
-  padding: 28px 28px 22px;
+  background: transparent;
+  border: none;
+  padding: 24px 8px 18px;
   display: grid;
   gap: 16px;
-  box-shadow: 0 4px 16px rgba(72, 53, 41, 0.04);
+  box-shadow: none;
 }
 
 .search-hero-tagline {

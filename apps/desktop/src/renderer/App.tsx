@@ -645,9 +645,7 @@ export function App(): JSX.Element {
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
-            lastRunAtIso={syncState.lastRunAt}
             passages={passages}
-            bookCount={works.length}
             highlightCount={passages.length}
             lastRunDeltaWorks={lastRunDeltaWorks}
             lastRunDeltaPassages={lastRunDeltaPassages}
@@ -790,7 +788,6 @@ export function App(): JSX.Element {
     runSyncNow,
     syncProgress,
     syncState.lastError,
-    syncState.lastRunAt,
     syncState.status,
     works
   ]);
