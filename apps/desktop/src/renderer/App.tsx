@@ -1,23 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ConnectionsScreen, type ConnectionState } from "./screens/ConnectionsScreen";
+import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
-import { SearchScreen } from "./screens/SearchScreen";
-import { SettingsScreen } from "./screens/SettingsScreen";
-import { GlobalSearchBar } from "./components/GlobalSearchBar";
-import { IndexerStatusPill } from "./components/IndexerStatusPill";
+import { PassagesScreen } from "./screens/PassagesScreen";
+import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
-import { IndexerStatusProvider } from "./state/IndexerStatusContext";
-import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { shouldShowSupportPrompt } from "./support-prompt";
+import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
+import { IndexerStatusProvider } from "./state/IndexerStatusContext";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Library", "Search", "Connections", "Logs", "Settings"] as const;
+const screens = ["Home", "Library", "Passages", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -27,38 +24,28 @@ const screenIcons: Record<Screen, JSX.Element> = {
       <path d="M6 14V9.5h4V14" />
     </svg>
   ),
-  Connections: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.5 6.5l-3 3" />
-      <path d="M6.5 9.5a2.5 2.5 0 1 1-2-2L6 6" />
-      <path d="M9.5 6.5a2.5 2.5 0 1 1 2 2L10 10" />
-    </svg>
-  ),
   Library: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 3h4.5a1.5 1.5 0 0 1 1.5 1.5v8.5a1 1 0 0 0-1-1H3z" />
       <path d="M13 3H8.5A1.5 1.5 0 0 0 7 4.5v8.5a1 1 0 0 1 1-1h5z" />
     </svg>
   ),
-  Search: (
+  Passages: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="7" cy="7" r="4" />
-      <path d="M10 10l3 3" />
-    </svg>
-  ),
-  Logs: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 4h10" />
-      <path d="M3 8h10" />
-      <path d="M3 12h7" />
+      <path d="M3 6c0-1.4 1-2.5 2.5-2.5" />
+      <path d="M3 6v2c0 1 .8 2 2 2" />
+      <path d="M3 6h2.8v4H3z" />
+      <path d="M8.5 6c0-1.4 1-2.5 2.5-2.5" />
+      <path d="M8.5 6v2c0 1 .8 2 2 2" />
+      <path d="M8.5 6h2.8v4H8.5z" />
     </svg>
   ),
   Settings: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="8" cy="8" r="2" />
-      <path d="M8 1.5v2 M8 12.5v2 M1.5 8h2 M12.5 8h2 M3.05 3.05l1.42 1.42 M11.53 11.53l1.42 1.42 M3.05 12.95l1.42-1.42 M11.53 4.47l1.42-1.42" />
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
     </svg>
-  ),
+  )
 };
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 
@@ -67,26 +54,6 @@ type SyncState = {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
-};
-
-const formatLocalDateTime = (value: string | null): string | null => {
-  if (!value) {
-    return null;
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short"
-  });
 };
 
 const isMissingConnectionsHandlerError = (error: unknown): boolean => {
@@ -206,11 +173,9 @@ function readInitialSidebarCollapsed(): boolean {
 
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
-  const [searchInitialQuery, setSearchInitialQuery] = useState<string>("");
-  const [pendingExpandPassageId, setPendingExpandPassageId] = useState<string | null>(null);
-  const [pendingScrollPassageId, setPendingScrollPassageId] = useState<string | null>(null);
-  const [breadcrumbFromSearch, setBreadcrumbFromSearch] = useState(false);
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
+  const [homeSearchQuery, setHomeSearchQuery] = useState("");
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -236,6 +201,7 @@ export function App(): JSX.Element {
   const [notionTokenDraft, setNotionTokenDraft] = useState("");
   const [connections, setConnections] = useState<Record<ConnectionProvider, ConnectionState>>(emptyConnections);
   const [works, setWorks] = useState<LibraryWork[]>([]);
+  const [passages, setPassages] = useState<Array<{ id: string; body: string; workId: string; workTitle: string }>>([]);
   const [selectedLibraryWorkId, setSelectedLibraryWorkId] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -245,9 +211,8 @@ export function App(): JSX.Element {
   const [supportPromptOpen, setSupportPromptOpen] = useState<boolean>(false);
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
-    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
+    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
   }>({ works: [], passages: [] });
-  const [syncRunStartedAtIso, setSyncRunStartedAtIso] = useState<string | null>(null);
   const activeSyncRunIdRef = useRef<string | null>(null);
   const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListRefreshQueuedRef = useRef(false);
@@ -323,8 +288,9 @@ export function App(): JSX.Element {
 
   const refreshLists = useCallback((): void => {
     void window.archi.listWorks().then(setWorks);
+    void window.archi.listPassages().then(setPassages);
     void window.archi.listLogs().then(setLogs);
-    void window.archi.listRecentActivity(8).then(setRecentActivity).catch(() => {});
+    void window.archi.listRecentActivity(12).then(setRecentActivity).catch(() => {});
   }, []);
 
   const requestListRefresh = useCallback((): void => {
@@ -370,7 +336,7 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (activeScreen !== "Connections") {
+    if (activeScreen !== "Settings") {
       return;
     }
     if (!onboardingCompleted) {
@@ -396,9 +362,6 @@ export function App(): JSX.Element {
       }
       setSyncProgress(event);
 
-      if (event.phase === "sync_start") {
-        setSyncRunStartedAtIso(event.at);
-      }
       if (event.status === "running" && event.phase !== "sync_complete") {
         setIsSyncing(true);
       }
@@ -535,41 +498,6 @@ export function App(): JSX.Element {
       });
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
-        e.preventDefault();
-        setActiveScreen("Settings");
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
-        e.preventDefault();
-        setActiveScreen("Search");
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  useEffect(() => {
-    if (activeScreen !== "Search") {
-      setPendingExpandPassageId(null);
-    }
-  }, [activeScreen]);
-
-  useEffect(() => {
-    if (activeScreen !== "Library") {
-      setPendingScrollPassageId(null);
-      setBreadcrumbFromSearch(false);
-    }
-  }, [activeScreen]);
-
   useEffect(
     () => () => {
       if (connectionsRetryTimerRef.current) {
@@ -593,33 +521,6 @@ export function App(): JSX.Element {
       setSelectedLibraryWorkId(null);
     }
   }, [selectedLibraryWorkId, works]);
-
-  const openSearchScreenWithQuery = useCallback((initialQuery: string): void => {
-    setSearchInitialQuery(initialQuery);
-    setPendingExpandPassageId(null);
-    setSelectedLibraryWorkId(null);
-    setActiveScreen("Search");
-  }, []);
-
-  const openSearchScreenForPassage = useCallback((query: string, expandPassageId?: string): void => {
-    setSearchInitialQuery(query);
-    setPendingExpandPassageId(expandPassageId ?? null);
-    setSelectedLibraryWorkId(null);
-    setActiveScreen("Search");
-  }, []);
-
-  const openBookAtPassage = useCallback((workId: string, passageId: string): void => {
-    setSelectedLibraryWorkId(workId);
-    setPendingScrollPassageId(passageId);
-    setBreadcrumbFromSearch(true);
-    setActiveScreen("Library");
-  }, []);
-
-  const backToSearch = useCallback((): void => {
-    setBreadcrumbFromSearch(false);
-    setSelectedLibraryWorkId(null);
-    setActiveScreen("Search");
-  }, []);
 
   const updateConnection = (provider: ConnectionProvider, operation: Promise<ConnectionState>): void => {
     setConnections((current) => ({
@@ -669,27 +570,91 @@ export function App(): JSX.Element {
   };
 
   const screenContent = useMemo(() => {
-    const formattedLastRunAt = formatLocalDateTime(syncState.lastRunAt);
+    const recentActivityIngestedSinceMs = 10_000;
+    const nowForDeltaMs = Date.now();
+    const lastRunDeltaWorks = recentActivity.works.filter((w) => {
+      const t = Date.parse(w.ingestedAt);
+      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
+    }).length;
+    const lastRunDeltaPassages = recentActivity.passages.filter((p) => {
+      const t = Date.parse(p.ingestedAt);
+      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
+    }).length;
     switch (activeScreen) {
       case "Home":
         return (
           <HomeScreen
-            status={syncState.status}
-            lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
-            onNavigateToConnections={() => setActiveScreen("Connections")}
+            onNavigateToSettings={(tab: SettingsTab) => {
+              setSettingsDefaultTab(tab);
+              setActiveScreen("Settings");
+            }}
             isSyncing={isSyncing}
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
-            syncRunStartedAtIso={syncRunStartedAtIso}
+            lastRunAtIso={syncState.lastRunAt}
+            works={works}
+            passages={passages}
+            bookCount={works.length}
+            highlightCount={passages.length}
+            lastRunDeltaWorks={lastRunDeltaWorks}
+            lastRunDeltaPassages={lastRunDeltaPassages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+            connections={Object.values(connections).map((c) => ({
+              provider: c.provider,
+              label: c.label,
+              status: c.status
+            }))}
+            lastError={syncState.lastError}
+            noHealthySources={Object.values(connections).every(
+              (c) => c.status !== "connected" && c.status !== "configuring"
+            )}
+            homeSearchQuery={homeSearchQuery}
           />
         );
-      case "Connections":
+      case "Library":
+        if (selectedLibraryWorkId) {
+          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
+          if (selectedWork) {
+            return (
+              <LibraryBookDetailScreen
+                work={selectedWork}
+                onOpenSearchScreen={(initialQuery: string) => {
+                  setHomeSearchQuery(initialQuery);
+                  setSelectedLibraryWorkId(null);
+                  setActiveScreen("Home");
+                }}
+              />
+            );
+          }
+        }
         return (
-          <ConnectionsScreen
+          <LibraryScreen
+            works={works}
+            selectedWorkId={selectedLibraryWorkId ?? undefined}
+            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
+          />
+        );
+      case "Passages":
+        return (
+          <PassagesScreen
+            passages={passages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Settings":
+        return (
+          <SettingsScreen
+            defaultTab={settingsDefaultTab}
             connections={connections}
             cloudEnabled={cloudEnabled}
             notionTokenDraft={notionTokenDraft}
@@ -740,41 +705,9 @@ export function App(): JSX.Element {
             }}
             onRefreshNotionMedia={refreshNotionMedia}
             isSyncing={isSyncing}
+            logs={logs}
           />
         );
-      case "Library":
-        if (selectedLibraryWorkId) {
-          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
-          if (selectedWork) {
-            return (
-              <LibraryBookDetailScreen
-                work={selectedWork}
-                onOpenSearchScreen={openSearchScreenWithQuery}
-                pendingScrollPassageId={pendingScrollPassageId}
-              />
-            );
-          }
-        }
-        return (
-          <LibraryScreen
-            works={works}
-            selectedWorkId={selectedLibraryWorkId ?? undefined}
-            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
-          />
-        );
-      case "Search":
-        return (
-          <SearchScreen
-            initialQuery={searchInitialQuery}
-            pendingExpandPassageId={pendingExpandPassageId}
-            onOpenWork={openBookAtPassage}
-            onOpenSearchScreen={openSearchScreenWithQuery}
-          />
-        );
-      case "Logs":
-        return <LogsScreen entries={logs} />;
-      case "Settings":
-        return <SettingsScreen />;
       default:
         return <p>Unknown screen.</p>;
     }
@@ -783,20 +716,18 @@ export function App(): JSX.Element {
     cancelSync,
     cloudEnabled,
     connections,
+    homeSearchQuery,
     isCancelingSync,
     isSyncing,
     logs,
-    openBookAtPassage,
-    openSearchScreenWithQuery,
-    pendingExpandPassageId,
-    pendingScrollPassageId,
+    passages,
     recentActivity,
-    searchInitialQuery,
-    syncRunStartedAtIso,
+    settingsDefaultTab,
     selectedLibraryWorkId,
     refreshNotionMedia,
     runSyncNow,
     syncProgress,
+    syncState.lastError,
     syncState.lastRunAt,
     syncState.status,
     works
@@ -836,7 +767,8 @@ export function App(): JSX.Element {
                 .completeOnboarding()
                 .then((result) => {
                   setOnboardingCompleted(result.onboardingCompleted);
-                  setActiveScreen("Connections");
+                  setSettingsDefaultTab("connections");
+                  setActiveScreen("Settings");
                   refreshConnections();
                   refreshLists();
                   void window.archi.getSyncState().then(setSyncState);
@@ -857,10 +789,16 @@ export function App(): JSX.Element {
     );
   }
 
+  const sidebarUnhealthy =
+    !isSyncing &&
+    (Object.values(connections).some((c) => c.status === "needs_action") ||
+      syncState.lastError !== null);
+
   return (
-    <IndexerStatusProvider>
-      <SearchPreferencesProvider>
+    <>
       <UpdateBanner />
+      <SearchPreferencesProvider>
+        <IndexerStatusProvider>
       <main className={`layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <WindowTitleBar />
       <aside className="sidebar">
@@ -872,7 +810,7 @@ export function App(): JSX.Element {
           {screens.map((screen) => (
             <button
               key={screen}
-              className={activeScreen === screen ? "active" : ""}
+              className={`${activeScreen === screen ? "active" : ""}${screen === "Settings" && sidebarUnhealthy ? " sidebar-nav-has-warning" : ""}`}
               title={sidebarCollapsed ? screen : undefined}
               onClick={() => {
                 setActiveScreen(screen);
@@ -883,11 +821,13 @@ export function App(): JSX.Element {
             >
               <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
               <span className="sidebar-nav-label">{screen}</span>
+              {screen === "Settings" && sidebarUnhealthy ? (
+                <span className="sidebar-nav-warning-dot" aria-label="Needs attention" />
+              ) : null}
             </button>
           ))}
         </nav>
         <div className="sidebar-divider" aria-hidden="true" />
-        <IndexerStatusPill collapsed={sidebarCollapsed} />
         <SupportButton collapsed={sidebarCollapsed} />
         <button
           type="button"
@@ -905,15 +845,7 @@ export function App(): JSX.Element {
       <section className="content" data-screen={activeScreen}>
         <header className="content-header">
           <div>
-            {selectedWork && breadcrumbFromSearch ? (
-              <button
-                type="button"
-                className="content-eyebrow content-eyebrow-link"
-                onClick={backToSearch}
-              >
-                <span aria-hidden="true">‹</span> Search results
-              </button>
-            ) : selectedWork ? (
+            {selectedWork ? (
               <button
                 type="button"
                 className="content-eyebrow content-eyebrow-link"
@@ -927,7 +859,36 @@ export function App(): JSX.Element {
             <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
-          <GlobalSearchBar onEscalate={openSearchScreenForPassage} />
+          {activeScreen === "Home" ? (
+            <div className="content-header-search">
+              <input
+                type="search"
+                className="content-header-search-input"
+                placeholder="Search your library…"
+                value={homeSearchQuery}
+                onChange={(event) => setHomeSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && homeSearchQuery) {
+                    event.preventDefault();
+                    setHomeSearchQuery("");
+                  }
+                }}
+                aria-label="Search your library"
+                autoFocus
+              />
+              {homeSearchQuery ? (
+                <button
+                  type="button"
+                  className="content-header-search-clear"
+                  onClick={() => setHomeSearchQuery("")}
+                  aria-label="Clear search"
+                  tabIndex={-1}
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
         {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
@@ -935,7 +896,8 @@ export function App(): JSX.Element {
       </section>
     </main>
     <SupportPromptModal open={supportPromptOpen} onClose={() => setSupportPromptOpen(false)} />
+        </IndexerStatusProvider>
       </SearchPreferencesProvider>
-    </IndexerStatusProvider>
+    </>
   );
 }

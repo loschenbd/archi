@@ -131,11 +131,13 @@ const api = {
       coverImageUrl?: string;
     }>
   > => ipcRenderer.invoke("archi:list-works"),
+  listPassages: (): Promise<Array<{ id: string; body: string; workId: string; workTitle: string }>> =>
+    ipcRenderer.invoke("archi:list-passages"),
   listRecentActivity: (
     limit?: number
   ): Promise<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
-    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
+    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
   }> => ipcRenderer.invoke("archi:list-recent-activity", limit),
   listPassagesByWork: (
     workId: string

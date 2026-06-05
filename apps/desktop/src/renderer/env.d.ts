@@ -80,9 +80,10 @@ declare global {
           coverImageUrl?: string;
         }>
       >;
+      listPassages: () => Promise<Array<{ id: string; body: string; workId: string; workTitle: string }>>;
       listRecentActivity: (limit?: number) => Promise<{
         works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
-        passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
+        passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
       }>;
       listPassagesByWork: (
         workId: string

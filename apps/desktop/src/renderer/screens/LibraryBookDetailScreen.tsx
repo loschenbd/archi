@@ -175,7 +175,7 @@ function createNotebookFallbackUrl(baseUrl: string, work: LibraryWork, passage: 
   }
 }
 
-export function LibraryBookDetailScreen({ work, onOpenSearchScreen, pendingScrollPassageId, breadcrumbFromSearch: _breadcrumbFromSearch, onBackToSearch: _onBackToSearch }: Props): JSX.Element {
+export function LibraryBookDetailScreen({ work, onOpenSearchScreen, pendingScrollPassageId }: Props): JSX.Element {
   const [passages, setPassages] = useState<LibraryPassage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

@@ -1,106 +1,80 @@
-import { useIndexerStatus } from "../state/IndexerStatusContext";
-import { useSearchPreferences } from "../state/SearchPreferencesContext";
+import { useEffect, useState } from "react";
+import { ConnectionsScreen, type ConnectionState } from "./ConnectionsScreen";
+import { LogsScreen } from "./LogsScreen";
 
-// Mirrors @archi/search's EMBEDDING_MODEL_ID. Cannot import from @archi/search:
-// its barrel pulls embedding/modelPaths.ts which imports node:fs, and Vite
-// stubs node:fs in the renderer bundle (throws at module load).
-const EMBEDDING_MODEL_ID = "bge-small-en-v1.5@v1";
+type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
+export type SettingsTab = "connections" | "logs";
 
-function Toggle({
-  checked,
-  onChange,
-  ariaLabel
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  ariaLabel: string;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      className={`settings-toggle${checked ? " is-on" : ""}`}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="settings-toggle__thumb" />
-    </button>
-  );
-}
+type Props = {
+  defaultTab: SettingsTab;
+  connections: Record<ConnectionProvider, ConnectionState>;
+  cloudEnabled: boolean;
+  notionTokenDraft: string;
+  onNotionTokenDraftChange: (value: string) => void;
+  onSetNotionToken: () => void;
+  onConnect: (provider: ConnectionProvider) => void;
+  onReconnect: (provider: ConnectionProvider) => void;
+  onDisconnect: (provider: ConnectionProvider) => void;
+  onTest: (provider: ConnectionProvider) => void;
+  onChooseDeviceExportPath: () => void;
+  onSetCloudEnabled: (enabled: boolean) => void;
+  onRefreshNotionMedia: () => void;
+  isSyncing: boolean;
+  logs: string[];
+};
 
-function SettingsRow({
-  label,
-  description,
-  control
-}: {
-  label: string;
-  description: string;
-  control: JSX.Element;
-}): JSX.Element {
-  return (
-    <div className="settings-row">
-      <div className="settings-row__text">
-        <div className="settings-row__label">{label}</div>
-        <div className="settings-row__description">{description}</div>
-      </div>
-      <div className="settings-row__control">{control}</div>
-    </div>
-  );
-}
+export function SettingsScreen(props: Props): JSX.Element {
+  const [activeTab, setActiveTab] = useState<SettingsTab>(props.defaultTab);
 
-export function SettingsScreen(): JSX.Element {
-  const prefs = useSearchPreferences();
-  const { status } = useIndexerStatus();
+  // When the parent passes a fresh defaultTab (e.g. user clicked a sync-banner
+  // action that targets a specific tab), reflect it.
+  useEffect(() => {
+    setActiveTab(props.defaultTab);
+  }, [props.defaultTab]);
 
   return (
     <section className="settings-screen">
-      <header className="settings-screen__section-header">
-        <h2>Search</h2>
-      </header>
-      <SettingsRow
-        label="Show match-source labels"
-        description="Show whether each result matched by meaning, keyword, or both."
-        control={
-          <Toggle
-            checked={prefs.showMatchSource}
-            onChange={prefs.setShowMatchSource}
-            ariaLabel="Show match-source labels"
+      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "connections"}
+          className={`settings-tab-button${activeTab === "connections" ? " settings-tab-button-active" : ""}`}
+          onClick={() => setActiveTab("connections")}
+        >
+          Connections
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "logs"}
+          className={`settings-tab-button${activeTab === "logs" ? " settings-tab-button-active" : ""}`}
+          onClick={() => setActiveTab("logs")}
+        >
+          Logs
+        </button>
+      </div>
+
+      <div className="settings-tab-panel" role="tabpanel">
+        {activeTab === "connections" ? (
+          <ConnectionsScreen
+            connections={props.connections}
+            cloudEnabled={props.cloudEnabled}
+            notionTokenDraft={props.notionTokenDraft}
+            onNotionTokenDraftChange={props.onNotionTokenDraftChange}
+            onSetNotionToken={props.onSetNotionToken}
+            onConnect={props.onConnect}
+            onReconnect={props.onReconnect}
+            onDisconnect={props.onDisconnect}
+            onTest={props.onTest}
+            onChooseDeviceExportPath={props.onChooseDeviceExportPath}
+            onSetCloudEnabled={props.onSetCloudEnabled}
+            onRefreshNotionMedia={props.onRefreshNotionMedia}
+            isSyncing={props.isSyncing}
           />
-        }
-      />
-      <SettingsRow
-        label="Include archived passages"
-        description="Off by default. Turning this on adds archived highlights to all search results."
-        control={
-          <Toggle
-            checked={prefs.includeArchived}
-            onChange={prefs.setIncludeArchived}
-            ariaLabel="Include archived passages"
-          />
-        }
-      />
-      <SettingsRow
-        label="Include hidden passages"
-        description="Off by default."
-        control={
-          <Toggle
-            checked={prefs.includeHidden}
-            onChange={prefs.setIncludeHidden}
-            ariaLabel="Include hidden passages"
-          />
-        }
-      />
-      <hr className="settings-screen__divider" />
-      <div className="settings-screen__index-status">
-        <div className="settings-row__label">Index status</div>
-        <div className="settings-row__description">
-          {status
-            ? `${status.indexed.toLocaleString()} / ${status.total.toLocaleString()} indexed`
-            : "Loading…"}
-          {" · "}
-          <code>{EMBEDDING_MODEL_ID}</code>
-        </div>
+        ) : (
+          <LogsScreen entries={props.logs} />
+        )}
       </div>
     </section>
   );
