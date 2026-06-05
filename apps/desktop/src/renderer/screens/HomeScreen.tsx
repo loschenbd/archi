@@ -57,7 +57,7 @@ type Props = {
   } | null;
   recentWorks: RecentWork[];
   recentPassages: RecentPassage[];
-  syncRunStartedAtIso: string | null;
+  lastRunAtIso: string | null;
   works: SearchWork[];
   passages: SearchPassage[];
   bookCount: number;
@@ -80,7 +80,7 @@ export function HomeScreen({
   syncProgress,
   recentWorks,
   recentPassages,
-  syncRunStartedAtIso,
+  lastRunAtIso,
   works,
   passages,
   bookCount,
@@ -139,7 +139,7 @@ export function HomeScreen({
           <StatsStrip
             bookCount={bookCount}
             highlightCount={highlightCount}
-            lastRunAtIso={syncRunStartedAtIso}
+            lastRunAtIso={lastRunAtIso}
             lastRunDeltaWorks={lastRunDeltaWorks}
             lastRunDeltaPassages={lastRunDeltaPassages}
             isSyncing={isSyncing}

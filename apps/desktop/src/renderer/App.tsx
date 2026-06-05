@@ -211,7 +211,6 @@ export function App(): JSX.Element {
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
     passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
   }>({ works: [], passages: [] });
-  const [syncRunStartedAtIso, setSyncRunStartedAtIso] = useState<string | null>(null);
   const activeSyncRunIdRef = useRef<string | null>(null);
   const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListRefreshQueuedRef = useRef(false);
@@ -361,9 +360,6 @@ export function App(): JSX.Element {
       }
       setSyncProgress(event);
 
-      if (event.phase === "sync_start") {
-        setSyncRunStartedAtIso(event.at);
-      }
       if (event.status === "running" && event.phase !== "sync_complete") {
         setIsSyncing(true);
       }
@@ -597,7 +593,7 @@ export function App(): JSX.Element {
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
-            syncRunStartedAtIso={syncRunStartedAtIso}
+            lastRunAtIso={syncState.lastRunAt}
             works={works}
             passages={passages}
             bookCount={works.length}
@@ -716,12 +712,12 @@ export function App(): JSX.Element {
     passages,
     recentActivity,
     settingsDefaultTab,
-    syncRunStartedAtIso,
     selectedLibraryWorkId,
     refreshNotionMedia,
     runSyncNow,
     syncProgress,
     syncState.lastError,
+    syncState.lastRunAt,
     syncState.status,
     works
   ]);
