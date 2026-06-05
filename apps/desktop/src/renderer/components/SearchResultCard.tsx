@@ -100,6 +100,50 @@ export function SearchResultCard({
             {matchLabel[result.matchedVia]}
           </span>
         )}
+        <div
+          className="search-result-card__actions"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {onFindSimilar ? (
+            <button
+              type="button"
+              className="search-result-card__action"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFindSimilar();
+              }}
+              aria-label="Find similar passages"
+              title="Find similar passages"
+            >
+              <span aria-hidden="true">⚡</span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="search-result-card__action"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenWork(result.work.id, result.passageId);
+            }}
+            aria-label="Open book in Library"
+            title="Open book in Library"
+          >
+            <span aria-hidden="true">↗</span>
+          </button>
+          <button
+            type="button"
+            className={`search-result-card__action${copied ? " search-result-card__action--success" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void copyBody();
+            }}
+            aria-label={copied ? "Copied to clipboard" : "Copy quote to clipboard"}
+            title={copied ? "Copied" : "Copy quote"}
+          >
+            <span aria-hidden="true">{copied ? "✓" : "⎘"}</span>
+          </button>
+        </div>
       </header>
       <p
         id={bodyId}
@@ -112,49 +156,6 @@ export function SearchResultCard({
           <strong>Note</strong>
           {result.readerNote}
         </p>
-      )}
-      {expanded && (
-        <div
-          className="passage-card-actions"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          {onFindSimilar ? (
-            <button
-              type="button"
-              className="passage-card-action"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFindSimilar();
-              }}
-              aria-label="Find similar passages"
-              title="Find passages semantically similar to this one"
-            >
-              <span className="passage-card-action-icon" aria-hidden="true">⚡</span>
-              Find similar
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="passage-card-action"
-            onClick={() => onOpenWork(result.work.id, result.passageId)}
-            title="Open this book in Library"
-          >
-            <span className="passage-card-action-icon" aria-hidden="true">↗</span>
-            Open book
-          </button>
-          <button
-            type="button"
-            className={`passage-card-action ${copied ? "passage-card-action-success" : ""}`}
-            onClick={() => {
-              void copyBody();
-            }}
-            title="Copy quote to clipboard"
-          >
-            <span className="passage-card-action-icon" aria-hidden="true">{copied ? "✓" : "⎘"}</span>
-            {copied ? "Copied" : "Copy"}
-          </button>
-        </div>
       )}
       {result.markedAt && (
         <footer className="search-result-card__footer">

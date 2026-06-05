@@ -2409,6 +2409,42 @@ select {
   color: var(--ink-500);
 }
 
+.search-result-card__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.search-result-card__action {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--ink-300) 28%, transparent);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--ink-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  letter-spacing: 0;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.search-result-card__action:hover {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.search-result-card__action--success {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
 .search-result-card__match-source {
   margin-top: 2px;
 }
