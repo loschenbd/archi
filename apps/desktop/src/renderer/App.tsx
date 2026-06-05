@@ -659,7 +659,8 @@ export function App(): JSX.Element {
             connections={Object.values(connections).map((c) => ({
               provider: c.provider,
               label: c.label,
-              status: c.status
+              status: c.status,
+              enabled: c.metadata?.enabled !== false
             }))}
             lastError={syncState.lastError}
             noHealthySources={Object.values(connections).every(

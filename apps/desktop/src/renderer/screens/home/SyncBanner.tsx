@@ -9,6 +9,7 @@ export type SyncBannerConnection = {
   provider: ConnectionProvider;
   label: string;
   status: ConnectionStatus;
+  enabled?: boolean;
 };
 
 export type SyncBannerProgress = {
@@ -105,7 +106,9 @@ export function SyncBanner(props: Props): JSX.Element | null {
   const pctComplete = hasDeterminate ? Math.min(100, Math.round((processed! / total!) * 100)) : null;
 
   const phaseLabel = syncProgress ? PHASE_LABELS[syncProgress.phase] ?? syncProgress.phase : null;
-  const needsAuthConnection = connections.find((c) => c.status === "needs_action");
+  const needsAuthConnection = connections.find(
+    (c) => c.status === "needs_action" && c.enabled !== false
+  );
 
   // Priority: Cancelling > Running > Indexing > NoHealthySources > NeedsAuth > Failed > Hidden
   // (Cancelling must short-circuit Running because isSyncing is still true while
