@@ -517,7 +517,7 @@ select {
 .home-screen {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 28px;
   min-height: calc(100vh - 240px);
 }
 
@@ -2158,24 +2158,13 @@ select {
 
 .highlights-split {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-@media (max-width: 920px) {
-  .highlights-split {
-    grid-template-columns: 1fr;
-  }
+  gap: 28px;
 }
 
 .random-highlight-card,
 .latest-highlights {
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--ink-300) 18%, transparent);
-  border-radius: 12px;
-  padding: 16px 18px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .random-highlight-head,
