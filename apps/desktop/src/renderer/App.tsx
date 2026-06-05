@@ -54,26 +54,6 @@ type SyncState = {
   lastError: string | null;
 };
 
-const formatLocalDateTime = (value: string | null): string | null => {
-  if (!value) {
-    return null;
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short"
-  });
-};
-
 const isMissingConnectionsHandlerError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -591,12 +571,7 @@ export function App(): JSX.Element {
     });
   };
 
-  const connectionsNeedAuth = Object.values(connections).some(
-    (connection) => connection.status === "needs_action"
-  );
-
   const screenContent = useMemo(() => {
-    const formattedLastRunAt = formatLocalDateTime(syncState.lastRunAt);
     const recentActivityIngestedSinceMs = 10_000;
     const nowForDeltaMs = Date.now();
     const lastRunDeltaWorks = recentActivity.works.filter((w) => {
@@ -611,14 +586,12 @@ export function App(): JSX.Element {
       case "Home":
         return (
           <HomeScreen
-            lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
             onNavigateToSettings={(tab: SettingsTab) => {
               setSettingsDefaultTab(tab);
               setActiveScreen("Settings");
             }}
-            needsAuth={connectionsNeedAuth}
             isSyncing={isSyncing}
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
@@ -736,7 +709,6 @@ export function App(): JSX.Element {
     cancelSync,
     cloudEnabled,
     connections,
-    connectionsNeedAuth,
     homeSearchQuery,
     isCancelingSync,
     isSyncing,
@@ -750,7 +722,6 @@ export function App(): JSX.Element {
     runSyncNow,
     syncProgress,
     syncState.lastError,
-    syncState.lastRunAt,
     syncState.status,
     works
   ]);

@@ -63,11 +63,11 @@ export function HomeSearchResults({ query, works, passages, onOpenWork }: Props)
                     className="home-search-item home-search-item-work"
                     onClick={() => onOpenWork(work.id)}
                   >
-                    <span className="activity-cover" aria-hidden="true">
+                    <span className="home-search-cover" aria-hidden="true">
                       {work.coverImageUrl ? (
                         <img src={work.coverImageUrl} alt="" loading="lazy" />
                       ) : (
-                        <span className="activity-cover-letter">
+                        <span className="home-search-cover-letter">
                           {(work.title[0] ?? "?").toUpperCase()}
                         </span>
                       )}
@@ -112,7 +112,7 @@ export function HomeSearchResults({ query, works, passages, onOpenWork }: Props)
                         className="home-search-item home-search-item-passage"
                         onClick={() => onOpenWork(passage.workId)}
                       >
-                        <span className="activity-quote-mark" aria-hidden="true">
+                        <span className="home-search-quote-mark" aria-hidden="true">
                           &ldquo;
                         </span>
                         <span className="home-search-item-body">

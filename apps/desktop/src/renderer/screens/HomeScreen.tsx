@@ -37,11 +37,9 @@ type SearchPassage = {
 };
 
 type Props = {
-  lastRunAt: string | null;
   onSyncNow: () => void;
   onCancelSync: () => void;
   onNavigateToSettings: (tab: "connections" | "logs") => void;
-  needsAuth: boolean;
   isSyncing: boolean;
   isCancelingSync: boolean;
   syncProgress: {
