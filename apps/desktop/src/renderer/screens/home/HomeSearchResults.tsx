@@ -12,6 +12,15 @@ type Props = {
   onFindSimilar: (passage: { id: string; body: string }) => void;
 };
 
+function formatMatchSourceCounts(
+  results: { matchedVia: "vector" | "fts5" | "both" }[]
+): string {
+  const keyword = results.filter((r) => r.matchedVia === "fts5").length;
+  const vector = results.filter((r) => r.matchedVia === "vector").length;
+  const both = results.filter((r) => r.matchedVia === "both").length;
+  return `${keyword} keyword · ${vector} vector · ${both} combined`;
+}
+
 export function HomeSearchResults({
   query,
   filters,
@@ -50,7 +59,9 @@ export function HomeSearchResults({
   }, [query, filters, runQuery]);
 
   const summary = response
-    ? `Showing ${response.results.length} of ${response.totalCandidates} candidates (${response.durationMs} ms)`
+    ? prefs.showMatchSource
+      ? formatMatchSourceCounts(response.results)
+      : `${response.results.length} ${response.results.length === 1 ? "result" : "results"}`
     : "";
 
   const handleCopy = (body: string): void => {

@@ -518,6 +518,17 @@ export function App(): JSX.Element {
     }
   }, [selectedLibraryWorkId, works]);
 
+  useEffect(() => {
+    if (!findSimilarPassage) return undefined;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setFindSimilarPassage(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [findSimilarPassage]);
+
   const updateConnection = (provider: ConnectionProvider, operation: Promise<ConnectionState>): void => {
     setConnections((current) => ({
       ...current,
@@ -613,7 +624,7 @@ export function App(): JSX.Element {
             noHealthySources={Object.values(connections).every(
               (c) => c.status !== "connected" && c.status !== "configuring"
             )}
-            homeSearchQuery={effectiveSearchQuery}
+            effectiveSearchQuery={effectiveSearchQuery}
             homeSearchFilters={homeSearchFilters}
             onFiltersChange={setHomeSearchFilters}
             onFindSimilar={(passage) => setFindSimilarPassage(passage)}

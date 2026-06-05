@@ -61,7 +61,7 @@ type Props = {
   connections: SyncBannerConnection[];
   lastError: string | null;
   noHealthySources: boolean;
-  homeSearchQuery: string;
+  effectiveSearchQuery: string;
   homeSearchFilters: SearchFilters;
   onFiltersChange: (next: SearchFilters) => void;
   onFindSimilar: (passage: { id: string; body: string }) => void;
@@ -86,7 +86,7 @@ export function HomeScreen({
   connections,
   lastError,
   noHealthySources,
-  homeSearchQuery,
+  effectiveSearchQuery,
   homeSearchFilters,
   onFiltersChange,
   onFindSimilar
@@ -94,7 +94,7 @@ export function HomeScreen({
   // useDeferredValue lets the input update at high priority while the heavier
   // search-results subtree (filter chips + result cards + IPC effect) re-renders
   // at lower priority — typing stays snappy.
-  const liveTrimmedQuery = homeSearchQuery.trim();
+  const liveTrimmedQuery = effectiveSearchQuery.trim();
   const trimmedQuery = useDeferredValue(liveTrimmedQuery);
 
   return (
