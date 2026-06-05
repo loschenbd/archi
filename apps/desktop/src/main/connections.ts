@@ -299,41 +299,26 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
       );
     }
 
+    // Use cached connector status only. The connector's cached status is
+    // authoritative — it's set by real operations (fetchSince, reconnect,
+    // testConnection) and reflects the last actual outcome. Triggering a
+    // live Playwright validation from a routine status read is expensive
+    // (spawns a headless browser every 15s with the renderer's polling)
+    // and produces false-negatives when Amazon's headless detection or
+    // cookie timing differs from the actual sync path. Validation now
+    // happens only on explicit user actions or during sync.
     const cached = this.connector.getCachedStatus();
-    const cachedFreshMs = 5 * 60 * 1000;
-    if (
-      cached.validatedAtMs !== null &&
-      Date.now() - cached.validatedAtMs < cachedFreshMs &&
-      cached.status !== "needs_auth"
-    ) {
-      return createConnectionState({
-        provider: this.provider,
-        label: "Cloud notebook",
-        status: "connected",
-        canDisconnect: false,
-        hints: [],
-        diagnostics: {
-          summary: "Cloud notebook session is ready."
-        },
-        metadata: {
-          enabled: this.settings.getCloudSettings().enabled,
-          ...this.latestValidationMetadata()
-        }
-      });
-    }
-
-    const status = await this.connector.getStatus();
     return createConnectionState({
       provider: this.provider,
       label: "Cloud notebook",
-      status: mapCloudStatusToConnectionStatus(status),
+      status: mapCloudStatusToConnectionStatus(cached.status),
       canDisconnect: false,
       hints:
-        status === "needs_auth"
+        cached.status === "needs_auth"
           ? ["Authentication needed. Click Reconnect, complete Amazon login if prompted, then Test before syncing."]
           : [],
       diagnostics:
-        status === "needs_auth"
+        cached.status === "needs_auth"
           ? {
               summary: "Cloud notebook needs authentication.",
               details: this.lastError ?? undefined

@@ -202,6 +202,15 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   private currentlyHeadless: boolean = true;
 
   constructor(private readonly options: PlaywrightCloudOptions) {
+    // Optimistic initial state: if a prior session left auth artifacts on
+    // disk, presume we're connected until a real sync operation proves
+    // otherwise. Routine status reads no longer launch Playwright, so we
+    // need to start out trusting persisted state instead of pessimistically
+    // reporting needs_auth and forcing a live validation.
+    if (this.hasPersistedAuthArtifacts()) {
+      this.status = "connected";
+      this.statusValidatedAtMs = Date.now();
+    }
     if (options.onValidation) {
       const artifactStats = dumpAuthArtifactsState({
         storageStatePath: options.storageStatePath,
