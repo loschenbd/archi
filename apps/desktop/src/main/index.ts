@@ -24,6 +24,7 @@ import {
   type NotionAuthStore
 } from "./connections.js";
 import { CredentialStore } from "./credentialStore.js";
+import { ElectronCloudNetValidator } from "./cloudNetValidator.js";
 import { createSearchModule, type SearchModule } from "./searchModule.js";
 import { registerSearchIpc } from "./ipc/searchIpc.js";
 
@@ -268,10 +269,16 @@ app.whenReady().then(() => {
     persist: (report: CloudValidationReport) => appendValidationReport(cloudValidationLogPath, report)
   });
 
+  const cloudNetValidator = new ElectronCloudNetValidator({
+    notebookUrl: settings.cloud.notebookUrl,
+    storageStatePath: settings.cloud.storageStatePath
+  });
+
   const cloudConnector = new PlaywrightCloudNotebookConnector({
     notebookUrl: settings.cloud.notebookUrl,
     storageStatePath: settings.cloud.storageStatePath,
     profilePath: settings.cloud.profilePath,
+    netValidator: cloudNetValidator,
     onValidation: (report) => cloudValidationLog.record(report),
     onNeedsAuth: async () => {
       state.status = "needs_auth";
@@ -418,6 +425,30 @@ app.whenReady().then(() => {
     getNotionSettings: () => settings.notion
   });
   const connectionManager = new ConnectionManager([notionAdapter, cloudAdapter, deviceAdapter]);
+
+  // Periodically probe the cloud-notebook session via Electron net (cheap
+  // HTTP HEAD-ish request, no headless Chromium). On success/failure this
+  // updates the connector's cached status, which the renderer reads on
+  // every refreshConnections poll. Skip the probe entirely when cloud
+  // sync is disabled in settings — there's nothing to validate then.
+  const CLOUD_NET_VALIDATE_INTERVAL_MS = 5 * 60 * 1000;
+  const validateCloudViaNet = async (): Promise<void> => {
+    if (!settings.cloud.enabled) {
+      return;
+    }
+    try {
+      await cloudConnector.validateViaNet?.();
+    } catch {
+      // Validator already swallows errors; this catch is defensive.
+    }
+  };
+  setTimeout(() => {
+    void validateCloudViaNet();
+  }, 2000);
+  setInterval(() => {
+    void validateCloudViaNet();
+  }, CLOUD_NET_VALIDATE_INTERVAL_MS);
+
   let inFlightSync: Promise<typeof state> | null = null;
   let inFlightRunId: string | null = null;
   let inFlightRunStartedAtMs: number | null = null;
