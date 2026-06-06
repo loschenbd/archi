@@ -271,7 +271,11 @@ app.whenReady().then(() => {
 
   const cloudNetValidator = new ElectronCloudNetValidator({
     notebookUrl: settings.cloud.notebookUrl,
-    storageStatePath: settings.cloud.storageStatePath
+    storageStatePath: settings.cloud.storageStatePath,
+    onDebug: (message) => {
+      // eslint-disable-next-line no-console
+      console.log(`[cloud-net-validator] ${message}`);
+    }
   });
 
   const cloudConnector = new PlaywrightCloudNotebookConnector({
@@ -434,12 +438,19 @@ app.whenReady().then(() => {
   const CLOUD_NET_VALIDATE_INTERVAL_MS = 5 * 60 * 1000;
   const validateCloudViaNet = async (): Promise<void> => {
     if (!settings.cloud.enabled) {
+      // eslint-disable-next-line no-console
+      console.log("[cloud-net-validator] skipped — cloud sync disabled");
       return;
     }
+    // eslint-disable-next-line no-console
+    console.log("[cloud-net-validator] invoking validateViaNet on connector…");
     try {
-      await cloudConnector.validateViaNet?.();
-    } catch {
-      // Validator already swallows errors; this catch is defensive.
+      const result = await cloudConnector.validateViaNet?.();
+      // eslint-disable-next-line no-console
+      console.log(`[cloud-net-validator] validateViaNet result: ${result ?? "null"}`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(`[cloud-net-validator] validateViaNet threw: ${(error as Error).message}`);
     }
   };
   setTimeout(() => {

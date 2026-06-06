@@ -416,22 +416,48 @@ export class DeviceExportConnectionAdapter implements ConnectionAdapter {
 
   private evaluateStatus(): ConnectionState {
     const exportPath = this.settings.getDeviceExportPath();
-    const exists = exportPath.trim().length > 0 && fs.existsSync(exportPath);
+    const isConfigured = exportPath.trim().length > 0;
+    const exists = isConfigured && fs.existsSync(exportPath);
+
+    // Three states:
+    //   • configured + file present → connected
+    //   • configured but file missing → needs_action (real error)
+    //   • not configured at all → disconnected (user hasn't opted into
+    //     device-export; this isn't a broken connection, it's just unused)
+    //
+    // Returning needs_action for the "never configured" case made the
+    // sync banner shout "Device export file needs reconnect" at users who
+    // have never even chosen to use device-export.
+    const status: ConnectionStatus = exists
+      ? "connected"
+      : isConfigured
+        ? "needs_action"
+        : "disconnected";
+
     return createConnectionState({
       provider: this.provider,
       label: "Device export file",
-      status: exists ? "connected" : "needs_action",
+      status,
       canDisconnect: false,
       canReconnect: false,
-      hints: exists ? [] : ["Choose your Kindle export file to enable reliable local ingestion."],
+      hints: exists
+        ? []
+        : isConfigured
+          ? ["The export file at the saved path is missing — re-export from Kindle or pick a new file."]
+          : ["Choose your Kindle export file to enable reliable local ingestion."],
       diagnostics: exists
         ? {
             summary: "Device export file is configured."
           }
-        : {
-            summary: "Device export file is missing."
-          },
+        : isConfigured
+          ? {
+              summary: "Device export file is missing."
+            }
+          : {
+              summary: "Device export file is not set up."
+            },
       metadata: {
+        enabled: isConfigured,
         path: exportPath
       }
     });
