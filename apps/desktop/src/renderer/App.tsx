@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { SearchFilters } from "@archi/search";
 import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -329,7 +330,32 @@ export function App(): JSX.Element {
     void window.archi.listWorks().then(setWorks);
     void window.archi.listPassages().then(setPassages);
     void window.archi.listLogs().then(setLogs);
-    void window.archi.listRecentActivity(12).then(setRecentActivity).catch(() => {});
+    // Wrap the recent-activity update in a View Transition so the books
+    // rail auto-animates reorder when sync brings in new works. Each tile
+    // has a unique view-transition-name (book-<id>); the browser captures
+    // old/new layouts and crossfades/tweens between them. flushSync forces
+    // React to commit synchronously inside the transition callback so the
+    // captured "after" snapshot is the new DOM.
+    void window.archi
+      .listRecentActivity(12)
+      .then((data) => {
+        const startTransition =
+          typeof document !== "undefined" &&
+          typeof (document as Document & { startViewTransition?: unknown }).startViewTransition ===
+            "function"
+            ? (document as Document & {
+                startViewTransition: (cb: () => void) => unknown;
+              }).startViewTransition.bind(document)
+            : null;
+        if (startTransition) {
+          startTransition(() => {
+            flushSync(() => setRecentActivity(data));
+          });
+        } else {
+          setRecentActivity(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const requestListRefresh = useCallback((): void => {

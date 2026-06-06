@@ -2110,6 +2110,69 @@ select {
   scroll-snap-align: start;
 }
 
+.books-rail-tile--entering {
+  animation: books-rail-tile-enter 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.books-rail-tile--entering .books-rail-tile-cover {
+  animation: books-rail-tile-glow 1400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes books-rail-tile-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(28px) scale(0.94);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes books-rail-tile-glow {
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent),
+      0 6px 14px rgba(72, 53, 41, 0.10);
+  }
+  25% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent),
+      0 10px 22px rgba(72, 53, 41, 0.18);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent),
+      0 6px 14px rgba(72, 53, 41, 0.10);
+  }
+}
+
+/* View Transitions API: smooth reorder when the works list shifts (e.g.
+ * a new book gets inserted at the front and existing tiles slide right).
+ * Each tile has view-transition-name=book-<id> set inline; the browser
+ * captures old/new positions and crossfades + tweens automatically when
+ * the DOM update is wrapped in document.startViewTransition. Tune
+ * duration + easing so it matches the entry animation. */
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 480ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .books-rail-tile--entering,
+  .books-rail-tile--entering .books-rail-tile-cover {
+    animation: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
 .books-rail-tile-button {
   display: grid;
   gap: 6px;
