@@ -419,45 +419,37 @@ export class DeviceExportConnectionAdapter implements ConnectionAdapter {
     const isConfigured = exportPath.trim().length > 0;
     const exists = isConfigured && fs.existsSync(exportPath);
 
-    // Three states:
-    //   • configured + file present → connected
-    //   • configured but file missing → needs_action (real error)
-    //   • not configured at all → disconnected (user hasn't opted into
-    //     device-export; this isn't a broken connection, it's just unused)
+    // Two states from the user's perspective:
+    //   • file present → connected (ingestion will work)
+    //   • file absent (never configured, or configured but the file
+    //     vanished) → disconnected
     //
-    // Returning needs_action for the "never configured" case made the
-    // sync banner shout "Device export file needs reconnect" at users who
-    // have never even chosen to use device-export.
-    const status: ConnectionStatus = exists
-      ? "connected"
-      : isConfigured
-        ? "needs_action"
-        : "disconnected";
-
+    // We deliberately do NOT report needs_action when the file is missing.
+    // The Settings UI does not surface a device-export card, so there's
+    // no way for the user to clear or re-pick the path; alarming via the
+    // sync banner just creates a permanent unfixable nag. Device-export
+    // is also a secondary source — cloud-notebook is the primary path —
+    // so a missing local file is closer to "unused" than "broken."
     return createConnectionState({
       provider: this.provider,
       label: "Device export file",
-      status,
+      status: exists ? "connected" : "disconnected",
       canDisconnect: false,
       canReconnect: false,
       hints: exists
         ? []
-        : isConfigured
-          ? ["The export file at the saved path is missing — re-export from Kindle or pick a new file."]
-          : ["Choose your Kindle export file to enable reliable local ingestion."],
+        : ["Choose your Kindle export file to enable reliable local ingestion."],
       diagnostics: exists
         ? {
             summary: "Device export file is configured."
           }
-        : isConfigured
-          ? {
-              summary: "Device export file is missing."
-            }
-          : {
-              summary: "Device export file is not set up."
-            },
+        : {
+            summary: isConfigured
+              ? "Device export file is not available at the saved path."
+              : "Device export file is not set up."
+          },
       metadata: {
-        enabled: isConfigured,
+        enabled: exists,
         path: exportPath
       }
     });
