@@ -104,7 +104,11 @@ export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
         {filtered.length} {filtered.length === 1 ? "passage" : "passages"}
       </p>
       {filtered.length === 0 ? (
-        <p>No passages synced yet.</p>
+        <p>
+          {passages.length === 0
+            ? "No passages synced yet."
+            : "No passages match your search."}
+        </p>
       ) : (
         <div ref={scrollRef} className="passages-list-scroll">
           <div

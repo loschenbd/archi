@@ -116,7 +116,11 @@ export function LibraryScreen({ works, selectedWorkId, onSelectWork }: Props): J
         {filtered.length} {filtered.length === 1 ? "work" : "works"}
       </p>
       {filtered.length === 0 ? (
-        <p className="library-empty-state">No works ingested yet.</p>
+        <p className="library-empty-state">
+          {works.length === 0
+            ? "No works ingested yet."
+            : "No works match your search."}
+        </p>
       ) : (
         <ul className="library-card-grid">
           {filtered.map((work) => (

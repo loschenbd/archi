@@ -13,7 +13,7 @@ export function OnboardingScreen({ isCompleting, onContinue }: Props): JSX.Eleme
         next step.
       </p>
       <div className="onboarding-actions">
-        <button className="button-primary" onClick={onContinue} disabled={isCompleting}>
+        <button type="button" className="button-primary" onClick={onContinue} disabled={isCompleting}>
           {isCompleting ? "Preparing workspace..." : "Start setup"}
         </button>
       </div>

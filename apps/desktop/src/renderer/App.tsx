@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ConnectionsScreen, type ConnectionState } from "./screens/ConnectionsScreen";
+import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { LogsScreen } from "./screens/LogsScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { PassagesScreen } from "./screens/PassagesScreen";
+import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { shouldShowSupportPrompt } from "./support-prompt";
+import { maskConnectionForBanner } from "./lib/syncBannerMapping";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Connections", "Library", "Passages", "Logs"] as const;
+const screens = ["Home", "Library", "Passages", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -20,13 +21,6 @@ const screenIcons: Record<Screen, JSX.Element> = {
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2.5 7L8 2.5L13.5 7v6a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V7z" />
       <path d="M6 14V9.5h4V14" />
-    </svg>
-  ),
-  Connections: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.5 6.5l-3 3" />
-      <path d="M6.5 9.5a2.5 2.5 0 1 1-2-2L6 6" />
-      <path d="M9.5 6.5a2.5 2.5 0 1 1 2 2L10 10" />
     </svg>
   ),
   Library: (
@@ -45,11 +39,10 @@ const screenIcons: Record<Screen, JSX.Element> = {
       <path d="M8.5 6h2.8v4H8.5z" />
     </svg>
   ),
-  Logs: (
+  Settings: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 4h10" />
-      <path d="M3 8h10" />
-      <path d="M3 12h7" />
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
     </svg>
   )
 };
@@ -60,26 +53,7 @@ type SyncState = {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
-};
-
-const formatLocalDateTime = (value: string | null): string | null => {
-  if (!value) {
-    return null;
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short"
-  });
+  cloudAuthSurfaced: boolean;
 };
 
 const isMissingConnectionsHandlerError = (error: unknown): boolean => {
@@ -199,7 +173,9 @@ function readInitialSidebarCollapsed(): boolean {
 
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
+  const [homeSearchQuery, setHomeSearchQuery] = useState("");
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -216,7 +192,8 @@ export function App(): JSX.Element {
     status: "idle",
     lastRunAt: null,
     nextRunAt: null,
-    lastError: null
+    lastError: null,
+    cloudAuthSurfaced: false
   });
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -235,9 +212,8 @@ export function App(): JSX.Element {
   const [supportPromptOpen, setSupportPromptOpen] = useState<boolean>(false);
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
-    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
+    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
   }>({ works: [], passages: [] });
-  const [syncRunStartedAtIso, setSyncRunStartedAtIso] = useState<string | null>(null);
   const activeSyncRunIdRef = useRef<string | null>(null);
   const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListRefreshQueuedRef = useRef(false);
@@ -315,7 +291,7 @@ export function App(): JSX.Element {
     void window.archi.listWorks().then(setWorks);
     void window.archi.listPassages().then(setPassages);
     void window.archi.listLogs().then(setLogs);
-    void window.archi.listRecentActivity(8).then(setRecentActivity).catch(() => {});
+    void window.archi.listRecentActivity(12).then(setRecentActivity).catch(() => {});
   }, []);
 
   const requestListRefresh = useCallback((): void => {
@@ -361,7 +337,7 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (activeScreen !== "Connections") {
+    if (activeScreen !== "Settings") {
       return;
     }
     if (!onboardingCompleted) {
@@ -387,9 +363,6 @@ export function App(): JSX.Element {
       }
       setSyncProgress(event);
 
-      if (event.phase === "sync_start") {
-        setSyncRunStartedAtIso(event.at);
-      }
       if (event.status === "running" && event.phase !== "sync_complete") {
         setIsSyncing(true);
       }
@@ -598,27 +571,78 @@ export function App(): JSX.Element {
   };
 
   const screenContent = useMemo(() => {
-    const formattedLastRunAt = formatLocalDateTime(syncState.lastRunAt);
+    const recentActivityIngestedSinceMs = 10_000;
+    const nowForDeltaMs = Date.now();
+    const lastRunDeltaWorks = recentActivity.works.filter((w) => {
+      const t = Date.parse(w.ingestedAt);
+      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
+    }).length;
+    const lastRunDeltaPassages = recentActivity.passages.filter((p) => {
+      const t = Date.parse(p.ingestedAt);
+      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
+    }).length;
     switch (activeScreen) {
       case "Home":
         return (
           <HomeScreen
-            status={syncState.status}
-            lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
-            onNavigateToConnections={() => setActiveScreen("Connections")}
+            onNavigateToSettings={(tab: SettingsTab) => {
+              setSettingsDefaultTab(tab);
+              setActiveScreen("Settings");
+            }}
             isSyncing={isSyncing}
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
-            syncRunStartedAtIso={syncRunStartedAtIso}
+            lastRunAtIso={syncState.lastRunAt}
+            works={works}
+            passages={passages}
+            bookCount={works.length}
+            highlightCount={passages.length}
+            lastRunDeltaWorks={lastRunDeltaWorks}
+            lastRunDeltaPassages={lastRunDeltaPassages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+            connections={Object.values(connections).map((c) => maskConnectionForBanner(c, syncState.cloudAuthSurfaced))}
+            lastError={syncState.lastError}
+            noHealthySources={Object.values(connections).every(
+              (c) => c.status !== "connected" && c.status !== "configuring"
+            )}
+            homeSearchQuery={homeSearchQuery}
           />
         );
-      case "Connections":
+      case "Library":
+        if (selectedLibraryWorkId) {
+          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
+          if (selectedWork) {
+            return <LibraryBookDetailScreen work={selectedWork} />;
+          }
+        }
         return (
-          <ConnectionsScreen
+          <LibraryScreen
+            works={works}
+            selectedWorkId={selectedLibraryWorkId ?? undefined}
+            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
+          />
+        );
+      case "Passages":
+        return (
+          <PassagesScreen
+            passages={passages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Settings":
+        return (
+          <SettingsScreen
+            defaultTab={settingsDefaultTab}
             connections={connections}
             cloudEnabled={cloudEnabled}
             notionTokenDraft={notionTokenDraft}
@@ -669,34 +693,9 @@ export function App(): JSX.Element {
             }}
             onRefreshNotionMedia={refreshNotionMedia}
             isSyncing={isSyncing}
+            logs={logs}
           />
         );
-      case "Library":
-        if (selectedLibraryWorkId) {
-          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
-          if (selectedWork) {
-            return <LibraryBookDetailScreen work={selectedWork} />;
-          }
-        }
-        return (
-          <LibraryScreen
-            works={works}
-            selectedWorkId={selectedLibraryWorkId ?? undefined}
-            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
-          />
-        );
-      case "Passages":
-        return (
-          <PassagesScreen
-            passages={passages}
-            onOpenWork={(workId) => {
-              setSelectedLibraryWorkId(workId);
-              setActiveScreen("Library");
-            }}
-          />
-        );
-      case "Logs":
-        return <LogsScreen entries={logs} />;
       default:
         return <p>Unknown screen.</p>;
     }
@@ -705,16 +704,18 @@ export function App(): JSX.Element {
     cancelSync,
     cloudEnabled,
     connections,
+    homeSearchQuery,
     isCancelingSync,
     isSyncing,
     logs,
     passages,
     recentActivity,
-    syncRunStartedAtIso,
+    settingsDefaultTab,
     selectedLibraryWorkId,
     refreshNotionMedia,
     runSyncNow,
     syncProgress,
+    syncState.lastError,
     syncState.lastRunAt,
     syncState.status,
     works
@@ -754,7 +755,8 @@ export function App(): JSX.Element {
                 .completeOnboarding()
                 .then((result) => {
                   setOnboardingCompleted(result.onboardingCompleted);
-                  setActiveScreen("Connections");
+                  setSettingsDefaultTab("connections");
+                  setActiveScreen("Settings");
                   refreshConnections();
                   refreshLists();
                   void window.archi.getSyncState().then(setSyncState);
@@ -775,6 +777,11 @@ export function App(): JSX.Element {
     );
   }
 
+  const sidebarUnhealthy =
+    !isSyncing &&
+    (Object.values(connections).some((c) => c.status === "needs_action") ||
+      syncState.lastError !== null);
+
   return (
     <>
       <UpdateBanner />
@@ -789,7 +796,7 @@ export function App(): JSX.Element {
           {screens.map((screen) => (
             <button
               key={screen}
-              className={activeScreen === screen ? "active" : ""}
+              className={`${activeScreen === screen ? "active" : ""}${screen === "Settings" && sidebarUnhealthy ? " sidebar-nav-has-warning" : ""}`}
               title={sidebarCollapsed ? screen : undefined}
               onClick={() => {
                 setActiveScreen(screen);
@@ -800,6 +807,9 @@ export function App(): JSX.Element {
             >
               <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
               <span className="sidebar-nav-label">{screen}</span>
+              {screen === "Settings" && sidebarUnhealthy ? (
+                <span className="sidebar-nav-warning-dot" aria-label="Needs attention" />
+              ) : null}
             </button>
           ))}
         </nav>
@@ -835,6 +845,36 @@ export function App(): JSX.Element {
             <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
+          {activeScreen === "Home" ? (
+            <div className="content-header-search">
+              <input
+                type="search"
+                className="content-header-search-input"
+                placeholder="Search your library…"
+                value={homeSearchQuery}
+                onChange={(event) => setHomeSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && homeSearchQuery) {
+                    event.preventDefault();
+                    setHomeSearchQuery("");
+                  }
+                }}
+                aria-label="Search your library"
+                autoFocus
+              />
+              {homeSearchQuery ? (
+                <button
+                  type="button"
+                  className="content-header-search-clear"
+                  onClick={() => setHomeSearchQuery("")}
+                  aria-label="Clear search"
+                  tabIndex={-1}
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
         {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
