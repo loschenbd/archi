@@ -10,6 +10,7 @@ import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { shouldShowSupportPrompt } from "./support-prompt";
+import { maskConnectionForBanner } from "./lib/syncBannerMapping";
 import appLogo from "./assets/logo.png";
 
 const screens = ["Home", "Library", "Passages", "Settings"] as const;
@@ -52,6 +53,7 @@ type SyncState = {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
+  cloudAuthSurfaced: boolean;
 };
 
 const isMissingConnectionsHandlerError = (error: unknown): boolean => {
@@ -190,7 +192,8 @@ export function App(): JSX.Element {
     status: "idle",
     lastRunAt: null,
     nextRunAt: null,
-    lastError: null
+    lastError: null,
+    cloudAuthSurfaced: false
   });
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -604,11 +607,7 @@ export function App(): JSX.Element {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
             }}
-            connections={Object.values(connections).map((c) => ({
-              provider: c.provider,
-              label: c.label,
-              status: c.status
-            }))}
+            connections={Object.values(connections).map((c) => maskConnectionForBanner(c, syncState.cloudAuthSurfaced))}
             lastError={syncState.lastError}
             noHealthySources={Object.values(connections).every(
               (c) => c.status !== "connected" && c.status !== "configuring"

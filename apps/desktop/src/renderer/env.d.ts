@@ -42,7 +42,7 @@ type UpdaterStatusEvent = {
 declare global {
   interface Window {
     archi: {
-      getSyncState: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
+      getSyncState: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
       closeWindow: () => Promise<void>;
       getSettings: () => Promise<{
         deviceExportPath: string;
@@ -53,9 +53,9 @@ declare global {
       completeOnboarding: () => Promise<{ onboardingCompleted: boolean }>;
       chooseDeviceExportPath: () => Promise<{ selected: boolean; deviceExportPath: string }>;
       setCloudEnabled: (enabled: boolean) => Promise<{ cloudEnabled: boolean }>;
-      runSyncNow: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
-      forceFullKindleSync: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
-      refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
+      runSyncNow: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
+      forceFullKindleSync: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
+      refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
       cancelSync: () => Promise<{ requested: boolean; message: string }>;
       openSupportLink: () => Promise<void>;
       updater: {

@@ -5,6 +5,7 @@ type SyncState = {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
+  cloudAuthSurfaced: boolean;
 };
 
 type SyncProgressPhase =
