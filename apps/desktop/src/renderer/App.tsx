@@ -8,6 +8,7 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
+import { maskConnectionForBanner } from "./lib/syncBannerMapping";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { shouldShowSupportPrompt } from "./support-prompt";
@@ -45,6 +46,7 @@ type SyncState = {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
+  cloudAuthSurfaced: boolean;
 };
 
 const isMissingConnectionsHandlerError = (error: unknown): boolean => {
@@ -231,7 +233,8 @@ export function App(): JSX.Element {
     status: "idle",
     lastRunAt: null,
     nextRunAt: null,
-    lastError: null
+    lastError: null,
+    cloudAuthSurfaced: false
   });
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -682,12 +685,7 @@ export function App(): JSX.Element {
               setHomeSearchQuery("");
               setFindSimilarPassage(null);
             }}
-            connections={Object.values(connections).map((c) => ({
-              provider: c.provider,
-              label: c.label,
-              status: c.status,
-              enabled: c.metadata?.enabled !== false
-            }))}
+            connections={Object.values(connections).map((c) => maskConnectionForBanner(c, syncState.cloudAuthSurfaced))}
             lastError={syncState.lastError}
             noHealthySources={Object.values(connections).every(
               (c) => c.status !== "connected" && c.status !== "configuring"
