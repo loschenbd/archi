@@ -9,6 +9,7 @@ import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { WindowTitleBar } from "./components/WindowTitleBar";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
@@ -101,21 +102,6 @@ type LibraryWork = {
   storeIdentifier?: string;
   coverImageUrl?: string;
 };
-
-function WindowTitleBar(): JSX.Element {
-  return (
-    <div className="window-titlebar">
-      <button
-        type="button"
-        className="window-close-button"
-        aria-label="Close window"
-        onClick={() => {
-          void window.archi.closeWindow();
-        }}
-      />
-    </div>
-  );
-}
 
 const emptyConnections: Record<ConnectionProvider, ConnectionState> = {
   notion: {
