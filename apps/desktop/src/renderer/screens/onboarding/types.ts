@@ -8,6 +8,10 @@ export type WizardState = {
   notionLabel: string | null;
   kindleStatus: StepStatus;
   kindleLabel: string | null;
+  // True while the Amazon sign-in browser window is still open and the connector
+  // is polling for completion. The wizard keeps `kindleStatus: "pending"` during
+  // this phase and renders a friendly waiting message instead of an error.
+  kindleAuthInProgress: boolean;
   notionTokenDraft: string;
   stepError: string | null;
   isCompleting: boolean;
@@ -17,10 +21,17 @@ export type OnboardingCompleteResult = {
   syncStartError: string | null;
 };
 
-// Shape that `computeStartStep` reads from. Defensive about missing keys
+// Shape the wizard reads from getConnections(). Defensive about missing keys
 // because the IPC handler-not-registered race can yield partial results.
 export type ConnectionsSnapshot = {
-  notion?: { status?: string; diagnostics?: { summary?: string | null } };
-  cloud_notebook?: { status?: string; diagnostics?: { summary?: string | null } };
+  notion?: {
+    status?: string;
+    diagnostics?: { summary?: string | null; details?: string | null };
+  };
+  cloud_notebook?: {
+    status?: string;
+    diagnostics?: { summary?: string | null; details?: string | null };
+    metadata?: Record<string, string | boolean | number | null>;
+  };
   device_export?: { status?: string };
 };

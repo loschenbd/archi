@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmStep } from "./steps/ConfirmStep";
 import { FirstSyncStep } from "./steps/FirstSyncStep";
 import { KindleStep } from "./steps/KindleStep";
@@ -18,10 +18,22 @@ const INITIAL_STATE: WizardState = {
   notionLabel: null,
   kindleStatus: "idle",
   kindleLabel: null,
+  kindleAuthInProgress: false,
   notionTokenDraft: "",
   stepError: null,
   isCompleting: false,
 };
+
+// Kindle sign-in poll: the cloud adapter returns needs_action + metadata.authInProgress
+// after a 20s timeout while the underlying Playwright connector keeps polling for up
+// to 5 minutes. Mirror the connector's deadline here (150 ticks × 2s = 5 min).
+const KINDLE_POLL_INTERVAL_MS = 2000;
+const KINDLE_POLL_MAX_TICKS = 150;
+
+function isAuthInProgress(snapshot: ConnectionsSnapshot["cloud_notebook"]): boolean {
+  const value = snapshot?.metadata?.authInProgress;
+  return value === true;
+}
 
 export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
@@ -88,38 +100,123 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
       });
   }, [state.notionTokenDraft]);
 
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTicksRef = useRef(0);
+
+  const stopKindlePolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    pollTicksRef.current = 0;
+  }, []);
+
+  useEffect(() => stopKindlePolling, [stopKindlePolling]);
+
+  const startKindlePolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      return;
+    }
+    pollTicksRef.current = 0;
+    pollTimerRef.current = setInterval(() => {
+      pollTicksRef.current += 1;
+      void window.archi
+        .getConnections()
+        .then((connections: ConnectionsSnapshot) => {
+          const cn = connections.cloud_notebook;
+          if (cn?.status === "connected") {
+            stopKindlePolling();
+            setState((prev) => ({
+              ...prev,
+              kindleStatus: "connected",
+              kindleLabel: cn.diagnostics?.summary ?? "Signed in",
+              kindleAuthInProgress: false,
+              stepError: null,
+            }));
+            return;
+          }
+          if (!isAuthInProgress(cn)) {
+            stopKindlePolling();
+            setState((prev) => ({
+              ...prev,
+              kindleStatus: "error",
+              kindleLabel: null,
+              kindleAuthInProgress: false,
+              stepError:
+                cn?.diagnostics?.details ?? cn?.diagnostics?.summary ?? "Sign-in didn't complete.",
+            }));
+            return;
+          }
+          if (pollTicksRef.current >= KINDLE_POLL_MAX_TICKS) {
+            stopKindlePolling();
+            setState((prev) => ({
+              ...prev,
+              kindleStatus: "error",
+              kindleLabel: null,
+              kindleAuthInProgress: false,
+              stepError: "Sign-in didn't complete in time. Try again.",
+            }));
+          }
+        })
+        .catch(() => {
+          // Transient IPC error during polling — keep polling, the next tick will retry.
+        });
+    }, KINDLE_POLL_INTERVAL_MS);
+  }, [stopKindlePolling]);
+
   const signInKindle = useCallback(() => {
-    setState((prev) => ({ ...prev, kindleStatus: "pending", stepError: null }));
+    stopKindlePolling();
+    setState((prev) => ({
+      ...prev,
+      kindleStatus: "pending",
+      kindleAuthInProgress: false,
+      stepError: null,
+    }));
     void window.archi
       .connectConnection("cloud_notebook")
       .then((next) => {
-        setState((prev) => {
-          if (next.status === "connected") {
-            return {
-              ...prev,
-              kindleStatus: "connected",
-              kindleLabel: next.diagnostics?.summary ?? "Signed in",
-              stepError: null,
-            };
-          }
-          return {
+        if (next.status === "connected") {
+          setState((prev) => ({
             ...prev,
-            kindleStatus: "error",
-            kindleLabel: null,
-            stepError:
-              next.diagnostics?.details ?? next.diagnostics?.summary ?? "Sign-in didn't complete.",
-          };
-        });
+            kindleStatus: "connected",
+            kindleLabel: next.diagnostics?.summary ?? "Signed in",
+            kindleAuthInProgress: false,
+            stepError: null,
+          }));
+          return;
+        }
+        const stillAuthing =
+          next.status === "needs_action" &&
+          Boolean((next.metadata as Record<string, unknown> | undefined)?.authInProgress);
+        if (stillAuthing) {
+          setState((prev) => ({
+            ...prev,
+            kindleStatus: "pending",
+            kindleAuthInProgress: true,
+            stepError: null,
+          }));
+          startKindlePolling();
+          return;
+        }
+        setState((prev) => ({
+          ...prev,
+          kindleStatus: "error",
+          kindleLabel: null,
+          kindleAuthInProgress: false,
+          stepError:
+            next.diagnostics?.details ?? next.diagnostics?.summary ?? "Sign-in didn't complete.",
+        }));
       })
       .catch((err) => {
         setState((prev) => ({
           ...prev,
           kindleStatus: "error",
           kindleLabel: null,
+          kindleAuthInProgress: false,
           stepError: err instanceof Error ? err.message : "Sign-in didn't complete.",
         }));
       });
-  }, []);
+  }, [startKindlePolling, stopKindlePolling]);
 
   const finish = useCallback(() => {
     setState((prev) => ({ ...prev, currentStep: 5, isCompleting: true, stepError: null }));
@@ -174,7 +271,12 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
           onSkip={() => advanceTo(3)}
           onContinue={() => advanceTo(3)}
         >
-          <KindleStep status={state.kindleStatus} label={state.kindleLabel} onSignIn={signInKindle} />
+          <KindleStep
+            status={state.kindleStatus}
+            label={state.kindleLabel}
+            authInProgress={state.kindleAuthInProgress}
+            onSignIn={signInKindle}
+          />
         </WizardChrome>
       );
     case 3:

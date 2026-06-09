@@ -3,10 +3,20 @@ import type { StepStatus } from "../types";
 type Props = {
   status: StepStatus;
   label: string | null;
+  authInProgress: boolean;
   onSignIn: () => void;
 };
 
-export function KindleStep({ status, label, onSignIn }: Props): JSX.Element {
+export function KindleStep({ status, label, authInProgress, onSignIn }: Props): JSX.Element {
+  const buttonLabel =
+    status === "connected"
+      ? "Signed in"
+      : authInProgress
+        ? "Waiting for sign-in…"
+        : status === "pending"
+          ? "Opening sign-in…"
+          : "Sign in with Amazon";
+
   return (
     <div className="onboarding-wizard-step">
       <p className="content-eyebrow">Step 2 of 5 · Kindle</p>
@@ -22,7 +32,7 @@ export function KindleStep({ status, label, onSignIn }: Props): JSX.Element {
           onClick={onSignIn}
           disabled={status === "pending" || status === "connected"}
         >
-          {status === "pending" ? "Opening sign-in…" : status === "connected" ? "Signed in" : "Sign in with Amazon"}
+          {buttonLabel}
         </button>
         {status === "connected" ? (
           <span className="onboarding-wizard-status onboarding-wizard-status--ok">
@@ -30,6 +40,12 @@ export function KindleStep({ status, label, onSignIn }: Props): JSX.Element {
           </span>
         ) : null}
       </div>
+      {authInProgress ? (
+        <p className="onboarding-wizard-help">
+          Finish signing in to Amazon in the browser window — including any verification prompts. Archi will pick
+          up the session as soon as the notebook loads.
+        </p>
+      ) : null}
     </div>
   );
 }
