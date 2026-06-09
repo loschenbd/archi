@@ -48,13 +48,15 @@ export function NotionStep({ tokenDraft, status, label, onTokenChange, onTest }:
       </div>
       <p className="onboarding-wizard-help">
         Need help?{" "}
-        <a
-          href="https://www.notion.so/help/create-integrations-with-the-notion-api"
-          target="_blank"
-          rel="noreferrer"
+        <button
+          type="button"
+          className="onboarding-wizard-help-link"
+          onClick={() => {
+            void window.archi.openExternalUrl("https://www.notion.so/help/create-integrations-with-the-notion-api");
+          }}
         >
           How to create a Notion integration token →
-        </a>
+        </button>
       </p>
     </div>
   );

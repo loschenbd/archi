@@ -636,6 +636,24 @@ select {
   margin-top: 4px;
 }
 
+.onboarding-wizard-help-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.onboarding-wizard-help-link:hover,
+.onboarding-wizard-help-link:focus-visible {
+  color: var(--accent-strong);
+  outline: none;
+}
+
 .onboarding-wizard-recap {
   list-style: none;
   padding: 0;

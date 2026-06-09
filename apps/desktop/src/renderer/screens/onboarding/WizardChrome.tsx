@@ -57,7 +57,7 @@ export function WizardChrome({
           })}
         </div>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
-        <div className="onboarding-wizard-step-body">{children}</div>
+        <div key={currentStep} className="onboarding-wizard-step-body">{children}</div>
         {stepError ? <p className="error banner-error">{stepError}</p> : null}
         {showFooter ? (
           <div className="onboarding-wizard-footer">
