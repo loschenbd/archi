@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { computeStartStep } from "./computeStartStep";
 import { ConfirmStep } from "./steps/ConfirmStep";
 import { FirstSyncStep } from "./steps/FirstSyncStep";
 import { KindleStep } from "./steps/KindleStep";
@@ -27,14 +26,14 @@ const INITIAL_STATE: WizardState = {
 export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
 
-  // Mount: fast-forward to the first unfinished step based on existing connections.
+  // Mount: seed already-connected status so steps 2/3 and the recap show ✓ pre-filled.
+  // The wizard always starts at step 1 (Welcome) — no fast-forward.
   useEffect(() => {
     void window.archi
       .getConnections()
       .then((connections: ConnectionsSnapshot) => {
         setState((prev) => ({
           ...prev,
-          currentStep: computeStartStep(connections),
           notionStatus: connections.notion?.status === "connected" ? "connected" : prev.notionStatus,
           notionLabel:
             connections.notion?.status === "connected"
@@ -48,7 +47,7 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
         }));
       })
       .catch(() => {
-        // Stay on step 1. App-level IPC retry logic covers the cold-start race.
+        // No-op. App-level IPC retry logic covers the cold-start race.
       });
   }, []);
 

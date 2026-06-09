@@ -37,6 +37,8 @@ The wizard occupies the full window with the existing `.window-titlebar` (close 
 | 4 | Confirm | — | n/a |
 | 5 | First sync | `completeOnboarding` then fire-and-forget `runSyncNow` | n/a (auto-transitions) |
 
+**Entry point — always Welcome.** Earlier drafts of this spec had a `computeStartStep` resume function that fast-forwarded returning users past steps they'd already completed. Removed during the post-merge smoke test (commit added below this design): Welcome is a one-click pitch screen, not a chore, and skipping it makes the wizard feel disjointed when triggered manually (e.g., during testing or after a forced re-onboarding from an upgrade). The wizard always starts at Step 1; on mount, `getConnections()` is read only to *seed already-connected status* on steps 2/3 (so user sees ✓ when they arrive there) and on the Confirm step.
+
 ## File layout
 
 New (mirrors the existing `screens/home/` pattern):
@@ -45,8 +47,6 @@ New (mirrors the existing `screens/home/` pattern):
 apps/desktop/src/renderer/screens/onboarding/
 ├── OnboardingWizard.tsx        ← orchestrator: step state, IPC wiring, onComplete
 ├── WizardChrome.tsx            ← titlebar + progress dots + footer (Back / Skip / Continue)
-├── computeStartStep.ts         ← pure fn; unit-tested
-├── computeStartStep.test.ts    ← Vitest unit test
 ├── types.ts                    ← Step union, per-step status types, prop shapes
 └── steps/
     ├── WelcomeStep.tsx
