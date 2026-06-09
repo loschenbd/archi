@@ -260,7 +260,11 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
           // does not land exactly on notebook path after login redirects.
           if (await this.isAuthenticatedPage(page)) {
             const canAccessNotebook = await this.canAccessNotebook(page, "reconnect").catch(() => false);
-            if (canAccessNotebook || this.isNotebookUrl(page.url())) {
+            // Only accept a real validator pass. A URL match alone (e.g. an Amazon
+            // interstitial parked on /notebook) makes reconnect green while fetch later
+            // fails at the same page — leaving users with a "Signed in" wizard but a
+            // sync that immediately reports needs_auth.
+            if (canAccessNotebook) {
               this.status = "reconnected";
               this.statusValidatedAtMs = Date.now();
               await this.persistContextState(context);
