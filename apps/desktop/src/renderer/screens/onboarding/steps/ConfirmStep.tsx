@@ -26,10 +26,10 @@ export function ConfirmStep({ notionStatus, notionLabel, kindleStatus, kindleLab
   return (
     <div className="onboarding-wizard-step">
       <p className="content-eyebrow">Step 4 of 5 · Ready</p>
-      <h1>You're ready to sync.</h1>
+      <h1>Ready when you are.</h1>
       <ul className="onboarding-wizard-recap">
-        {statusLine("Notion", notionStatus, notionLabel)}
         {statusLine("Kindle", kindleStatus, kindleLabel)}
+        {statusLine("Notion", notionStatus, notionLabel)}
       </ul>
     </div>
   );

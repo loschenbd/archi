@@ -170,9 +170,26 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
           showBack={false}
           showSkip={true}
           continueLabel="Continue →"
-          continueDisabled={state.notionStatus !== "connected"}
+          continueDisabled={state.kindleStatus !== "connected"}
           onSkip={() => advanceTo(3)}
           onContinue={() => advanceTo(3)}
+        >
+          <KindleStep status={state.kindleStatus} label={state.kindleLabel} onSignIn={signInKindle} />
+        </WizardChrome>
+      );
+    case 3:
+      return (
+        <WizardChrome
+          currentStep={3}
+          ipcError={ipcError}
+          stepError={wizardError}
+          showBack={true}
+          showSkip={true}
+          continueLabel="Continue →"
+          continueDisabled={state.notionStatus !== "connected"}
+          onBack={() => advanceTo(2)}
+          onSkip={() => advanceTo(4)}
+          onContinue={() => advanceTo(4)}
         >
           <NotionStep
             tokenDraft={state.notionTokenDraft}
@@ -185,23 +202,6 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
           />
         </WizardChrome>
       );
-    case 3:
-      return (
-        <WizardChrome
-          currentStep={3}
-          ipcError={ipcError}
-          stepError={wizardError}
-          showBack={true}
-          showSkip={true}
-          continueLabel="Continue →"
-          continueDisabled={state.kindleStatus !== "connected"}
-          onBack={() => advanceTo(2)}
-          onSkip={() => advanceTo(4)}
-          onContinue={() => advanceTo(4)}
-        >
-          <KindleStep status={state.kindleStatus} label={state.kindleLabel} onSignIn={signInKindle} />
-        </WizardChrome>
-      );
     case 4:
       return (
         <WizardChrome
@@ -210,7 +210,7 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
           stepError={wizardError}
           showBack={true}
           showSkip={false}
-          continueLabel="Start first sync → Open Archi"
+          continueLabel="Import my highlights → Open Archi"
           continueDisabled={false}
           onBack={() => advanceTo(3)}
           onContinue={finish}

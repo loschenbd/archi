@@ -9,11 +9,11 @@ type Props = {
 export function KindleStep({ status, label, onSignIn }: Props): JSX.Element {
   return (
     <div className="onboarding-wizard-step">
-      <p className="content-eyebrow">Step 3 of 5 · Kindle</p>
+      <p className="content-eyebrow">Step 2 of 5 · Kindle</p>
       <h1>Connect your Kindle highlights.</h1>
       <p>
-        Sign in to your Amazon account so Archi can read your Kindle notebook. The sign-in window opens once; Archi
-        keeps the session and refreshes it as needed.
+        Sign in to Amazon so Archi can read your Kindle notebook and pull every highlight you&apos;ve ever made into
+        your local library. The sign-in window opens once; Archi keeps the session and refreshes it as needed.
       </p>
       <div className="onboarding-wizard-row">
         <button

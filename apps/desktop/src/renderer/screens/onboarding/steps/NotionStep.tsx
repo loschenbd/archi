@@ -12,11 +12,12 @@ export function NotionStep({ tokenDraft, status, label, onTokenChange, onTest }:
   const testDisabled = status === "pending" || tokenDraft.trim().length === 0;
   return (
     <div className="onboarding-wizard-step">
-      <p className="content-eyebrow">Step 2 of 5 · Notion</p>
-      <h1>Connect your Notion workspace.</h1>
+      <p className="content-eyebrow">Step 3 of 5 · Notion</p>
+      <h1>Mirror your library to Notion.</h1>
       <p>
-        Paste an internal integration token from <code>notion.so/profile/integrations</code>. Archi will write your
-        library to a database it creates the first time you sync.
+        Optional. Archi can mirror your local library to a Notion database &mdash; useful for browsing on your phone,
+        sharing, or editing in place. Paste an internal integration token from <code>notion.so/profile/integrations</code>;
+        Archi creates the database on first sync. Skip this if you don&apos;t use Notion.
       </p>
       <label className="onboarding-wizard-field-label" htmlFor="onboarding-notion-token">
         Integration token
