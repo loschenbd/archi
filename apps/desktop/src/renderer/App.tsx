@@ -195,7 +195,9 @@ export function App(): JSX.Element {
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
     passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
-  }>({ works: [], passages: [] });
+    deltaWorks: number;
+    deltaPassages: number;
+  }>({ works: [], passages: [], deltaWorks: 0, deltaPassages: 0 });
   const activeSyncRunIdRef = useRef<string | null>(null);
   const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListRefreshQueuedRef = useRef(false);
@@ -568,16 +570,12 @@ export function App(): JSX.Element {
   };
 
   const screenContent = useMemo(() => {
-    const recentActivityIngestedSinceMs = 10_000;
-    const nowForDeltaMs = Date.now();
-    const lastRunDeltaWorks = recentActivity.works.filter((w) => {
-      const t = Date.parse(w.ingestedAt);
-      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
-    }).length;
-    const lastRunDeltaPassages = recentActivity.passages.filter((p) => {
-      const t = Date.parse(p.ingestedAt);
-      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
-    }).length;
+    // "+N new" counts come straight from the main process's runTouched* sets
+    // (sized at IPC time). This is stable across re-renders and updates only when
+    // a new sync touches more items — see github.com/loschenbd/archi/issues/3 for
+    // the previous wall-clock-window bug this replaces.
+    const lastRunDeltaWorks = recentActivity.deltaWorks;
+    const lastRunDeltaPassages = recentActivity.deltaPassages;
     switch (activeScreen) {
       case "Home":
         return (

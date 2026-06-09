@@ -1535,7 +1535,12 @@ app.whenReady().then(() => {
           workTitle: worksById.get(passage.workId)?.displayTitle ?? "Unknown Work",
           ingestedAt: passage.markedAt ?? passage.ingestedAt
         }));
-      return { works: recentWorks, passages: recentPassages };
+      return {
+        works: recentWorks,
+        passages: recentPassages,
+        deltaWorks: runTouchedWorkIds.size,
+        deltaPassages: runTouchedPassageIds.size
+      };
     }
     const recentWorks = [...allWorks]
       .sort((a, b) => (b.firstIngestedAt ?? "").localeCompare(a.firstIngestedAt ?? ""))
@@ -1557,7 +1562,9 @@ app.whenReady().then(() => {
         workTitle: worksById.get(passage.workId)?.displayTitle ?? "Unknown Work",
         ingestedAt: passage.markedAt ?? passage.ingestedAt
       }));
-    return { works: recentWorks, passages: recentPassages };
+    // No sync has run this session — items are the most-recent-by-timestamp
+    // fallback, not freshly-touched. Suppress the "+N new" badges.
+    return { works: recentWorks, passages: recentPassages, deltaWorks: 0, deltaPassages: 0 };
   });
   ipcMain.handle("archi:list-passages-by-work", (_event, workId: string) =>
     repository.listPassagesByWorkId(workId).map((passage) => ({
