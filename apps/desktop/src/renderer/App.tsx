@@ -3,7 +3,7 @@ import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { PassagesScreen } from "./screens/PassagesScreen";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
@@ -181,7 +181,6 @@ export function App(): JSX.Element {
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
   const [notionTokenDraft, setNotionTokenDraft] = useState("");
   const [connections, setConnections] = useState<Record<ConnectionProvider, ConnectionState>>(emptyConnections);
   const [works, setWorks] = useState<LibraryWork[]>([]);
@@ -276,6 +275,21 @@ export function App(): JSX.Element {
     void window.archi.listLogs().then(setLogs);
     void window.archi.listRecentActivity(12).then(setRecentActivity).catch(() => {});
   }, []);
+
+  const handleOnboardingComplete = useCallback(
+    (result: { syncStartError: string | null }): void => {
+      setOnboardingCompleted(true);
+      setSettingsDefaultTab("connections");
+      setActiveScreen("Home");
+      if (result.syncStartError) {
+        setIpcError(result.syncStartError);
+      }
+      refreshConnections();
+      refreshLists();
+      void window.archi.getSyncState().then(setSyncState);
+    },
+    [refreshConnections, refreshLists]
+  );
 
   const requestListRefresh = useCallback((): void => {
     if (isListRefreshQueuedRef.current) {
@@ -725,43 +739,7 @@ export function App(): JSX.Element {
   }
 
   if (!onboardingCompleted) {
-    return (
-      <main className="onboarding-layout">
-        <WindowTitleBar />
-        <section className="screen-card onboarding-card">
-          {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
-          <OnboardingScreen
-            isCompleting={isCompletingOnboarding}
-            onContinue={() => {
-              if (isCompletingOnboarding) {
-                return;
-              }
-              setIpcError(null);
-              setIsCompletingOnboarding(true);
-              void window.archi
-                .completeOnboarding()
-                .then((result) => {
-                  setOnboardingCompleted(result.onboardingCompleted);
-                  setSettingsDefaultTab("connections");
-                  setActiveScreen("Settings");
-                  refreshConnections();
-                  refreshLists();
-                  void window.archi.getSyncState().then(setSyncState);
-                })
-                .catch((error) => {
-                  setIpcError(
-                    `Could not complete onboarding (${error instanceof Error ? error.message : "unknown error"}). ` +
-                      "The main process may not be running correctly — check the terminal output."
-                  );
-                })
-                .finally(() => {
-                  setIsCompletingOnboarding(false);
-                });
-            }}
-          />
-        </section>
-      </main>
-    );
+    return <OnboardingWizard ipcError={ipcError} onComplete={handleOnboardingComplete} />;
   }
 
   const sidebarUnhealthy =
