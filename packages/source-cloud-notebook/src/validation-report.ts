@@ -56,15 +56,10 @@ export function classifyUrl(rawUrl: string): UrlClassification {
   if (!/(^|\.)amazon\.[a-z]+(\.[a-z]+)?$/.test(host)) {
     return "unknown";
   }
-  // Amazon serves the Kindle notebook at both /kp/notebook (legacy) and
-  // /notebook (current). Accept either. The host check above already
-  // scopes this to amazon.* domains so "/notebook" on a different site
-  // can't collide.
-  if (
-    path.startsWith("/kp/notebook") ||
-    path === "/notebook" ||
-    path.startsWith("/notebook/")
-  ) {
+  // Amazon serves the actual Kindle notebook at /notebook (current) and historically at
+  // /kp/notebook — both reach the same UI on read.amazon.com. Recognize both so a page
+  // with the notebook DOM doesn't get misclassified as `interstitial_other`.
+  if (path === "/notebook" || path.startsWith("/notebook/") || path.startsWith("/kp/notebook")) {
     return "notebook";
   }
   if (path.includes("/ap/signin") || path.includes("/sign-in")) {

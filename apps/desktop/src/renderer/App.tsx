@@ -5,12 +5,13 @@ import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { maskConnectionForBanner } from "./lib/syncBannerMapping";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { WindowTitleBar } from "./components/WindowTitleBar";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { IndexerStatusProvider } from "./state/IndexerStatusContext";
@@ -96,21 +97,6 @@ type LibraryWork = {
   storeIdentifier?: string;
   coverImageUrl?: string;
 };
-
-function WindowTitleBar(): JSX.Element {
-  return (
-    <div className="window-titlebar">
-      <button
-        type="button"
-        className="window-close-button"
-        aria-label="Close window"
-        onClick={() => {
-          void window.archi.closeWindow();
-        }}
-      />
-    </div>
-  );
-}
 
 const emptyConnections: Record<ConnectionProvider, ConnectionState> = {
   notion: {
@@ -239,7 +225,6 @@ export function App(): JSX.Element {
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
   const [notionTokenDraft, setNotionTokenDraft] = useState("");
   const [connections, setConnections] = useState<Record<ConnectionProvider, ConnectionState>>(emptyConnections);
   const [works, setWorks] = useState<LibraryWork[]>([]);
@@ -255,7 +240,9 @@ export function App(): JSX.Element {
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
     passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
-  }>({ works: [], passages: [] });
+    deltaWorks: number;
+    deltaPassages: number;
+  }>({ works: [], passages: [], deltaWorks: 0, deltaPassages: 0 });
   const activeSyncRunIdRef = useRef<string | null>(null);
   const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListRefreshQueuedRef = useRef(false);
@@ -360,6 +347,21 @@ export function App(): JSX.Element {
       })
       .catch(() => {});
   }, []);
+
+  const handleOnboardingComplete = useCallback(
+    (result: { syncStartError: string | null }): void => {
+      setOnboardingCompleted(true);
+      setSettingsDefaultTab("connections");
+      setActiveScreen("Home");
+      if (result.syncStartError) {
+        setIpcError(result.syncStartError);
+      }
+      refreshConnections();
+      refreshLists();
+      void window.archi.getSyncState().then(setSyncState);
+    },
+    [refreshConnections, refreshLists]
+  );
 
   const requestListRefresh = useCallback((): void => {
     if (isListRefreshQueuedRef.current) {
@@ -649,16 +651,12 @@ export function App(): JSX.Element {
   };
 
   const screenContent = useMemo(() => {
-    const recentActivityIngestedSinceMs = 10_000;
-    const nowForDeltaMs = Date.now();
-    const lastRunDeltaWorks = recentActivity.works.filter((w) => {
-      const t = Date.parse(w.ingestedAt);
-      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
-    }).length;
-    const lastRunDeltaPassages = recentActivity.passages.filter((p) => {
-      const t = Date.parse(p.ingestedAt);
-      return Number.isFinite(t) && nowForDeltaMs - t < recentActivityIngestedSinceMs;
-    }).length;
+    // "+N new" counts come straight from the main process's runTouched* sets
+    // (sized at IPC time). This is stable across re-renders and updates only when
+    // a new sync touches more items — see github.com/loschenbd/archi/issues/3 for
+    // the previous wall-clock-window bug this replaces.
+    const lastRunDeltaWorks = recentActivity.deltaWorks;
+    const lastRunDeltaPassages = recentActivity.deltaPassages;
     switch (activeScreen) {
       case "Home":
         return (
@@ -841,41 +839,7 @@ export function App(): JSX.Element {
     return (
       <SearchPreferencesProvider>
         <IndexerStatusProvider>
-          <main className="onboarding-layout">
-            <WindowTitleBar />
-            <section className="screen-card onboarding-card">
-              {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
-              <OnboardingScreen
-                isCompleting={isCompletingOnboarding}
-                onContinue={() => {
-                  if (isCompletingOnboarding) {
-                    return;
-                  }
-                  setIpcError(null);
-                  setIsCompletingOnboarding(true);
-                  void window.archi
-                    .completeOnboarding()
-                    .then((result) => {
-                      setOnboardingCompleted(result.onboardingCompleted);
-                      setSettingsDefaultTab("connections");
-                      setActiveScreen("Settings");
-                      refreshConnections();
-                      refreshLists();
-                      void window.archi.getSyncState().then(setSyncState);
-                    })
-                    .catch((error) => {
-                      setIpcError(
-                        `Could not complete onboarding (${error instanceof Error ? error.message : "unknown error"}). ` +
-                          "The main process may not be running correctly — check the terminal output."
-                      );
-                    })
-                    .finally(() => {
-                      setIsCompletingOnboarding(false);
-                    });
-                }}
-              />
-            </section>
-          </main>
+          <OnboardingWizard ipcError={ipcError} onComplete={handleOnboardingComplete} />
         </IndexerStatusProvider>
       </SearchPreferencesProvider>
     );

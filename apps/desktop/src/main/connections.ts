@@ -294,7 +294,7 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
     if (this.inFlightReconnect) {
       return this.createNeedsActionState(
         "Cloud authentication is in progress.",
-        "Complete sign-in in the browser window, then click Test to verify cloud access.",
+        "Complete sign-in in the browser window. Status will update once verification finishes.",
         true
       );
     }
@@ -349,7 +349,7 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
       label: "Cloud notebook",
       status: "needs_action",
       canDisconnect: false,
-      hints: ["Authenticate in the opened browser window, then click Test to verify and refresh status."],
+      hints: ["Complete sign-in in the opened browser window. Status updates once verification finishes."],
       diagnostics: {
         summary,
         details
@@ -390,7 +390,7 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
       if (reconnectResult === timeoutResult) {
         return this.createNeedsActionState(
           "Reconnect is taking longer than expected.",
-          "Complete sign-in in the browser window, then click Test to verify cloud access.",
+          "Complete sign-in in the browser window. Status will update once verification finishes.",
           true
         );
       }

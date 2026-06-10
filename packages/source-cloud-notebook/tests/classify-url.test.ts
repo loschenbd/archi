@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyUrl } from "../src/validation-report.js";
 
 describe("classifyUrl", () => {
-  it("returns notebook for the notebook path", () => {
+  it("returns notebook for the legacy /kp/notebook path", () => {
     expect(classifyUrl("https://read.amazon.com/kp/notebook")).toBe("notebook");
     expect(classifyUrl("https://read.amazon.com/kp/notebook?asin=B01FPGY5T0")).toBe("notebook");
     // Amazon also serves the notebook at /notebook (current URL).
@@ -13,6 +13,16 @@ describe("classifyUrl", () => {
 
   it("does not classify lookalike paths as notebook", () => {
     expect(classifyUrl("https://www.amazon.com/notebooks")).toBe("interstitial_other");
+  });
+
+  it("returns notebook for the current /notebook path", () => {
+    expect(classifyUrl("https://read.amazon.com/notebook")).toBe("notebook");
+    expect(classifyUrl("https://read.amazon.com/notebook?asin=B01FPGY5T0")).toBe("notebook");
+    expect(classifyUrl("https://read.amazon.com/notebook/")).toBe("notebook");
+  });
+
+  it("does not match longer paths that merely share the /notebook prefix", () => {
+    expect(classifyUrl("https://read.amazon.com/notebooks")).toBe("interstitial_other");
   });
 
   it("detects sign-in pages", () => {
