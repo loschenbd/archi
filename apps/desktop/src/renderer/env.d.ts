@@ -1,5 +1,7 @@
 export {};
 
+import type { IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
+
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
 type SyncProgressPhase =
@@ -42,7 +44,7 @@ type UpdaterStatusEvent = {
 declare global {
   interface Window {
     archi: {
-      getSyncState: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
+      getSyncState: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
       closeWindow: () => Promise<void>;
       getSettings: () => Promise<{
         deviceExportPath: string;
@@ -53,9 +55,9 @@ declare global {
       completeOnboarding: () => Promise<{ onboardingCompleted: boolean }>;
       chooseDeviceExportPath: () => Promise<{ selected: boolean; deviceExportPath: string }>;
       setCloudEnabled: (enabled: boolean) => Promise<{ cloudEnabled: boolean }>;
-      runSyncNow: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
-      forceFullKindleSync: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
-      refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null }>;
+      runSyncNow: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
+      forceFullKindleSync: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
+      refreshNotionMedia: () => Promise<{ status: string; lastRunAt: string | null; nextRunAt: string | null; lastError: string | null; cloudAuthSurfaced: boolean }>;
       cancelSync: () => Promise<{ requested: boolean; message: string }>;
       openSupportLink: () => Promise<void>;
       updater: {
@@ -203,6 +205,12 @@ declare global {
       >;
       onSyncProgress: (listener: (event: SyncProgressEvent) => void) => void;
       offSyncProgress: (listener: (event: SyncProgressEvent) => void) => void;
+      search: {
+        query: (q: SearchQuery) => Promise<SearchResponse>;
+        indexerStatus: () => Promise<IndexerStatus>;
+        startIndexing: () => Promise<{ started: boolean }>;
+        facets: () => Promise<{ creators: string[]; labels: string[] }>;
+      };
     };
   }
 }

@@ -27,7 +27,7 @@ function highlightMatches(text: string, query: string): ReactNode {
   );
 }
 
-export function PassagesScreen({ passages, onOpenWork }: Props): JSX.Element {
+export function LibraryAllHighlights({ passages, onOpenWork }: Props): JSX.Element {
   const [query, setQuery] = useState("");
   const [workFilter, setWorkFilter] = useState("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);

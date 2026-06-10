@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import type { Facets, IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
 
 type SyncState = {
   status: string;
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
+  cloudAuthSurfaced: boolean;
 };
 
 type SyncProgressPhase =
@@ -212,6 +214,16 @@ const api = {
       ipcRenderer.invoke("archi:get-preference", { key, fallback }),
     set: (key: string, value: unknown): Promise<void> =>
       ipcRenderer.invoke("archi:set-preference", { key, value })
+  },
+  search: {
+    query: (q: SearchQuery): Promise<SearchResponse> =>
+      ipcRenderer.invoke("archi:search:query", q),
+    indexerStatus: (): Promise<IndexerStatus> =>
+      ipcRenderer.invoke("archi:search:indexerStatus"),
+    startIndexing: (): Promise<{ started: boolean }> =>
+      ipcRenderer.invoke("archi:search:startIndexing"),
+    facets: (): Promise<Facets> =>
+      ipcRenderer.invoke("archi:search:facets")
   }
 };
 

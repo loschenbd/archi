@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 type Work = {
   id: string;
   title: string;
@@ -12,7 +14,60 @@ type Props = {
   onOpenWork: (workId: string) => void;
 };
 
-export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element {
+const VISIBLE = 12;
+const ENTER_FLAG_MS = 1600;
+
+export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element | null {
+  // Track ids we've already shown so we can flag genuinely new arrivals
+  // (vs the initial mount, which would otherwise animate every tile).
+  const previousIdsRef = useRef<Set<string> | null>(null);
+  const [newlyArrived, setNewlyArrived] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const visible = works.slice(0, VISIBLE);
+    const visibleIds = new Set(visible.map((w) => w.id));
+
+    if (previousIdsRef.current === null) {
+      // First mount: don't animate; just seed the baseline.
+      previousIdsRef.current = visibleIds;
+      return;
+    }
+
+    const arrivals = new Set<string>();
+    for (const id of visibleIds) {
+      if (!previousIdsRef.current.has(id)) {
+        arrivals.add(id);
+      }
+    }
+    previousIdsRef.current = visibleIds;
+
+    if (arrivals.size === 0) {
+      return;
+    }
+
+    setNewlyArrived((current) => {
+      const next = new Set(current);
+      for (const id of arrivals) next.add(id);
+      return next;
+    });
+
+    const timer = window.setTimeout(() => {
+      setNewlyArrived((current) => {
+        const next = new Set(current);
+        for (const id of arrivals) next.delete(id);
+        return next;
+      });
+    }, ENTER_FLAG_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [works]);
+
+  if (works.length === 0) {
+    return null;
+  }
+
+  const visible = works.slice(0, VISIBLE);
+
   return (
     <section className="books-rail">
       <header className="books-rail-head">
@@ -21,12 +76,17 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
           <span className="books-rail-new-chip">+{deltaCount} new</span>
         ) : null}
       </header>
-      {works.length === 0 ? (
-        <p className="books-rail-empty">Nothing yet — run a sync to start filling your library.</p>
-      ) : (
-        <ul className="books-rail-track">
-          {works.slice(0, 12).map((work) => (
-            <li key={work.id} className="books-rail-tile">
+      <ul className="books-rail-track">
+        {visible.map((work) => {
+          const isNew = newlyArrived.has(work.id);
+          return (
+            <li
+              key={work.id}
+              className={`books-rail-tile${isNew ? " books-rail-tile--entering" : ""}`}
+              // View Transitions API auto-animates reorder when parent
+              // state changes are wrapped in document.startViewTransition.
+              style={{ viewTransitionName: `book-${work.id}` } as React.CSSProperties}
+            >
               <button
                 type="button"
                 className="books-rail-tile-button"
@@ -47,9 +107,9 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
                 ) : null}
               </button>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
     </section>
   );
 }

@@ -24,6 +24,10 @@ import {
   type NotionAuthStore
 } from "./connections.js";
 import { CredentialStore } from "./credentialStore.js";
+import { ElectronCloudNetValidator } from "./cloudNetValidator.js";
+import { createSearchModule, type SearchModule } from "./searchModule.js";
+import { registerSearchIpc } from "./ipc/searchIpc.js";
+import { nextCloudAuthSurfaced } from "./cloudAuthSurfaced.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,11 +51,13 @@ const state: {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
+  cloudAuthSurfaced: boolean;
 } = {
   status: "idle",
   lastRunAt: null,
   nextRunAt: null,
-  lastError: null
+  lastError: null,
+  cloudAuthSurfaced: false
 };
 
 type SyncProgressPhase =
@@ -208,6 +214,8 @@ app.whenReady().then(() => {
     console.log(`[archi] Backfilled position for ${backfilledPositions} cloud passages from external_passage_id.`);
   }
 
+  const searchModule: SearchModule = createSearchModule(db);
+
   const emitSyncProgress = (
     params: Omit<SyncProgressEvent, "at" | "elapsedMs"> & { startedAtMs: number; persist?: boolean }
   ): void => {
@@ -229,6 +237,19 @@ app.whenReady().then(() => {
 
   const settings = loadSettings(settingsPath);
   clearStaleNotionDatabaseIdsFromSyncError(syncStatePath, settingsPath, settings);
+  // Hydrate sticky banner-display state from disk so it survives restarts.
+  // Without this, a user-initiated needs_auth failure would silently clear
+  // on next app launch and the user would think the issue resolved itself.
+  if (fs.existsSync(syncStatePath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(syncStatePath, "utf8")) as { cloudAuthSurfaced?: unknown };
+      if (typeof parsed.cloudAuthSurfaced === "boolean") {
+        state.cloudAuthSurfaced = parsed.cloudAuthSurfaced;
+      }
+    } catch {
+      // sync-state.json is best-effort; a parse failure just means defaults.
+    }
+  }
   const credentialStore = new CredentialStore(userDataPath, {
     allowEncryption: app.isPackaged
   });
@@ -264,10 +285,20 @@ app.whenReady().then(() => {
     persist: (report: CloudValidationReport) => appendValidationReport(cloudValidationLogPath, report)
   });
 
+  const cloudNetValidator = new ElectronCloudNetValidator({
+    notebookUrl: settings.cloud.notebookUrl,
+    storageStatePath: settings.cloud.storageStatePath,
+    onDebug: (message) => {
+      // eslint-disable-next-line no-console
+      console.log(`[cloud-net-validator] ${message}`);
+    }
+  });
+
   const cloudConnector = new PlaywrightCloudNotebookConnector({
     notebookUrl: settings.cloud.notebookUrl,
     storageStatePath: settings.cloud.storageStatePath,
     profilePath: settings.cloud.profilePath,
+    netValidator: cloudNetValidator,
     onValidation: (report) => cloudValidationLog.record(report),
     onNeedsAuth: async () => {
       state.status = "needs_auth";
@@ -414,9 +445,15 @@ app.whenReady().then(() => {
     getNotionSettings: () => settings.notion
   });
   const connectionManager = new ConnectionManager([notionAdapter, cloudAdapter, deviceAdapter]);
+
   let inFlightSync: Promise<typeof state> | null = null;
   let inFlightRunId: string | null = null;
   let inFlightRunStartedAtMs: number | null = null;
+  // The trigger of the currently-running sync. Reads as live value (NOT a
+  // closure capture) so that a user-initiated runSync() arriving while an
+  // auto run is in-flight can UPGRADE the trigger — otherwise the user's
+  // click would silently inherit the auto result and never surface a banner.
+  let inFlightTrigger: "user" | "auto" | null = null;
   let cancelSyncRequested = false;
   let cancelSyncController: AbortController | null = null;
   const clearStaleNotionSyncErrorIfResolved = (): void => {
@@ -437,13 +474,23 @@ app.whenReady().then(() => {
   // The persisted `needs_auth` status is a snapshot of the last sync run, not live truth.
   // Once the user successfully reconnects a provider, Home should stop nagging — otherwise
   // it disagrees with Connections (which reflects live connector health).
-  const clearStaleNeedsAuthIfResolved = (): void => {
-    if (state.status !== "needs_auth") {
+  const clearStaleNeedsAuthIfResolved = (provider?: ConnectionProvider): void => {
+    let changed = false;
+    if (state.status === "needs_auth") {
+      state.status = "idle";
+      changed = true;
+    }
+    // Cloud-specific reconnect/test success clears the surfaced banner flag —
+    // any prior user-triggered needs_auth has now been resolved by user action.
+    if (provider === "cloud_notebook" && state.cloudAuthSurfaced) {
+      state.cloudAuthSurfaced = false;
+      changed = true;
+    }
+    if (!changed) {
       return;
     }
-    state.status = "idle";
     fs.writeFileSync(syncStatePath, JSON.stringify(state, null, 2));
-    fs.appendFileSync(logPath, `${new Date().toISOString()} status=idle (cleared needs_auth on successful connection action)\n`);
+    fs.appendFileSync(logPath, `${new Date().toISOString()} status=${state.status} (cleared needs_auth on successful connection action)\n`);
   };
 
   class SyncCancelledError extends Error {
@@ -724,6 +771,11 @@ app.whenReady().then(() => {
             repository.markCloudBookSeen(bookId, now);
           }
 
+          state.cloudAuthSurfaced = nextCloudAuthSurfaced(
+            state.cloudAuthSurfaced,
+            "success",
+            inFlightTrigger ?? "auto"
+          );
           emitSyncProgress({
             runId,
             startedAtMs,
@@ -972,6 +1024,14 @@ app.whenReady().then(() => {
             lastError: error instanceof Error ? error.message : "Cloud sync failed"
           });
           state.status = status;
+          // Read inFlightTrigger LIVE — a user click that arrives mid-run
+          // upgrades the in-flight trigger to "user", so the failure correctly
+          // surfaces. See docs/superpowers/specs/2026-06-08-cloud-banner-on-user-sync-only.md.
+          state.cloudAuthSurfaced = nextCloudAuthSurfaced(
+            state.cloudAuthSurfaced,
+            status === "needs_auth" ? "needs_auth" : "other",
+            inFlightTrigger ?? "auto"
+          );
           emitSyncProgress({
             runId,
             startedAtMs,
@@ -1209,16 +1269,27 @@ app.whenReady().then(() => {
     return state;
   };
 
-  const runSync = (opts?: { forceRefreshMedia?: boolean }): Promise<typeof state> => {
+  const runSync = (opts?: { forceRefreshMedia?: boolean; trigger?: "user" | "auto" }): Promise<typeof state> => {
+    const incomingTrigger = opts?.trigger ?? "auto";
     if (inFlightSync) {
+      // Upgrade in-flight trigger if a user click arrives during an auto run.
+      // Never downgrade user → auto.
+      if (incomingTrigger === "user" && inFlightTrigger === "auto") {
+        inFlightTrigger = "user";
+      }
       return inFlightSync;
     }
-    inFlightSync = runSyncOnce({ forceRefreshMedia: opts?.forceRefreshMedia ?? false }).finally(() => {
+    inFlightTrigger = incomingTrigger;
+    inFlightSync = runSyncOnce({
+      forceRefreshMedia: opts?.forceRefreshMedia ?? false
+    }).finally(() => {
       inFlightSync = null;
       inFlightRunId = null;
       inFlightRunStartedAtMs = null;
+      inFlightTrigger = null;
       cancelSyncRequested = false;
       cancelSyncController = null;
+      searchModule.indexer.tick();
     });
     return inFlightSync;
   };
@@ -1331,7 +1402,7 @@ app.whenReady().then(() => {
       const result = await connectionManager.setNotionToken(token);
       if (result.status === "connected") {
         clearStaleNotionSyncErrorIfResolved();
-        clearStaleNeedsAuthIfResolved();
+        clearStaleNeedsAuthIfResolved("notion");
       }
       pushConnectionDebugEvent({
         provider: "notion",
@@ -1364,7 +1435,7 @@ app.whenReady().then(() => {
         if (provider === "notion") {
           clearStaleNotionSyncErrorIfResolved();
         }
-        clearStaleNeedsAuthIfResolved();
+        clearStaleNeedsAuthIfResolved(provider);
       }
       pushConnectionDebugEvent({
         provider,
@@ -1397,7 +1468,7 @@ app.whenReady().then(() => {
         if (provider === "notion") {
           clearStaleNotionSyncErrorIfResolved();
         }
-        clearStaleNeedsAuthIfResolved();
+        clearStaleNeedsAuthIfResolved(provider);
       }
       pushConnectionDebugEvent({
         provider,
@@ -1457,7 +1528,7 @@ app.whenReady().then(() => {
         if (provider === "notion") {
           clearStaleNotionSyncErrorIfResolved();
         }
-        clearStaleNeedsAuthIfResolved();
+        clearStaleNeedsAuthIfResolved(provider);
       }
       pushConnectionDebugEvent({
         provider,
@@ -1628,18 +1699,18 @@ app.whenReady().then(() => {
       .reverse();
   });
   ipcMain.handle("archi:run-sync-now", async () => {
-    const current = await runSync();
+    const current = await runSync({ trigger: "user" });
     schedule();
     return current;
   });
   ipcMain.handle("archi:force-full-kindle-sync", async () => {
     pendingForceFullSweep = true;
-    const current = await runSync();
+    const current = await runSync({ trigger: "user" });
     schedule();
     return current;
   });
   ipcMain.handle("archi:refresh-notion-media", async () => {
-    const current = await runSync({ forceRefreshMedia: true });
+    const current = await runSync({ forceRefreshMedia: true, trigger: "user" });
     schedule();
     return current;
   });
@@ -1690,6 +1761,12 @@ app.whenReady().then(() => {
 
   ipcMain.handle("archi:set-preference", (_event, { key, value }: { key: string; value: unknown }) => {
     preferences.set(key, value);
+  });
+
+  registerSearchIpc(searchModule);
+
+  ipcMain.handle("archi:search:facets", async () => {
+    return searchModule.search.getFacets();
   });
 
   createWindow();

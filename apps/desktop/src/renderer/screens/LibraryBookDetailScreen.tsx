@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FindSimilarButton } from "../components/FindSimilarButton";
 
 type PositionKind = "page" | "location" | "offset" | "order" | "unknown";
 
@@ -33,6 +34,10 @@ type LocationGroup = {
 
 type Props = {
   work: LibraryWork;
+  onFindSimilar: (passage: { id: string; body: string }) => void;
+  pendingScrollPassageId?: string | null;
+  breadcrumbFromSearch?: boolean;
+  onBackToSearch?: () => void;
 };
 
 function parseNumber(text?: string): number {
@@ -170,12 +175,13 @@ function createNotebookFallbackUrl(baseUrl: string, work: LibraryWork, passage: 
   }
 }
 
-export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
+export function LibraryBookDetailScreen({ work, onFindSimilar, pendingScrollPassageId }: Props): JSX.Element {
   const [passages, setPassages] = useState<LibraryPassage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [kindleErrorMessage, setKindleErrorMessage] = useState<string | null>(null);
   const [openingPassageId, setOpeningPassageId] = useState<string | null>(null);
+  const [copiedPassageId, setCopiedPassageId] = useState<string | null>(null);
   const [notebookUrl, setNotebookUrl] = useState("https://read.amazon.com/notebook");
 
   useEffect(() => {
@@ -216,6 +222,20 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
     };
   }, []);
 
+  const ringRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const [ringed, setRinged] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingScrollPassageId) return;
+    if (!passages.some((p) => p.id === pendingScrollPassageId)) return;
+    const node = ringRefs.current[pendingScrollPassageId];
+    if (!node) return;
+    node.scrollIntoView({ block: "center", behavior: "smooth" });
+    setRinged(pendingScrollPassageId);
+    const timer = window.setTimeout(() => setRinged(null), 1500);
+    return () => window.clearTimeout(timer);
+  }, [pendingScrollPassageId, passages]);
+
   const groups = useMemo(() => groupPassages(passages), [passages]);
   const sortedPassages = useMemo(
     () =>
@@ -227,6 +247,18 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
       ),
     [groups]
   );
+
+  const copyPassage = async (passage: LibraryPassage): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(passage.body);
+      setCopiedPassageId(passage.id);
+      window.setTimeout(() => {
+        setCopiedPassageId((current) => (current === passage.id ? null : current));
+      }, 1400);
+    } catch {
+      // Clipboard write can reject in unusual sandbox states; silently swallow.
+    }
+  };
 
   const handleOpenInKindle = async (passage: LibraryPassage): Promise<void> => {
     setOpeningPassageId(passage.id);
@@ -262,7 +294,13 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
       {!isLoading && !errorMessage && sortedPassages.length === 0 ? <p>No quotes found for this work yet.</p> : null}
       <ul className="library-quotes">
         {sortedPassages.map(({ passage, locationLabel }) => (
-          <li key={passage.id} className="library-quote-card">
+          <li
+            key={passage.id}
+            className={`library-quote-card${ringed === passage.id ? " library-quote-card--ringed" : ""}`}
+            ref={(node) => {
+              ringRefs.current[passage.id] = node;
+            }}
+          >
             <p className="library-quote-body">{passage.body}</p>
             {passage.readerNote ? <p className="library-quote-note">Note: {passage.readerNote}</p> : null}
             <footer className="library-quote-footer">
@@ -275,6 +313,24 @@ export function LibraryBookDetailScreen({ work }: Props): JSX.Element {
                 disabled={openingPassageId === passage.id}
               >
                 {openingPassageId === passage.id ? "Opening…" : "↗ Open in Kindle"}
+              </button>
+              <FindSimilarButton
+                onFindSimilar={() => onFindSimilar({ id: passage.id, body: passage.body })}
+              />
+              <button
+                type="button"
+                className={`passage-card-action ${
+                  copiedPassageId === passage.id ? "passage-card-action-success" : ""
+                }`}
+                onClick={() => {
+                  void copyPassage(passage);
+                }}
+                title="Copy quote to clipboard"
+              >
+                <span className="passage-card-action-icon" aria-hidden="true">
+                  {copiedPassageId === passage.id ? "✓" : "⎘"}
+                </span>
+                {copiedPassageId === passage.id ? "Copied" : "Copy"}
               </button>
             </footer>
           </li>

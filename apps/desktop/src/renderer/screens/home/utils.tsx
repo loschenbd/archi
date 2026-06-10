@@ -1,3 +1,4 @@
+import type { SearchFilters } from "@archi/search";
 import { Fragment, type ReactNode } from "react";
 
 export function highlightMatch(text: string, query: string): ReactNode {
@@ -65,4 +66,19 @@ export function formatElapsed(seconds: number): string {
   const hours = Math.floor(minutes / 60);
   const remMinutes = minutes % 60;
   return `${hours}h ${String(remMinutes).padStart(2, "0")}m`;
+}
+
+export function hasNonDefaultFilters(filters: SearchFilters): boolean {
+  return (
+    (filters.workIds?.length ?? 0) > 0 ||
+    filters.creator !== undefined ||
+    (filters.labels?.length ?? 0) > 0 ||
+    filters.isStarred === true ||
+    filters.markerColor !== undefined ||
+    filters.workType !== undefined ||
+    filters.markedAfter !== undefined ||
+    filters.markedBefore !== undefined ||
+    filters.isArchived === true ||
+    filters.isHidden === true
+  );
 }

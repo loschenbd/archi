@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatElapsed } from "./utils";
+import { useIndexerStatus } from "../../state/IndexerStatusContext";
 
 type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
@@ -8,6 +9,7 @@ export type SyncBannerConnection = {
   provider: ConnectionProvider;
   label: string;
   status: ConnectionStatus;
+  enabled?: boolean;
 };
 
 export type SyncBannerProgress = {
@@ -68,6 +70,11 @@ export function SyncBanner(props: Props): JSX.Element | null {
     onNavigateToSettings
   } = props;
 
+  const { status: indexerWrapper, start: startIndexing, starting: startingIndexing } = useIndexerStatus();
+  const indexedCount = indexerWrapper?.indexed ?? 0;
+  const totalToIndex = indexerWrapper?.total ?? 0;
+  const isIndexing = indexerWrapper?.status === "running";
+
   const [progressBaseAtMs, setProgressBaseAtMs] = useState<number>(Date.now());
   const [tickAtMs, setTickAtMs] = useState<number>(Date.now());
 
@@ -99,11 +106,14 @@ export function SyncBanner(props: Props): JSX.Element | null {
   const pctComplete = hasDeterminate ? Math.min(100, Math.round((processed! / total!) * 100)) : null;
 
   const phaseLabel = syncProgress ? PHASE_LABELS[syncProgress.phase] ?? syncProgress.phase : null;
-  const needsAuthConnection = connections.find((c) => c.status === "needs_action");
+  const needsAuthConnection = connections.find(
+    (c) => c.status === "needs_action" && c.enabled !== false
+  );
 
-  // Priority: Cancelling > Running > NoHealthySources > NeedsAuth > Failed > Hidden
+  // Priority: Cancelling > Running > Indexing > NoHealthySources > NeedsAuth > Failed > Hidden
   // (Cancelling must short-circuit Running because isSyncing is still true while
-  // a cancel propagates.)
+  // a cancel propagates. Indexing is hidden while a sync runs because the sync
+  // banner is the primary signal during sync.)
   if (isCancelingSync) {
     return (
       <div className="sync-banner sync-banner-cancelling" role="status" aria-live="polite">
@@ -152,6 +162,50 @@ export function SyncBanner(props: Props): JSX.Element | null {
         >
           {hasDeterminate ? (
             <span className="sync-banner-progress-fill" style={{ width: `${pctComplete}%` }} />
+          ) : (
+            <span className="sync-banner-progress-indeterminate-fill" aria-hidden="true" />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (isIndexing) {
+    const hasTotal = totalToIndex > 0;
+    const indexingPct = hasTotal ? Math.min(100, Math.round((indexedCount / totalToIndex) * 100)) : null;
+    const onReindex = (): void => {
+      void startIndexing();
+    };
+    return (
+      <div className="sync-banner sync-banner-indexing" role="status" aria-live="polite">
+        <div className="sync-banner-row">
+          <span className="sync-banner-message">
+            <span className="sync-banner-dot" aria-hidden="true" />
+            Indexing your library · <span className="tabular">{indexedCount.toLocaleString()}</span> / <span className="tabular">{totalToIndex.toLocaleString()}</span> highlights
+          </span>
+          <span className="sync-banner-action">
+            {indexingPct !== null ? (
+              <span className="tabular sync-banner-counts">{indexingPct}%</span>
+            ) : null}
+            <button
+              type="button"
+              className="sync-banner-action-button"
+              onClick={onReindex}
+              disabled={startingIndexing}
+            >
+              Re-index
+            </button>
+          </span>
+        </div>
+        <div
+          className={`sync-banner-progress ${hasTotal ? "sync-banner-progress-determinate" : "sync-banner-progress-indeterminate"}`}
+          role="progressbar"
+          aria-valuemin={hasTotal ? 0 : undefined}
+          aria-valuemax={hasTotal ? 100 : undefined}
+          aria-valuenow={indexingPct ?? undefined}
+        >
+          {hasTotal ? (
+            <span className="sync-banner-progress-fill" style={{ width: `${indexingPct}%` }} />
           ) : (
             <span className="sync-banner-progress-indeterminate-fill" aria-hidden="true" />
           )}

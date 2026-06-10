@@ -16,6 +16,9 @@
     "dev:preload": "tsc -p tsconfig.preload.json -w",
     "dev:electron": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && wait-on tcp:${VITE_PORT:-5173} && cross-env VITE_DEV_SERVER_URL=http://localhost:${VITE_PORT:-5173} electron dist/main/index.js",
     "rebuild:native": "node ./scripts/rebuild-native-for-electron.mjs",
+    "fetch:model": "node ./scripts/fetch-embedding-model.mjs",
+    "prebuild": "pnpm run fetch:model",
+    "predev": "pnpm run fetch:model",
     "healthcheck": "node ./scripts/doctor.mjs",
     "lint": "eslint src --ext .ts,.tsx",
     "package": "pnpm build && electron-builder --config electron-builder.yml --mac dmg && node ./scripts/verify-packaged-runtime.mjs",
@@ -27,10 +30,16 @@
   "dependencies": {
     "@archi/core": "workspace:*",
     "@archi/destination-notion": "workspace:*",
+    "@archi/search": "workspace:*",
     "@archi/source-cloud-notebook": "workspace:*",
     "@archi/source-device-export": "workspace:*",
     "@archi/ui": "workspace:*",
     "@tanstack/react-virtual": "^3",
+    "@xenova/transformers": "^2.17.2",
+    "onnxruntime-node": "^1.14.0",
+    "sqlite-vec": "^0.1.6",
+    "sqlite-vec-darwin-arm64": "^0.1.6",
+    "sqlite-vec-darwin-x64": "^0.1.6",
     "argparse": "^2.0.1",
     "bindings": "^1.5.0",
     "builder-util-runtime": "^9.5.1",
@@ -59,6 +68,9 @@
       "injected": true
     },
     "@archi/destination-notion": {
+      "injected": true
+    },
+    "@archi/search": {
       "injected": true
     },
     "@archi/source-cloud-notebook": {

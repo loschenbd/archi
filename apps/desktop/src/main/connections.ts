@@ -299,41 +299,26 @@ export class CloudNotebookConnectionAdapter implements ConnectionAdapter {
       );
     }
 
+    // Use cached connector status only. The connector's cached status is
+    // authoritative — it's set by real operations (fetchSince, reconnect,
+    // testConnection) and reflects the last actual outcome. Triggering a
+    // live Playwright validation from a routine status read is expensive
+    // (spawns a headless browser every 15s with the renderer's polling)
+    // and produces false-negatives when Amazon's headless detection or
+    // cookie timing differs from the actual sync path. Validation now
+    // happens only on explicit user actions or during sync.
     const cached = this.connector.getCachedStatus();
-    const cachedFreshMs = 5 * 60 * 1000;
-    if (
-      cached.validatedAtMs !== null &&
-      Date.now() - cached.validatedAtMs < cachedFreshMs &&
-      cached.status !== "needs_auth"
-    ) {
-      return createConnectionState({
-        provider: this.provider,
-        label: "Cloud notebook",
-        status: "connected",
-        canDisconnect: false,
-        hints: [],
-        diagnostics: {
-          summary: "Cloud notebook session is ready."
-        },
-        metadata: {
-          enabled: this.settings.getCloudSettings().enabled,
-          ...this.latestValidationMetadata()
-        }
-      });
-    }
-
-    const status = await this.connector.getStatus();
     return createConnectionState({
       provider: this.provider,
       label: "Cloud notebook",
-      status: mapCloudStatusToConnectionStatus(status),
+      status: mapCloudStatusToConnectionStatus(cached.status),
       canDisconnect: false,
       hints:
-        status === "needs_auth"
+        cached.status === "needs_auth"
           ? ["Authentication needed. Click Reconnect, complete Amazon login if prompted, then Test before syncing."]
           : [],
       diagnostics:
-        status === "needs_auth"
+        cached.status === "needs_auth"
           ? {
               summary: "Cloud notebook needs authentication.",
               details: this.lastError ?? undefined
@@ -431,22 +416,40 @@ export class DeviceExportConnectionAdapter implements ConnectionAdapter {
 
   private evaluateStatus(): ConnectionState {
     const exportPath = this.settings.getDeviceExportPath();
-    const exists = exportPath.trim().length > 0 && fs.existsSync(exportPath);
+    const isConfigured = exportPath.trim().length > 0;
+    const exists = isConfigured && fs.existsSync(exportPath);
+
+    // Two states from the user's perspective:
+    //   • file present → connected (ingestion will work)
+    //   • file absent (never configured, or configured but the file
+    //     vanished) → disconnected
+    //
+    // We deliberately do NOT report needs_action when the file is missing.
+    // The Settings UI does not surface a device-export card, so there's
+    // no way for the user to clear or re-pick the path; alarming via the
+    // sync banner just creates a permanent unfixable nag. Device-export
+    // is also a secondary source — cloud-notebook is the primary path —
+    // so a missing local file is closer to "unused" than "broken."
     return createConnectionState({
       provider: this.provider,
       label: "Device export file",
-      status: exists ? "connected" : "needs_action",
+      status: exists ? "connected" : "disconnected",
       canDisconnect: false,
       canReconnect: false,
-      hints: exists ? [] : ["Choose your Kindle export file to enable reliable local ingestion."],
+      hints: exists
+        ? []
+        : ["Choose your Kindle export file to enable reliable local ingestion."],
       diagnostics: exists
         ? {
             summary: "Device export file is configured."
           }
         : {
-            summary: "Device export file is missing."
+            summary: isConfigured
+              ? "Device export file is not available at the saved path."
+              : "Device export file is not set up."
           },
       metadata: {
+        enabled: exists,
         path: exportPath
       }
     });

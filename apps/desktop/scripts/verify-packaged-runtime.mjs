@@ -36,4 +36,39 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+const appRoot = path.join(macDir, "Archi.app");
+
+const modelOnnx = path.join(
+  appRoot,
+  "Contents/Resources/models/bge-small-en-v1.5/onnx/model_quantized.onnx"
+);
+if (!fs.existsSync(modelOnnx)) {
+  console.error(`Missing bundled embedding model: ${modelOnnx}`);
+  process.exit(1);
+}
+
+function findFile(dir, name) {
+  if (!fs.existsSync(dir)) return null;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const found = findFile(p, name);
+      if (found) return found;
+    } else if (entry.name === name) {
+      return p;
+    }
+  }
+  return null;
+}
+
+const unpackedRoot = path.join(appRoot, "Contents/Resources/app.asar.unpacked");
+const vecDylib = findFile(unpackedRoot, "vec0.dylib");
+if (!vecDylib) {
+  console.error(
+    "Missing sqlite-vec native binary (vec0.dylib) — packaged app will crash at db open"
+  );
+  process.exit(1);
+}
+console.log("[verify] bundled model + sqlite-vec present at", vecDylib);
+
 console.log("Packaged runtime verification passed.");

@@ -1,10 +1,10 @@
-import { useDeferredValue, useMemo } from "react";
+import type { SearchFilters } from "@archi/search";
 import { BooksRail } from "./home/BooksRail";
-import { HomeSearchResults } from "./home/HomeSearchResults";
 import { LatestHighlights } from "./home/LatestHighlights";
 import { RandomHighlight } from "./home/RandomHighlight";
-import { StatsStrip } from "./home/StatsStrip";
+import { SearchHero } from "./home/SearchHero";
 import { SyncBanner, type SyncBannerConnection } from "./home/SyncBanner";
+import { hasNonDefaultFilters } from "./home/utils";
 
 type RecentWork = {
   id: string;
@@ -20,13 +20,6 @@ type RecentPassage = {
   workTitle: string;
   ingestedAt: string;
   workId?: string;
-};
-
-type SearchWork = {
-  id: string;
-  title: string;
-  creator?: string;
-  coverImageUrl?: string;
 };
 
 type SearchPassage = {
@@ -57,18 +50,24 @@ type Props = {
   } | null;
   recentWorks: RecentWork[];
   recentPassages: RecentPassage[];
-  lastRunAtIso: string | null;
-  works: SearchWork[];
   passages: SearchPassage[];
-  bookCount: number;
   highlightCount: number;
   lastRunDeltaWorks: number;
   lastRunDeltaPassages: number;
-  onOpenWork: (workId: string) => void;
+  onOpenWork: (workId: string, passageId?: string) => void;
   connections: SyncBannerConnection[];
   lastError: string | null;
   noHealthySources: boolean;
-  homeSearchQuery: string;
+  effectiveSearchQuery: string;
+  findSimilarPassageId: string | null;
+  findSimilarPassage: { id: string; body: string } | null;
+  homeSearchFilters: SearchFilters;
+  onFiltersChange: (next: SearchFilters) => void;
+  onFindSimilar: (passage: { id: string; body: string }) => void;
+  recentSearches: string[];
+  pushRecentSearch: (q: string) => void;
+  onSearchQueryChange: (q: string) => void;
+  onClearFindSimilar: () => void;
 };
 
 export function HomeScreen({
@@ -80,10 +79,7 @@ export function HomeScreen({
   syncProgress,
   recentWorks,
   recentPassages,
-  lastRunAtIso,
-  works,
   passages,
-  bookCount,
   highlightCount,
   lastRunDeltaWorks,
   lastRunDeltaPassages,
@@ -91,27 +87,22 @@ export function HomeScreen({
   connections,
   lastError,
   noHealthySources,
-  homeSearchQuery
+  effectiveSearchQuery,
+  findSimilarPassageId,
+  findSimilarPassage,
+  homeSearchFilters,
+  onFiltersChange,
+  onFindSimilar,
+  recentSearches,
+  pushRecentSearch,
+  onSearchQueryChange,
+  onClearFindSimilar
 }: Props): JSX.Element {
-  // useDeferredValue lets the input update at high priority while filtering /
-  // rendering large result lists happens at lower priority — typing stays snappy
-  // even when a broad query matches hundreds of passages.
-  const liveTrimmedQuery = homeSearchQuery.trim();
-  const trimmedQuery = useDeferredValue(liveTrimmedQuery);
-
-  const searchResults = useMemo(() => {
-    if (!trimmedQuery) {
-      return { works: [] as SearchWork[], passages: [] as SearchPassage[] };
-    }
-    const q = trimmedQuery.toLowerCase();
-    const matchedWorks = works.filter((work) =>
-      `${work.title} ${work.creator ?? ""}`.toLowerCase().includes(q)
-    );
-    const matchedPassages = passages.filter((passage) =>
-      `${passage.workTitle} ${passage.body}`.toLowerCase().includes(q)
-    );
-    return { works: matchedWorks, passages: matchedPassages };
-  }, [trimmedQuery, works, passages]);
+  const trimmedQuery = effectiveSearchQuery.trim();
+  const searchActive =
+    trimmedQuery.length > 0 ||
+    findSimilarPassageId !== null ||
+    hasNonDefaultFilters(homeSearchFilters);
 
   return (
     <section className="home-screen">
@@ -127,45 +118,42 @@ export function HomeScreen({
         onNavigateToSettings={onNavigateToSettings}
       />
 
-      {trimmedQuery ? (
-        <HomeSearchResults
-          query={trimmedQuery}
-          works={searchResults.works}
-          passages={searchResults.passages}
-          onOpenWork={onOpenWork}
-        />
-      ) : (
-        <>
-          <StatsStrip
-            bookCount={bookCount}
-            highlightCount={highlightCount}
-            lastRunAtIso={lastRunAtIso}
-            lastRunDeltaWorks={lastRunDeltaWorks}
-            lastRunDeltaPassages={lastRunDeltaPassages}
-            isSyncing={isSyncing}
-            hasUnhealthyBanner={lastError !== null || noHealthySources || connections.some((c) => c.status === "needs_action")}
-            onSyncNow={onSyncNow}
-          />
+      <SearchHero
+        query={effectiveSearchQuery}
+        setQuery={onSearchQueryChange}
+        filters={homeSearchFilters}
+        setFilters={onFiltersChange}
+        findSimilarPassageId={findSimilarPassageId}
+        findSimilarPassage={findSimilarPassage}
+        clearFindSimilar={onClearFindSimilar}
+        highlightCount={highlightCount}
+        recentSearches={recentSearches}
+        pushRecentSearch={pushRecentSearch}
+        onOpenWork={onOpenWork}
+        onFindSimilar={onFindSimilar}
+      />
 
+      {!searchActive ? (
+        <>
           <BooksRail
             works={recentWorks.slice(0, 12)}
             deltaCount={lastRunDeltaWorks}
-            onOpenWork={onOpenWork}
+            onOpenWork={(workId) => onOpenWork(workId)}
           />
 
           <div className="highlights-split">
             <RandomHighlight
               passages={passages}
-              onOpenWork={onOpenWork}
+              onOpenWork={(workId) => onOpenWork(workId)}
             />
             <LatestHighlights
               passages={recentPassages}
               deltaCount={lastRunDeltaPassages}
-              onOpenWork={onOpenWork}
+              onOpenWork={(workId) => onOpenWork(workId)}
             />
           </div>
         </>
-      )}
+      ) : null}
     </section>
   );
 }

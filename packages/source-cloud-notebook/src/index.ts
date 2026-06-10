@@ -149,6 +149,7 @@ export interface CloudNotebookConnector {
   getCachedStatus(): CloudCachedStatus;
   reconnect(): Promise<void>;
   fetchSince(cursor?: string, options?: CloudFetchOptions): Promise<CloudFetchResult>;
+  validateViaNet?(): Promise<CloudConnectorStatus | null>;
 }
 
 export type CloudBookDiscovery = {
@@ -164,11 +165,26 @@ export type CloudBookDiscovery = {
 
 export type ChromiumMode = "legacy_headless" | "new_headless" | "offscreen_headed" | "headed_visible";
 
+/**
+ * Cheap, headless-undetectable status validator. Implementations make a
+ * single authenticated HTTP request to the notebook URL and infer
+ * connection state from the response (200 + notebook markers → connected;
+ * 3xx redirect to signin → needs_auth). The Electron-based implementation
+ * uses session.cookies + net.request so Amazon's anti-bot sees a normal
+ * Chromium HTTP client rather than a Playwright headless browser. The
+ * connector calls this from validateViaNet(); fetchSince and reconnect
+ * remain on Playwright because they need actual DOM interaction.
+ */
+export interface CloudNetValidator {
+  validate(): Promise<CloudConnectorStatus>;
+}
+
 export type PlaywrightCloudOptions = {
   notebookUrl: string;
   storageStatePath: string;
   profilePath?: string;
   chromiumMode?: ChromiumMode;
+  netValidator?: CloudNetValidator;
   onNeedsAuth?: () => Promise<void>;
   onFetchProgress?: (event: CloudFetchStats) => void;
   onBookFetched?: (event: CloudBookDiscovery) => void;
@@ -202,6 +218,15 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   private currentlyHeadless: boolean = true;
 
   constructor(private readonly options: PlaywrightCloudOptions) {
+    // Optimistic initial state: if a prior session left auth artifacts on
+    // disk, presume we're connected until a real sync operation proves
+    // otherwise. Routine status reads no longer launch Playwright, so we
+    // need to start out trusting persisted state instead of pessimistically
+    // reporting needs_auth and forcing a live validation.
+    if (this.hasPersistedAuthArtifacts()) {
+      this.status = "connected";
+      this.statusValidatedAtMs = Date.now();
+    }
     if (options.onValidation) {
       const artifactStats = dumpAuthArtifactsState({
         storageStatePath: options.storageStatePath,
@@ -226,14 +251,53 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
   }
 
   async getStatus(): Promise<CloudConnectorStatus> {
+    // Sync-driven status. We never launch a browser here — fetchSince()
+    // and reconnect() are the only paths that authoritatively update
+    // this.status. Routine status reads just reflect what we already
+    // know: cookies on disk → presume the prior session is intact;
+    // no cookies → needs_auth. The proof is whether the next sync
+    // works, not a speculative headless probe.
     return this.withConnectorLock(async () => {
-      await this.refreshStatusFromPersistedSession();
+      if (!this.hasPersistedAuthArtifacts()) {
+        this.status = "needs_auth";
+        this.statusValidatedAtMs = Date.now();
+      }
       return this.status;
     });
   }
 
   getCachedStatus(): CloudCachedStatus {
     return { status: this.status, validatedAtMs: this.statusValidatedAtMs };
+  }
+
+  /**
+   * Cheap, no-browser status check. Delegates to the injected netValidator
+   * (typically Electron's session.cookies + net.request) and updates the
+   * cached status. Returns null and leaves status untouched if no validator
+   * was provided or if no auth artifacts are on disk to validate against.
+   */
+  async validateViaNet(): Promise<CloudConnectorStatus | null> {
+    if (!this.options.netValidator) {
+      return null;
+    }
+    return this.withConnectorLock(async () => {
+      if (!this.hasPersistedAuthArtifacts()) {
+        this.status = "needs_auth";
+        this.statusValidatedAtMs = Date.now();
+        return this.status;
+      }
+      try {
+        const result = await this.options.netValidator!.validate();
+        this.status = result;
+        this.statusValidatedAtMs = Date.now();
+        return this.status;
+      } catch {
+        // Validation failed unexpectedly (network error, parsing error).
+        // Don't flip status — leave it as-is and let the next sync or
+        // validation attempt decide.
+        return this.status;
+      }
+    });
   }
 
   async reconnect(): Promise<void> {
