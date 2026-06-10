@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ConnectionsScreen, type ConnectionState } from "./screens/ConnectionsScreen";
+import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { LogsScreen } from "./screens/LogsScreen";
-import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { PassagesScreen } from "./screens/PassagesScreen";
+import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { SupportPromptModal } from "./components/SupportPromptModal";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { WindowTitleBar } from "./components/WindowTitleBar";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Connections", "Library", "Passages", "Logs"] as const;
+const screens = ["Home", "Library", "Passages", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -20,13 +21,6 @@ const screenIcons: Record<Screen, JSX.Element> = {
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2.5 7L8 2.5L13.5 7v6a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V7z" />
       <path d="M6 14V9.5h4V14" />
-    </svg>
-  ),
-  Connections: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.5 6.5l-3 3" />
-      <path d="M6.5 9.5a2.5 2.5 0 1 1-2-2L6 6" />
-      <path d="M9.5 6.5a2.5 2.5 0 1 1 2 2L10 10" />
     </svg>
   ),
   Library: (
@@ -45,11 +39,10 @@ const screenIcons: Record<Screen, JSX.Element> = {
       <path d="M8.5 6h2.8v4H8.5z" />
     </svg>
   ),
-  Logs: (
+  Settings: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 4h10" />
-      <path d="M3 8h10" />
-      <path d="M3 12h7" />
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
     </svg>
   )
 };
@@ -60,26 +53,6 @@ type SyncState = {
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
-};
-
-const formatLocalDateTime = (value: string | null): string | null => {
-  if (!value) {
-    return null;
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short"
-  });
 };
 
 const isMissingConnectionsHandlerError = (error: unknown): boolean => {
@@ -129,21 +102,6 @@ type LibraryWork = {
   storeIdentifier?: string;
   coverImageUrl?: string;
 };
-
-function WindowTitleBar(): JSX.Element {
-  return (
-    <div className="window-titlebar">
-      <button
-        type="button"
-        className="window-close-button"
-        aria-label="Close window"
-        onClick={() => {
-          void window.archi.closeWindow();
-        }}
-      />
-    </div>
-  );
-}
 
 const emptyConnections: Record<ConnectionProvider, ConnectionState> = {
   notion: {
@@ -199,7 +157,9 @@ function readInitialSidebarCollapsed(): boolean {
 
 export function App(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>("connections");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readInitialSidebarCollapsed);
+  const [homeSearchQuery, setHomeSearchQuery] = useState("");
 
   const toggleSidebar = useCallback((): void => {
     setSidebarCollapsed((previous) => {
@@ -221,7 +181,6 @@ export function App(): JSX.Element {
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
   const [notionTokenDraft, setNotionTokenDraft] = useState("");
   const [connections, setConnections] = useState<Record<ConnectionProvider, ConnectionState>>(emptyConnections);
   const [works, setWorks] = useState<LibraryWork[]>([]);
@@ -235,9 +194,10 @@ export function App(): JSX.Element {
   const [supportPromptOpen, setSupportPromptOpen] = useState<boolean>(false);
   const [recentActivity, setRecentActivity] = useState<{
     works: Array<{ id: string; title: string; creator?: string; coverImageUrl?: string; ingestedAt: string }>;
-    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string }>;
-  }>({ works: [], passages: [] });
-  const [syncRunStartedAtIso, setSyncRunStartedAtIso] = useState<string | null>(null);
+    passages: Array<{ id: string; body: string; workTitle: string; ingestedAt: string; workId?: string }>;
+    deltaWorks: number;
+    deltaPassages: number;
+  }>({ works: [], passages: [], deltaWorks: 0, deltaPassages: 0 });
   const activeSyncRunIdRef = useRef<string | null>(null);
   const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListRefreshQueuedRef = useRef(false);
@@ -315,8 +275,23 @@ export function App(): JSX.Element {
     void window.archi.listWorks().then(setWorks);
     void window.archi.listPassages().then(setPassages);
     void window.archi.listLogs().then(setLogs);
-    void window.archi.listRecentActivity(8).then(setRecentActivity).catch(() => {});
+    void window.archi.listRecentActivity(12).then(setRecentActivity).catch(() => {});
   }, []);
+
+  const handleOnboardingComplete = useCallback(
+    (result: { syncStartError: string | null }): void => {
+      setOnboardingCompleted(true);
+      setSettingsDefaultTab("connections");
+      setActiveScreen("Home");
+      if (result.syncStartError) {
+        setIpcError(result.syncStartError);
+      }
+      refreshConnections();
+      refreshLists();
+      void window.archi.getSyncState().then(setSyncState);
+    },
+    [refreshConnections, refreshLists]
+  );
 
   const requestListRefresh = useCallback((): void => {
     if (isListRefreshQueuedRef.current) {
@@ -361,7 +336,7 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (activeScreen !== "Connections") {
+    if (activeScreen !== "Settings") {
       return;
     }
     if (!onboardingCompleted) {
@@ -387,9 +362,6 @@ export function App(): JSX.Element {
       }
       setSyncProgress(event);
 
-      if (event.phase === "sync_start") {
-        setSyncRunStartedAtIso(event.at);
-      }
       if (event.status === "running" && event.phase !== "sync_complete") {
         setIsSyncing(true);
       }
@@ -598,27 +570,78 @@ export function App(): JSX.Element {
   };
 
   const screenContent = useMemo(() => {
-    const formattedLastRunAt = formatLocalDateTime(syncState.lastRunAt);
+    // "+N new" counts come straight from the main process's runTouched* sets
+    // (sized at IPC time). This is stable across re-renders and updates only when
+    // a new sync touches more items — see github.com/loschenbd/archi/issues/3 for
+    // the previous wall-clock-window bug this replaces.
+    const lastRunDeltaWorks = recentActivity.deltaWorks;
+    const lastRunDeltaPassages = recentActivity.deltaPassages;
     switch (activeScreen) {
       case "Home":
         return (
           <HomeScreen
-            status={syncState.status}
-            lastRunAt={formattedLastRunAt}
             onSyncNow={runSyncNow}
             onCancelSync={cancelSync}
-            onNavigateToConnections={() => setActiveScreen("Connections")}
+            onNavigateToSettings={(tab: SettingsTab) => {
+              setSettingsDefaultTab(tab);
+              setActiveScreen("Settings");
+            }}
             isSyncing={isSyncing}
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
             recentPassages={recentActivity.passages}
-            syncRunStartedAtIso={syncRunStartedAtIso}
+            lastRunAtIso={syncState.lastRunAt}
+            works={works}
+            passages={passages}
+            bookCount={works.length}
+            highlightCount={passages.length}
+            lastRunDeltaWorks={lastRunDeltaWorks}
+            lastRunDeltaPassages={lastRunDeltaPassages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+            connections={Object.values(connections).map((c) => ({
+              provider: c.provider,
+              label: c.label,
+              status: c.status
+            }))}
+            lastError={syncState.lastError}
+            noHealthySources={Object.values(connections).every(
+              (c) => c.status !== "connected" && c.status !== "configuring"
+            )}
+            homeSearchQuery={homeSearchQuery}
           />
         );
-      case "Connections":
+      case "Library":
+        if (selectedLibraryWorkId) {
+          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
+          if (selectedWork) {
+            return <LibraryBookDetailScreen work={selectedWork} />;
+          }
+        }
         return (
-          <ConnectionsScreen
+          <LibraryScreen
+            works={works}
+            selectedWorkId={selectedLibraryWorkId ?? undefined}
+            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
+          />
+        );
+      case "Passages":
+        return (
+          <PassagesScreen
+            passages={passages}
+            onOpenWork={(workId) => {
+              setSelectedLibraryWorkId(workId);
+              setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Settings":
+        return (
+          <SettingsScreen
+            defaultTab={settingsDefaultTab}
             connections={connections}
             cloudEnabled={cloudEnabled}
             notionTokenDraft={notionTokenDraft}
@@ -669,34 +692,9 @@ export function App(): JSX.Element {
             }}
             onRefreshNotionMedia={refreshNotionMedia}
             isSyncing={isSyncing}
+            logs={logs}
           />
         );
-      case "Library":
-        if (selectedLibraryWorkId) {
-          const selectedWork = works.find((work) => work.id === selectedLibraryWorkId);
-          if (selectedWork) {
-            return <LibraryBookDetailScreen work={selectedWork} />;
-          }
-        }
-        return (
-          <LibraryScreen
-            works={works}
-            selectedWorkId={selectedLibraryWorkId ?? undefined}
-            onSelectWork={(workId) => setSelectedLibraryWorkId(workId)}
-          />
-        );
-      case "Passages":
-        return (
-          <PassagesScreen
-            passages={passages}
-            onOpenWork={(workId) => {
-              setSelectedLibraryWorkId(workId);
-              setActiveScreen("Library");
-            }}
-          />
-        );
-      case "Logs":
-        return <LogsScreen entries={logs} />;
       default:
         return <p>Unknown screen.</p>;
     }
@@ -705,16 +703,18 @@ export function App(): JSX.Element {
     cancelSync,
     cloudEnabled,
     connections,
+    homeSearchQuery,
     isCancelingSync,
     isSyncing,
     logs,
     passages,
     recentActivity,
-    syncRunStartedAtIso,
+    settingsDefaultTab,
     selectedLibraryWorkId,
     refreshNotionMedia,
     runSyncNow,
     syncProgress,
+    syncState.lastError,
     syncState.lastRunAt,
     syncState.status,
     works
@@ -737,43 +737,13 @@ export function App(): JSX.Element {
   }
 
   if (!onboardingCompleted) {
-    return (
-      <main className="onboarding-layout">
-        <WindowTitleBar />
-        <section className="screen-card onboarding-card">
-          {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
-          <OnboardingScreen
-            isCompleting={isCompletingOnboarding}
-            onContinue={() => {
-              if (isCompletingOnboarding) {
-                return;
-              }
-              setIpcError(null);
-              setIsCompletingOnboarding(true);
-              void window.archi
-                .completeOnboarding()
-                .then((result) => {
-                  setOnboardingCompleted(result.onboardingCompleted);
-                  setActiveScreen("Connections");
-                  refreshConnections();
-                  refreshLists();
-                  void window.archi.getSyncState().then(setSyncState);
-                })
-                .catch((error) => {
-                  setIpcError(
-                    `Could not complete onboarding (${error instanceof Error ? error.message : "unknown error"}). ` +
-                      "The main process may not be running correctly — check the terminal output."
-                  );
-                })
-                .finally(() => {
-                  setIsCompletingOnboarding(false);
-                });
-            }}
-          />
-        </section>
-      </main>
-    );
+    return <OnboardingWizard ipcError={ipcError} onComplete={handleOnboardingComplete} />;
   }
+
+  const sidebarUnhealthy =
+    !isSyncing &&
+    (Object.values(connections).some((c) => c.status === "needs_action") ||
+      syncState.lastError !== null);
 
   return (
     <>
@@ -789,7 +759,7 @@ export function App(): JSX.Element {
           {screens.map((screen) => (
             <button
               key={screen}
-              className={activeScreen === screen ? "active" : ""}
+              className={`${activeScreen === screen ? "active" : ""}${screen === "Settings" && sidebarUnhealthy ? " sidebar-nav-has-warning" : ""}`}
               title={sidebarCollapsed ? screen : undefined}
               onClick={() => {
                 setActiveScreen(screen);
@@ -800,6 +770,9 @@ export function App(): JSX.Element {
             >
               <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
               <span className="sidebar-nav-label">{screen}</span>
+              {screen === "Settings" && sidebarUnhealthy ? (
+                <span className="sidebar-nav-warning-dot" aria-label="Needs attention" />
+              ) : null}
             </button>
           ))}
         </nav>
@@ -835,6 +808,36 @@ export function App(): JSX.Element {
             <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
             {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
           </div>
+          {activeScreen === "Home" ? (
+            <div className="content-header-search">
+              <input
+                type="search"
+                className="content-header-search-input"
+                placeholder="Search your library…"
+                value={homeSearchQuery}
+                onChange={(event) => setHomeSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && homeSearchQuery) {
+                    event.preventDefault();
+                    setHomeSearchQuery("");
+                  }
+                }}
+                aria-label="Search your library"
+                autoFocus
+              />
+              {homeSearchQuery ? (
+                <button
+                  type="button"
+                  className="content-header-search-clear"
+                  onClick={() => setHomeSearchQuery("")}
+                  aria-label="Clear search"
+                  tabIndex={-1}
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </header>
         {ipcError ? <p className="error banner-error">{ipcError}</p> : null}
         {syncState.lastError ? <p className="error banner-error">Last error: {syncState.lastError}</p> : null}
