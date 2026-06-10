@@ -3096,6 +3096,15 @@ select {
   font-size: 15px;
   color: var(--ink-900);
   outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.search-hero-input::-webkit-search-cancel-button,
+.search-hero-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 .search-hero-input::placeholder {
