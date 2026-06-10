@@ -33,6 +33,13 @@ mac:
   entitlementsInherit: assets/entitlements.mac.plist
   notarize:
     teamId: "74KV536J36"
+    # Creds come from a macOS Keychain profile stored once via:
+    #   xcrun notarytool store-credentials archi-notarize \
+    #     --apple-id "<your apple id>" \
+    #     --team-id 74KV536J36 \
+    #     --password "<app-specific password>"
+    # No env vars needed at build time.
+    keychainProfile: archi-notarize
   target:
     - dmg
 publish:
