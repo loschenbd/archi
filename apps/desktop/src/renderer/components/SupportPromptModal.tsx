@@ -40,14 +40,14 @@ export function SupportPromptModal({ open, onClose }: Props): JSX.Element | null
     >
       <div className="support-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="support-prompt-heading">
         <h2 id="support-prompt-heading" className="support-prompt-heading">
-          Hey — it's Ben.
+          Enjoying Archi?
         </h2>
         <p>
-          I built Archi as a helpful little tool for my own use and I loved it. So I'm sharing it with you. I hope you find it
-          useful too.
+          Archi is an independent project — no team, no investors, no ads. It's built and maintained one feature at a time,
+          in service of a calmer reading library that stays yours.
         </p>
         <p>
-          If you'd like to support me in maintaining this app and making other useful things, you can buy me a coffee.
+          If it's earned a place in your day, you can chip in to keep new features shipping and the bugs at bay.
         </p>
         <div className="support-prompt-actions">
           <button type="button" className="support-prompt-primary" onClick={handleBuy}>
