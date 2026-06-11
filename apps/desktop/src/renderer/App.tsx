@@ -7,6 +7,7 @@ import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
+import { IndexerStatusPill } from "./components/IndexerStatusPill";
 import { SupportButton } from "./components/SupportButton";
 import { maskConnectionForBanner } from "./lib/syncBannerMapping";
 import { SupportPromptModal } from "./components/SupportPromptModal";
@@ -884,6 +885,7 @@ export function App(): JSX.Element {
                 ))}
               </nav>
               <div className="sidebar-divider" aria-hidden="true" />
+              <IndexerStatusPill collapsed={sidebarCollapsed} />
               <SupportButton collapsed={sidebarCollapsed} />
               <button
                 type="button"
