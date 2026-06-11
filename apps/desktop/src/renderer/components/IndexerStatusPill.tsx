@@ -42,6 +42,20 @@ export function IndexerStatusPill({ collapsed }: Props): JSX.Element | null {
 
   const clickable = status.status === "idle" && status.indexed < status.total;
 
+  const buttonLabel = starting ? "Starting…" : label;
+  const inner = (
+    <>
+      <span className="indexer-status-pill__dot" aria-hidden="true">
+        {dotChar}
+      </span>
+      {!collapsed && (
+        <span className="indexer-status-pill__label">
+          {clickable ? buttonLabel : label}
+        </span>
+      )}
+    </>
+  );
+
   if (clickable) {
     return (
       <button
@@ -50,16 +64,9 @@ export function IndexerStatusPill({ collapsed }: Props): JSX.Element | null {
         onClick={() => void start()}
         disabled={starting}
         title={title}
-        aria-live="polite"
+        aria-label={buttonLabel}
       >
-        <span className="indexer-status-pill__dot" aria-hidden="true">
-          {dotChar}
-        </span>
-        {!collapsed && (
-          <span className="indexer-status-pill__label">
-            {starting ? "Starting…" : label}
-          </span>
-        )}
+        {inner}
       </button>
     );
   }
@@ -71,10 +78,7 @@ export function IndexerStatusPill({ collapsed }: Props): JSX.Element | null {
       aria-live="polite"
       role="status"
     >
-      <span className="indexer-status-pill__dot" aria-hidden="true">
-        {dotChar}
-      </span>
-      {!collapsed && <span className="indexer-status-pill__label">{label}</span>}
+      {inner}
     </div>
   );
 }
