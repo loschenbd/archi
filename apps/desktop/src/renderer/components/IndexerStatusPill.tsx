@@ -37,7 +37,7 @@ export function IndexerStatusPill({ collapsed }: Props): JSX.Element | null {
 
   const title =
     status.status === "failed" || status.status === "unavailable"
-      ? (status.lastError ?? "Embedding service unavailable. Keyword search still works.")
+      ? (status.lastError ?? "Vector search unavailable. Keyword still works.")
       : label;
 
   const clickable = status.status === "idle" && status.indexed < status.total;
