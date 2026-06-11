@@ -604,6 +604,25 @@ export function App(): JSX.Element {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [findSimilarPassage]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key === ",") {
+        event.preventDefault();
+        setActiveScreen("Settings");
+        return;
+      }
+      if (event.key === "k" || event.key === "K") {
+        if (activeScreen !== "Home") {
+          event.preventDefault();
+          setActiveScreen("Home");
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeScreen]);
+
   const updateConnection = (provider: ConnectionProvider, operation: Promise<ConnectionState>): void => {
     setConnections((current) => ({
       ...current,
