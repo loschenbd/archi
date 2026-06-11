@@ -3292,6 +3292,16 @@ button.indexer-status-pill:disabled {
   font-style: italic;
 }
 
+.search-hero-partial {
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--ink-500);
+  font-style: italic;
+}
+
 .search-hero-results {
   position: relative;
   padding-bottom: 4px;
