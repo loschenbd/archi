@@ -434,21 +434,20 @@
 
 @keyframes ui-footnote-flash {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
-    border-color: var(--rule-warm);
+    box-shadow: 0 0 0 0 transparent;
   }
-  25% {
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 32%, transparent);
-    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  20% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+      0 0 24px 6px color-mix(in srgb, var(--accent) 22%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
-    border-color: var(--rule-warm);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 .ui-footnote-flash {
-  animation: ui-footnote-flash 1.4s ease-out;
-  border-radius: 14px;
+  animation: ui-footnote-flash 1.6s ease-out;
+  border-radius: inherit;
 }
 
 /* ───── Chat composer (spec §6.3) ───── */
@@ -523,6 +522,16 @@
 .chat-citation-v2__number {
   margin-top: 6px;
   text-align: center;
+}
+.chat-citation-v2__number .ui-footnote-ref {
+  width: 22px;
+  height: 22px;
+  min-width: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 22px;
+  vertical-align: baseline;
+  padding-right: 1px;
 }
 
 /* ───── Chat setup shell ───── */
