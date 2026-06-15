@@ -28,3 +28,4 @@ export {
   type RecommendedModel,
 } from "./recommendations.js";
 export { OllamaClient } from "./ollama/ollamaClient.js";
+export { ChatService, type ChatEventSink, type ChatServiceEvent } from "./chatService.js";

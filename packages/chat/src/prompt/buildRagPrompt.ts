@@ -16,8 +16,8 @@ function truncateBody(body: string): string {
 }
 
 function formatPassageLine(result: SearchResult, index: number): string {
-  const creator = result.work.creator ?? "Unknown";
-  const title = result.work.displayTitle ?? "Untitled";
+  const creator = result.work?.creator ?? "Unknown";
+  const title = result.work?.displayTitle ?? "Untitled";
   const body = truncateBody(result.body ?? "");
   return `[${index + 1}] (${creator} — ${title}) "${body}"`;
 }
