@@ -64,3 +64,72 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* ───── Fields (spec §4.2) ───── */
+
+.ui-input,
+.ui-textarea,
+.ui-select {
+  display: block;
+  width: 100%;
+  background: color-mix(in srgb, var(--surface) 96%, #fff);
+  border: 1px solid var(--rule-warm);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--ink-900);
+  outline: none;
+  transition:
+    border-color 120ms ease,
+    box-shadow 160ms ease;
+  appearance: none;
+}
+
+.ui-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.ui-input:hover,
+.ui-textarea:hover,
+.ui-select:hover {
+  border-color: var(--rule-warm-strong);
+}
+
+.ui-input:focus,
+.ui-textarea:focus,
+.ui-select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.ui-input::placeholder,
+.ui-textarea::placeholder {
+  color: var(--ink-500);
+}
+
+.ui-input:disabled,
+.ui-textarea:disabled,
+.ui-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-input--lg {
+  padding: 18px 22px;
+  font-size: 18px;
+}
+
+.ui-select {
+  padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-500) 50%),
+                    linear-gradient(135deg, var(--ink-500) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
