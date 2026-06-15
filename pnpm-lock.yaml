@@ -207,6 +207,16 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)(lightningcss@1.32.0)
 
+  packages/chat:
+    dependencies:
+      '@archi/search':
+        specifier: workspace:*
+        version: link:../search
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)(lightningcss@1.32.0)
+
   packages/core:
     dependencies:
       better-sqlite3:
@@ -283,9 +293,6 @@ importers:
       '@archi/core':
         specifier: workspace:*
         version: link:../core
-    dependenciesMeta:
-      '@archi/core':
-        injected: true
 
   packages/ui:
     dependencies:
