@@ -13,6 +13,7 @@ export type ModelInfo = {
   recommended?: boolean;
 };
 
+// Mirrors Ollama's /api/pull NDJSON event shape. status is an arbitrary string from Ollama (e.g., "pulling manifest", "downloading digest …", "success"); we forward it verbatim rather than enumerating.
 export type PullProgress = {
   name: string;
   status: string;
