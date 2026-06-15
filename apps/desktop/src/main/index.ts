@@ -1767,7 +1767,7 @@ app.whenReady().then(() => {
 
   registerSearchIpc(searchModule);
 
-  const chatModule = createChatModule({ search: searchModule.search });
+  const chatModule = createChatModule({ search: searchModule.search, userDataPath });
   registerChatIpc(chatModule);
 
   ipcMain.handle("archi:search:facets", async () => {
