@@ -27,3 +27,4 @@ export {
   isRecommended,
   type RecommendedModel,
 } from "./recommendations.js";
+export { OllamaClient } from "./ollama/ollamaClient.js";

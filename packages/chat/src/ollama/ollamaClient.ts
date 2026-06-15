@@ -2,6 +2,7 @@ import type { DetectResult, ModelInfo, PullProgress, ChatDelta } from "../types.
 import type { ChatRequest, LLMClient } from "../llmClient.js";
 import {
   OLLAMA_BASE_URL,
+  type OllamaChatStreamEvent,
   type OllamaPullEvent,
   type OllamaTagsResponse,
 } from "./ollamaTypes.js";
@@ -98,8 +99,36 @@ export class OllamaClient implements LLMClient {
     }
   }
 
-  chat(_req: ChatRequest): AsyncIterable<ChatDelta> {
-    throw new Error("not implemented");
+  chat(req: ChatRequest): AsyncIterable<ChatDelta> {
+    const messages = [
+      ...(req.system ? [{ role: "system" as const, content: req.system }] : []),
+      ...req.messages,
+    ];
+    const body = JSON.stringify({ model: req.model, messages, stream: true });
+    return this.streamChat(body, req.signal);
+  }
+
+  private async *streamChat(
+    body: string,
+    signal?: AbortSignal
+  ): AsyncGenerator<ChatDelta> {
+    const response = await fetch(`${this.baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      signal,
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Ollama /api/chat returned HTTP ${response.status}: ${text}`);
+    }
+    for await (const event of readNdjsonChatStream(response.body)) {
+      yield {
+        text: event.message?.content ?? "",
+        done: event.done === true,
+      };
+      if (event.done) break;
+    }
   }
 }
 
@@ -130,6 +159,39 @@ async function* readNdjsonStream(
   if (tail) {
     try {
       yield JSON.parse(tail) as OllamaPullEvent;
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function* readNdjsonChatStream(
+  body: ReadableStream<Uint8Array> | null
+): AsyncGenerator<OllamaChatStreamEvent> {
+  if (!body) return;
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let newlineIndex: number;
+    while ((newlineIndex = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, newlineIndex).trim();
+      buffer = buffer.slice(newlineIndex + 1);
+      if (!line) continue;
+      try {
+        yield JSON.parse(line) as OllamaChatStreamEvent;
+      } catch {
+        // ignore malformed line
+      }
+    }
+  }
+  const tail = buffer.trim();
+  if (tail) {
+    try {
+      yield JSON.parse(tail) as OllamaChatStreamEvent;
     } catch {
       // ignore
     }
