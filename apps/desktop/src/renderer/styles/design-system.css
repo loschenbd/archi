@@ -4,3 +4,63 @@
    Loaded after styles.css; components are additive — legacy classes
    remain until Task 16 deletes them.
    ───────────────────────────────────────────────────────────── */
+
+/* ───── Cards (spec §4.1) ───── */
+
+.ui-card {
+  --card-pad: 24px;
+  background: var(--paper-warm-bg);
+  border: 1px solid var(--rule-warm);
+  border-radius: var(--radius-card);
+  padding: var(--card-pad);
+  box-shadow: var(--shadow-card);
+}
+
+.ui-card--tight { --card-pad: 16px; }
+.ui-card--loose { --card-pad: 32px; }
+
+.ui-card--ruled {
+  box-shadow:
+    var(--shadow-card),
+    inset 0 0 0 1px var(--rule-warm),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px var(--rule-warm);
+  padding: calc(var(--card-pad) + 6px);
+}
+
+.ui-card__eyebrow {
+  display: block;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-warm);
+  margin: 0 0 10px;
+}
+
+.ui-card__title {
+  font-family: Newsreader, Georgia, serif;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ink-900);
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-warm);
+}
+
+.ui-card__body {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-700);
+}
+
+.ui-card__footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
