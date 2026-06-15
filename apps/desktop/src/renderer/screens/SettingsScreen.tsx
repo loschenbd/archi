@@ -149,7 +149,7 @@ export function SettingsScreen(props: Props): JSX.Element {
 
   return (
     <section className="settings-screen">
-      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+      <div className="ui-tabs" role="tablist" aria-label="Settings sections">
         {tabOrder.map((tab) => {
           const ids = tabIds[tab];
           const active = activeTab === tab;
@@ -164,7 +164,7 @@ export function SettingsScreen(props: Props): JSX.Element {
               aria-selected={active}
               aria-controls={ids.panelId}
               tabIndex={active ? 0 : -1}
-              className={`settings-tab-button${active ? " settings-tab-button-active" : ""}`}
+              className="ui-tab"
               onClick={() => setActiveTab(tab)}
               onKeyDown={(event) => onTabKeyDown(event, tab)}
             >

@@ -543,3 +543,43 @@
   justify-content: center;
   flex-wrap: wrap;
 }
+
+/* ───── Settings cards ───── */
+
+.connection-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.connection-card-header .ui-card__title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.connection-card-footer {
+  justify-content: flex-start;
+}
+
+/* ───── Search index card ───── */
+
+.search-card-stats {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.search-card-stats dt { margin-bottom: 4px; }
+.search-card-stats dd {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--ink-700);
+}
+.search-card-stats code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 12.5px;
+  background: color-mix(in srgb, var(--accent-soft) 50%, var(--surface));
+  padding: 1px 6px;
+  border-radius: 4px;
+}

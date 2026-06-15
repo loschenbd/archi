@@ -13,10 +13,15 @@ export function SourcesScreen({ syncStatus, onReconnect, deviceExportPath, onCho
       <p>
         <strong>Device export file:</strong> {deviceExportPath}
       </p>
-      <button onClick={onChooseDeviceExportPath}>Choose export file</button>
+      <button type="button" className="ui-btn ui-btn--secondary" onClick={onChooseDeviceExportPath}>
+        Choose export file
+      </button>
       {syncStatus === "needs_auth" ? (
         <p>
-          Cloud notebook session expired. <button onClick={onReconnect}>Reconnect and resume</button>
+          Cloud notebook session expired.{" "}
+          <button type="button" className="ui-btn ui-btn--secondary" onClick={onReconnect}>
+            Reconnect and resume
+          </button>
         </p>
       ) : null}
       <ul>
