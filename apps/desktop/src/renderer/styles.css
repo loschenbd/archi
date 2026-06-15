@@ -3614,12 +3614,9 @@ select {
 
 /* ─────────────────────────────────────────────────────────────
    Design System — Atmosphere (spec §5.1)
-   Append-only, overrides body background and adds grain overlay.
+   Append-only. Keeps the legacy warm-radial body background and
+   adds the paper grain overlay on top.
    ───────────────────────────────────────────────────────────── */
-
-body {
-  background: var(--paper-warm-bg);
-}
 
 body::before {
   content: "";
