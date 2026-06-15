@@ -225,3 +225,80 @@
     transform: none;
   }
 }
+
+/* ───── Chips & Badges (spec §4.4) ───── */
+
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--ink-300) 18%, transparent);
+  border: 1px solid var(--rule-warm);
+  border-radius: var(--radius-pill);
+  color: var(--ink-700);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.ui-chip:hover {
+  border-color: var(--rule-warm-strong);
+  background: color-mix(in srgb, var(--accent-soft) 22%, var(--surface));
+  color: var(--accent-strong);
+}
+.ui-chip[aria-selected="true"],
+.ui-chip--active {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--rule-warm));
+  color: var(--accent-strong);
+}
+.ui-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+}
+.ui-badge--ok {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 38%, transparent);
+}
+.ui-badge--warn {
+  background: color-mix(in srgb, #c0962d 18%, transparent);
+  color: #8a6a17;
+  border-color: color-mix(in srgb, #c0962d 42%, transparent);
+}
+.ui-badge--info {
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.ui-badge--neutral {
+  background: color-mix(in srgb, var(--ink-300) 20%, transparent);
+  color: var(--ink-500);
+  border-color: var(--rule-warm);
+}
+
+.ui-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
