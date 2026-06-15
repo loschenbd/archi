@@ -146,7 +146,7 @@ export function LibraryScreen({
               <p>Browse imported works and drill into exact highlight locations.</p>
             </header>
             <input
-              className="library-search-input"
+              className="ui-input"
               placeholder="Search works..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
