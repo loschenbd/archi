@@ -308,6 +308,46 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
                 </div>
               );
             }
+            if (m.status === "aborted" && !m.content) {
+              const messageId = `m${i}`;
+              const hasCitations = m.citations.length > 0;
+              return (
+                <div key={i} className="chat-message-block">
+                  <ChatMessageBubble
+                    role="assistant"
+                    text="Stopped before a response."
+                    ghosted
+                  />
+                  {hasCitations ? (
+                    <ChatCitationList
+                      citations={m.citations}
+                      messageId={messageId}
+                      onOpenWork={onOpenWork}
+                    />
+                  ) : null}
+                </div>
+              );
+            }
+            if (m.status === "done" && !m.content) {
+              const messageId = `m${i}`;
+              const hasCitations = m.citations.length > 0;
+              return (
+                <div key={i} className="chat-message-block">
+                  <ChatMessageBubble
+                    role="assistant"
+                    text="(No response.)"
+                    ghosted
+                  />
+                  {hasCitations ? (
+                    <ChatCitationList
+                      citations={m.citations}
+                      messageId={messageId}
+                      onOpenWork={onOpenWork}
+                    />
+                  ) : null}
+                </div>
+              );
+            }
             const messageId = `m${i}`;
             const hasCitations =
               (m.status === "done" || m.status === "aborted") && m.citations.length > 0;
@@ -350,7 +390,13 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
             className="ui-textarea"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Ask something about your library…"
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                if (!sending && draft.trim()) void handleSend();
+              }
+            }}
+            placeholder="Ask something about your library… (⌘↩ to send)"
             disabled={sending}
             rows={3}
           />
