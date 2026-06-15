@@ -1,0 +1,633 @@
+/* ─────────────────────────────────────────────────────────────
+   Design System — Components (Paper Layer)
+   Source: docs/superpowers/specs/2026-06-15-design-system-design.md §4
+   Loaded after styles.css; components are additive — legacy classes
+   remain until Task 16 deletes them.
+   ───────────────────────────────────────────────────────────── */
+
+/* ───── Cards (spec §4.1) ───── */
+
+.ui-card {
+  --card-pad: 24px;
+  background: var(--paper-warm-bg);
+  border: 1px solid var(--rule-warm);
+  border-radius: var(--radius-card);
+  padding: var(--card-pad);
+  box-shadow: var(--shadow-card);
+}
+
+.ui-card--tight { --card-pad: 16px; }
+.ui-card--loose { --card-pad: 32px; }
+
+.ui-card--ruled {
+  box-shadow:
+    var(--shadow-card),
+    inset 0 0 0 1px var(--rule-warm),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px var(--rule-warm);
+  padding: calc(var(--card-pad) + 6px);
+}
+
+.ui-card__eyebrow {
+  display: block;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-warm);
+  margin: 0 0 10px;
+}
+
+.ui-card__title {
+  font-family: Newsreader, Georgia, serif;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ink-900);
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-warm);
+}
+
+.ui-card__body {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-700);
+}
+
+.ui-card__footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ───── Fields (spec §4.2) ───── */
+
+.ui-input,
+.ui-textarea,
+.ui-select {
+  display: block;
+  width: 100%;
+  background: color-mix(in srgb, var(--surface) 96%, #fff);
+  border: 1px solid var(--rule-warm);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--ink-900);
+  outline: none;
+  transition:
+    border-color 120ms ease,
+    box-shadow 160ms ease;
+  appearance: none;
+}
+
+.ui-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.ui-input:hover,
+.ui-textarea:hover,
+.ui-select:hover {
+  border-color: var(--rule-warm-strong);
+}
+
+.ui-input:focus,
+.ui-textarea:focus,
+.ui-select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.ui-input::placeholder,
+.ui-textarea::placeholder {
+  color: var(--ink-500);
+}
+
+.ui-input:disabled,
+.ui-textarea:disabled,
+.ui-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-input--lg {
+  padding: 18px 22px;
+  font-size: 18px;
+}
+
+.ui-select {
+  padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-500) 50%),
+                    linear-gradient(135deg, var(--ink-500) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* ───── Buttons (spec §4.3) ───── */
+
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.1;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 100ms ease,
+    box-shadow 160ms ease;
+}
+
+.ui-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.ui-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ui-btn--primary {
+  background: linear-gradient(180deg, var(--accent-500) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--accent) 56%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 4px 10px -6px rgba(178, 63, 47, 0.45);
+}
+.ui-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ui-btn--secondary {
+  background: color-mix(in srgb, var(--surface) 96%, #fff);
+  border-color: var(--rule-warm);
+  color: var(--ink-700);
+}
+.ui-btn--secondary:hover:not(:disabled) {
+  border-color: var(--rule-warm-strong);
+  background: color-mix(in srgb, var(--accent-soft) 22%, var(--surface));
+  color: var(--accent-strong);
+}
+
+.ui-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-500);
+  padding: 6px 10px;
+}
+.ui-btn--ghost:hover:not(:disabled) {
+  color: var(--accent-strong);
+}
+
+.ui-btn--danger {
+  background: color-mix(in srgb, var(--surface) 96%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--rule-warm));
+  color: var(--accent-strong);
+}
+.ui-btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-soft) 32%, var(--surface));
+}
+
+.ui-btn--sm {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+.ui-btn--lg {
+  padding: 14px 22px;
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn,
+  .ui-btn:hover {
+    transform: none;
+  }
+}
+
+/* ───── Chips & Badges (spec §4.4) ───── */
+
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--ink-300) 18%, transparent);
+  border: 1px solid var(--rule-warm);
+  border-radius: var(--radius-pill);
+  color: var(--ink-700);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.ui-chip:hover {
+  border-color: var(--rule-warm-strong);
+  background: color-mix(in srgb, var(--accent-soft) 22%, var(--surface));
+  color: var(--accent-strong);
+}
+.ui-chip[aria-selected="true"],
+.ui-chip--active {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--rule-warm));
+  color: var(--accent-strong);
+}
+.ui-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+}
+.ui-badge--ok {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 38%, transparent);
+}
+.ui-badge--warn {
+  background: color-mix(in srgb, #c0962d 18%, transparent);
+  color: #8a6a17;
+  border-color: color-mix(in srgb, #c0962d 42%, transparent);
+}
+.ui-badge--info {
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.ui-badge--neutral {
+  background: color-mix(in srgb, var(--ink-300) 20%, transparent);
+  color: var(--ink-500);
+  border-color: var(--rule-warm);
+}
+
+.ui-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* ───── Tabs (spec §4.5) ───── */
+
+.ui-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--rule-warm);
+  margin: 0 0 18px;
+}
+.ui-tab {
+  position: relative;
+  padding: 10px 4px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink-500);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.ui-tab:hover:not([aria-selected="true"]) {
+  color: var(--ink-700);
+}
+.ui-tab[aria-selected="true"] {
+  color: var(--ink-900);
+}
+.ui-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+  background: var(--accent-strong);
+}
+.ui-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  border-radius: 4px;
+}
+
+/* ───── Dividers & decorations (spec §4.6) ───── */
+
+.ui-hr {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--rule-warm);
+}
+.ui-rule-strong {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--rule-warm-strong);
+}
+
+.ui-fleuron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Newsreader, Georgia, serif;
+  color: var(--ink-warm);
+  font-size: 18px;
+  line-height: 1;
+}
+.ui-fleuron::before { content: "❦"; }
+
+.ui-drop-cap::first-letter {
+  float: left;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 52px;
+  line-height: 0.86;
+  font-weight: 600;
+  color: var(--accent-strong);
+  padding: 4px 8px 0 0;
+}
+
+/* ───── Wax-seal marker (spec §4.7) ───── */
+
+.ui-wax-mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      color-mix(in srgb, var(--wax-red) 92%, #fff) 0%,
+      var(--wax-red) 60%,
+      color-mix(in srgb, var(--wax-red) 70%, #000) 100%
+    );
+  box-shadow:
+    var(--wax-shadow),
+    0 0 0 1px color-mix(in srgb, var(--wax-red) 50%, transparent);
+}
+
+/* ───── Footnote reference (spec §4.8) ───── */
+
+.ui-footnote-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-family: Newsreader, Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--accent-strong);
+  background: transparent;
+  border: 1px solid var(--rule-warm);
+  border-radius: 999px;
+  vertical-align: super;
+  margin: 0 2px;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.ui-footnote-ref:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+}
+.ui-footnote-ref:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+@keyframes ui-footnote-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    border-color: var(--rule-warm);
+  }
+  25% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 32%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    border-color: var(--rule-warm);
+  }
+}
+.ui-footnote-flash {
+  animation: ui-footnote-flash 1.4s ease-out;
+  border-radius: 14px;
+}
+
+/* ───── Chat composer (spec §6.3) ───── */
+
+.chat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ───── Chat bubbles (spec §6.3) ───── */
+
+.chat-bubble-v2 {
+  max-width: 720px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.chat-bubble-v2__text { white-space: pre-wrap; }
+.chat-bubble-v2__footer {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.chat-bubble-v2--assistant { align-self: flex-start; }
+.chat-bubble-v2--user {
+  align-self: flex-end;
+}
+.chat-bubble-v2--ghosted {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.chat-bubble-user-v2 {
+  padding: 14px 18px;
+  background: linear-gradient(180deg, var(--accent-500) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--accent) 56%, transparent);
+  border-radius: var(--radius-card);
+  border-bottom-right-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 6px 14px -8px rgba(178, 63, 47, 0.35);
+}
+
+/* ───── Chat sources panel ───── */
+
+.chat-sources-v2 {
+  max-width: 720px;
+  margin-top: 6px;
+  align-self: flex-start;
+  width: 100%;
+}
+.chat-citations-v2 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.chat-citation-v2 {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.chat-citation-v2__number {
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ───── Chat setup shell ───── */
+
+.chat-setup-shell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 48px 24px;
+  overflow-y: auto;
+}
+.chat-setup-card {
+  width: min(640px, 100%);
+}
+.chat-setup-card .ui-card__footer {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ───── Settings cards ───── */
+
+.connection-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.connection-card-header .ui-card__title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.connection-card-footer {
+  justify-content: flex-start;
+}
+
+/* ───── Search index card ───── */
+
+.search-card-stats {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.search-card-stats dt { margin-bottom: 4px; }
+.search-card-stats dd {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--ink-700);
+}
+.search-card-stats code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 12.5px;
+  background: color-mix(in srgb, var(--accent-soft) 50%, var(--surface));
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ───── Book detail ───── */
+
+.book-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ───── Onboarding ───── */
+
+.wizard-chrome-card {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.wizard-chrome-card .ui-card__title {
+  font-size: 24px;
+  line-height: 1.2;
+}
+.wizard-chrome-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+}
+.wizard-chrome-actions .left-actions { display: flex; gap: 8px; }
+.wizard-chrome-actions .right-actions { display: flex; gap: 8px; }
+
+/* ───── Modal (spec §6.7) ───── */
+
+.ui-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 38, 26, 0.36);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+.ui-modal-card {
+  width: min(480px, 100%);
+  border-radius: var(--radius-modal);
+  box-shadow: var(--shadow-raised);
+}
+

@@ -287,7 +287,7 @@ export function LibraryBookDetailScreen({ work, onFindSimilar, pendingScrollPass
   };
 
   return (
-    <section className="library-detail-screen">
+    <section className="ui-card ui-card--ruled ui-card--loose book-detail-card">
       {isLoading ? <p>Loading quotes...</p> : null}
       {errorMessage ? <p className="error">{errorMessage}</p> : null}
       {kindleErrorMessage ? <p className="error">{kindleErrorMessage}</p> : null}

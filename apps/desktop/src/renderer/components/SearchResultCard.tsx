@@ -61,7 +61,7 @@ export function SearchResultCard({
 
   return (
     <article
-      className={`search-result-card${expanded ? " search-result-card--expanded" : ""}`}
+      className={`ui-card ui-card--tight search-result-card${expanded ? " search-result-card--expanded" : ""}`}
       id={cardId}
     >
       <button

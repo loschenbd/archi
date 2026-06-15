@@ -38,6 +38,23 @@ type CloudValidationDiagnosticsApi = {
 const diagnosticsApi = (): CloudValidationDiagnosticsApi =>
   window.archi as unknown as CloudValidationDiagnosticsApi;
 
+type BadgeVariant = "ok" | "warn" | "neutral";
+
+function statusBadgeVariant(status: string): BadgeVariant {
+  switch (status) {
+    case "connected":
+    case "healthy":
+      return "ok";
+    case "needs_action":
+    case "needs_auth":
+    case "error":
+    case "failed":
+      return "warn";
+    default:
+      return "neutral";
+  }
+}
+
 type Props = {
   connections: Record<ConnectionProvider, ConnectionState>;
   cloudEnabled: boolean;
@@ -90,38 +107,42 @@ function SearchSettingsPanel(): JSX.Element {
   })();
 
   return (
-    <article className="connection-card">
-      <header>
-        <h3>Search</h3>
-        <span className={`status-pill status-${status?.status ?? "configuring"}`}>
-          {(status?.status ?? "loading").replace("_", " ")}
-        </span>
+    <section className="ui-card">
+      <header className="connection-card-header">
+        <h2 className="ui-card__title">Search</h2>
+        <span className="ui-badge ui-badge--neutral">{runtimeLabel}</span>
       </header>
-      <dl className="diagnostics-latest">
-        <dt>Index status</dt>
-        <dd>{indexLabel}</dd>
-        <dt>Runtime</dt>
-        <dd>{runtimeLabel}</dd>
-        <dt>Embedding model</dt>
-        <dd>bge-small-en-v1.5 — managed by Archi</dd>
+      <dl className="search-card-stats">
+        <div>
+          <dt className="ui-card__eyebrow">Index status</dt>
+          <dd>{indexLabel}</dd>
+        </div>
+        <div>
+          <dt className="ui-card__eyebrow">Runtime</dt>
+          <dd>{runtimeLabel}</dd>
+        </div>
+        <div>
+          <dt className="ui-card__eyebrow">Embedding model</dt>
+          <dd><code>bge-small-en-v1.5</code> — managed by Archi</dd>
+        </div>
         {status?.failed ? (
-          <>
-            <dt>Failed</dt>
+          <div>
+            <dt className="ui-card__eyebrow">Failed</dt>
             <dd>{status.failed}</dd>
-          </>
+          </div>
         ) : null}
         {status?.lastError ? (
-          <>
-            <dt>Last error</dt>
+          <div>
+            <dt className="ui-card__eyebrow">Last error</dt>
             <dd className="error">{status.lastError}</dd>
-          </>
+          </div>
         ) : null}
       </dl>
       {/*
         TODO: add "Include archived" and "Include hidden" toggles; persist via preferences
               and pass into SearchService options.
       */}
-    </article>
+    </section>
   );
 }
 
@@ -175,10 +196,12 @@ export function ConnectionsScreen({
         <p>Set up integrations once and keep them healthy from one place.</p>
       </header>
       <div className="connections-grid">
-        <article className="connection-card">
-          <header>
-            <h3>Kindle Highlights</h3>
-            <span className={`status-pill status-${cloud.status}`}>{cloud.status.replace("_", " ")}</span>
+        <section className="ui-card">
+          <header className="connection-card-header">
+            <h2 className="ui-card__title">Kindle Highlights</h2>
+            <span className={`ui-badge ui-badge--${statusBadgeVariant(cloud.status)}`}>
+              {cloud.status.replace("_", " ")}
+            </span>
           </header>
           <label className="toggle-row">
             <input type="checkbox" checked={cloudEnabled} onChange={(event) => onSetCloudEnabled(event.target.checked)} /> Enable Kindle
@@ -197,27 +220,49 @@ export function ConnectionsScreen({
               ))}
             </ul>
           ) : null}
-          <div className="connection-actions">
+          <footer className="ui-card__footer connection-card-footer">
             {!cloudConnected && cloud.canConnect ? (
-              <button onClick={() => onConnect("cloud_notebook")} disabled={cloudBusy}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
+                onClick={() => onConnect("cloud_notebook")}
+                disabled={cloudBusy}
+              >
                 Connect
               </button>
             ) : null}
             {cloud.canReconnect ? (
-              <button onClick={() => onReconnect("cloud_notebook")} disabled={cloudBusy}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
+                onClick={() => onReconnect("cloud_notebook")}
+                disabled={cloudBusy}
+              >
                 {cloudConnected ? "Reconnect session" : "Reconnect"}
               </button>
             ) : null}
-            <button onClick={() => onTest("cloud_notebook")} disabled={cloudBusy}>
+            <button
+              type="button"
+              className="ui-btn ui-btn--secondary"
+              onClick={() => onTest("cloud_notebook")}
+              disabled={cloudBusy}
+            >
               {cloudConnected ? "Run test" : "Test"}
             </button>
             {cloud.canDisconnect ? (
-              <button onClick={() => onDisconnect("cloud_notebook")} disabled={cloudBusy}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--danger"
+                onClick={() => onDisconnect("cloud_notebook")}
+                disabled={cloudBusy}
+              >
                 Disconnect
               </button>
             ) : null}
             {cloudConnected ? (
               <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
                 onClick={async () => {
                   const ok = window.confirm(
                     "Re-extract highlights from every book in your Kindle library, ignoring incremental sync state. This is slower than a normal sync but useful if highlights look out of date. Continue?"
@@ -230,7 +275,7 @@ export function ConnectionsScreen({
                 Force full Kindle sync
               </button>
             ) : null}
-          </div>
+          </footer>
           <details className="connection-diagnostics">
             <summary>Diagnostics</summary>
             {latestValidation === undefined ? (
@@ -293,18 +338,21 @@ export function ConnectionsScreen({
               Reveal log in Finder
             </button>
           </details>
-        </article>
+        </section>
 
-        <article className="connection-card">
-          <header>
-            <h3>{notion.label}</h3>
-            <span className={`status-pill status-${notion.status}`}>{notion.status.replace("_", " ")}</span>
+        <section className="ui-card">
+          <header className="connection-card-header">
+            <h2 className="ui-card__title">{notion.label}</h2>
+            <span className={`ui-badge ui-badge--${statusBadgeVariant(notion.status)}`}>
+              {notion.status.replace("_", " ")}
+            </span>
           </header>
           <div className="token-entry">
             <label htmlFor="notion-token-input">Notion token (PAT or integration)</label>
             <input
               id="notion-token-input"
               type="password"
+              className="ui-input"
               placeholder={notionConnected ? "Token saved. Paste a new token to replace it." : "ntn_... or secret_..."}
               value={notionTokenDraft}
               autoComplete="off"
@@ -318,7 +366,12 @@ export function ConnectionsScreen({
               }}
               onChange={(event) => onNotionTokenDraftChange(event.target.value)}
             />
-            <button onClick={onSetNotionToken} disabled={notionBusy}>
+            <button
+              type="button"
+              className="ui-btn ui-btn--primary"
+              onClick={onSetNotionToken}
+              disabled={notionBusy}
+            >
               {notionConnected ? "Update token" : "Save token"}
             </button>
           </div>
@@ -332,32 +385,57 @@ export function ConnectionsScreen({
               ))}
             </ul>
           ) : null}
-          <div className="connection-actions">
+          <footer className="ui-card__footer connection-card-footer">
             {!notionConnected && notion.canConnect ? (
-              <button onClick={() => onConnect("notion")} disabled={notionBusy}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
+                onClick={() => onConnect("notion")}
+                disabled={notionBusy}
+              >
                 Use token flow
               </button>
             ) : null}
             {notion.canReconnect ? (
-              <button onClick={() => onReconnect("notion")} disabled={notionBusy}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
+                onClick={() => onReconnect("notion")}
+                disabled={notionBusy}
+              >
                 {notionConnected ? "Refresh" : "Reconnect"}
               </button>
             ) : null}
-            <button onClick={() => onTest("notion")} disabled={notionBusy}>
+            <button
+              type="button"
+              className="ui-btn ui-btn--secondary"
+              onClick={() => onTest("notion")}
+              disabled={notionBusy}
+            >
               {notionConnected ? "Run test" : "Test"}
             </button>
             {notion.canDisconnect ? (
-              <button onClick={() => onDisconnect("notion")} disabled={notionBusy}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--danger"
+                onClick={() => onDisconnect("notion")}
+                disabled={notionBusy}
+              >
                 Disconnect
               </button>
             ) : null}
             {notionConnected ? (
-              <button onClick={onRefreshNotionMedia} disabled={notionBusy || isSyncing}>
+              <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
+                onClick={onRefreshNotionMedia}
+                disabled={notionBusy || isSyncing}
+              >
                 Refresh Notion media
               </button>
             ) : null}
-          </div>
-        </article>
+          </footer>
+        </section>
 
         <SearchSettingsPanel />
       </div>

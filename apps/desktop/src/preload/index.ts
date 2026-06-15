@@ -1,4 +1,14 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import type {
+  ChatTurnRequest,
+  ChatTurnDoneEvent,
+  ChatTurnErrorEvent,
+  ChatTurnTokenEvent,
+  ChatTurnAbortedEvent,
+  DetectResult,
+  ModelInfo,
+  PullProgress,
+} from "@archi/chat";
 import type { Facets, IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
 
 type SyncState = {
@@ -224,7 +234,41 @@ const api = {
       ipcRenderer.invoke("archi:search:startIndexing"),
     facets: (): Promise<Facets> =>
       ipcRenderer.invoke("archi:search:facets")
-  }
+  },
+  chat: {
+    detect: (): Promise<DetectResult> => ipcRenderer.invoke("archi:chat:detect"),
+    listModels: (): Promise<ModelInfo[]> => ipcRenderer.invoke("archi:chat:listModels"),
+    pullModel: (name: string): Promise<{ started: boolean }> =>
+      ipcRenderer.invoke("archi:chat:pullModel", name),
+    turn: (req: ChatTurnRequest): Promise<{ accepted: boolean; turnId: string }> =>
+      ipcRenderer.invoke("archi:chat:turn", req),
+    cancel: (turnId: string): Promise<void> => ipcRenderer.invoke("archi:chat:cancel", turnId),
+    onPullProgress: (cb: (p: PullProgress) => void): (() => void) => {
+      const handler = (_e: unknown, p: PullProgress) => cb(p);
+      ipcRenderer.on("archi:chat:pullProgress", handler);
+      return () => ipcRenderer.removeListener("archi:chat:pullProgress", handler);
+    },
+    onToken: (cb: (e: ChatTurnTokenEvent) => void): (() => void) => {
+      const handler = (_e: unknown, p: ChatTurnTokenEvent) => cb(p);
+      ipcRenderer.on("archi:chat:token", handler);
+      return () => ipcRenderer.removeListener("archi:chat:token", handler);
+    },
+    onDone: (cb: (e: ChatTurnDoneEvent) => void): (() => void) => {
+      const handler = (_e: unknown, p: ChatTurnDoneEvent) => cb(p);
+      ipcRenderer.on("archi:chat:done", handler);
+      return () => ipcRenderer.removeListener("archi:chat:done", handler);
+    },
+    onError: (cb: (e: ChatTurnErrorEvent) => void): (() => void) => {
+      const handler = (_e: unknown, p: ChatTurnErrorEvent) => cb(p);
+      ipcRenderer.on("archi:chat:error", handler);
+      return () => ipcRenderer.removeListener("archi:chat:error", handler);
+    },
+    onAborted: (cb: (e: ChatTurnAbortedEvent) => void): (() => void) => {
+      const handler = (_e: unknown, p: ChatTurnAbortedEvent) => cb(p);
+      ipcRenderer.on("archi:chat:aborted", handler);
+      return () => ipcRenderer.removeListener("archi:chat:aborted", handler);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld("archi", api);

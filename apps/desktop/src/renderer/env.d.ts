@@ -1,6 +1,16 @@
 export {};
 
-import type { IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
+import type { IndexerStatus, SearchQuery, SearchResponse, SearchResult } from "@archi/search";
+import type {
+  ChatTurnRequest,
+  ChatTurnDoneEvent,
+  ChatTurnErrorEvent,
+  ChatTurnTokenEvent,
+  ChatTurnAbortedEvent,
+  DetectResult,
+  ModelInfo,
+  PullProgress,
+} from "@archi/chat";
 
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 type ConnectionStatus = "connected" | "needs_action" | "error" | "disconnected" | "configuring";
@@ -210,6 +220,18 @@ declare global {
         indexerStatus: () => Promise<IndexerStatus>;
         startIndexing: () => Promise<{ started: boolean }>;
         facets: () => Promise<{ creators: string[]; labels: string[] }>;
+      };
+      chat: {
+        detect: () => Promise<DetectResult>;
+        listModels: () => Promise<ModelInfo[]>;
+        pullModel: (name: string) => Promise<{ started: boolean }>;
+        turn: (req: ChatTurnRequest) => Promise<{ accepted: boolean; turnId: string }>;
+        cancel: (turnId: string) => Promise<void>;
+        onPullProgress: (cb: (p: PullProgress) => void) => () => void;
+        onToken: (cb: (e: ChatTurnTokenEvent) => void) => () => void;
+        onDone: (cb: (e: ChatTurnDoneEvent) => void) => () => void;
+        onError: (cb: (e: ChatTurnErrorEvent) => void) => () => void;
+        onAborted: (cb: (e: ChatTurnAbortedEvent) => void) => () => void;
       };
     };
   }

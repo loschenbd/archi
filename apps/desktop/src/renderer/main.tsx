@@ -2,6 +2,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./styles.css";
+import "./styles/design-system-tokens.css";
+import "./styles/design-system.css";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

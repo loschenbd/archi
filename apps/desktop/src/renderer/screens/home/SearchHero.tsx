@@ -186,12 +186,12 @@ export function SearchHero(props: Props): JSX.Element {
           </button>
         </div>
       ) : (
-        <div className="search-hero-input-wrap">
+        <div className="search-hero-input-wrap" style={{ border: 0, background: "transparent" }}>
           <span className="search-hero-icon" aria-hidden="true">⌕</span>
           <input
             ref={inputRef}
             type="search"
-            className="search-hero-input"
+            className="ui-input ui-input--lg"
             placeholder="What do you want to find?"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -226,7 +226,7 @@ export function SearchHero(props: Props): JSX.Element {
               <button
                 key={chip.label}
                 type="button"
-                className="search-hero-chip"
+                className="ui-chip"
                 onClick={() => {
                   clearFindSimilar();
                   chip.apply({ setQuery, setFilters });

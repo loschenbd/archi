@@ -71,43 +71,59 @@ function SearchSection(): JSX.Element {
     void start();
   };
   return (
-    <div className="settings-search-section">
-      <Toggle
-        checked={prefs.showMatchSource}
-        onChange={prefs.setShowMatchSource}
-        label="Show match-source labels"
-        description="Show KEYWORD / VECTOR / BOTH badges on results."
-      />
-      <Toggle
-        checked={prefs.includeArchived}
-        onChange={prefs.setIncludeArchived}
-        label="Include archived passages"
-      />
-      <Toggle
-        checked={prefs.includeHidden}
-        onChange={prefs.setIncludeHidden}
-        label="Include hidden passages"
-      />
-      <div className="settings-search-index-status">
-        <p className="content-eyebrow">Index status</p>
-        <p>
-          <span className="tabular">{indexedLabel}</span> of{" "}
-          <span className="tabular">{totalLabel}</span> indexed
-          <span aria-hidden="true"> · </span>
-          model <code>{EMBEDDING_MODEL_ID}</code>
-          <span aria-hidden="true"> · </span>
-          {statusLabel}
-        </p>
+    <section className="ui-card">
+      <header className="connection-card-header">
+        <h2 className="ui-card__title">Search</h2>
+        <span className="ui-badge ui-badge--neutral">{statusLabel}</span>
+      </header>
+      <div className="ui-card__body">
+        <Toggle
+          checked={prefs.showMatchSource}
+          onChange={prefs.setShowMatchSource}
+          label="Show match-source labels"
+          description="Show KEYWORD / VECTOR / BOTH badges on results."
+        />
+        <Toggle
+          checked={prefs.includeArchived}
+          onChange={prefs.setIncludeArchived}
+          label="Include archived passages"
+        />
+        <Toggle
+          checked={prefs.includeHidden}
+          onChange={prefs.setIncludeHidden}
+          label="Include hidden passages"
+        />
+      </div>
+      <dl className="search-card-stats">
+        <div>
+          <dt className="ui-card__eyebrow">Index status</dt>
+          <dd>
+            <span className="tabular">{indexedLabel}</span> of{" "}
+            <span className="tabular">{totalLabel}</span> indexed
+          </dd>
+        </div>
+        <div>
+          <dt className="ui-card__eyebrow">Runtime</dt>
+          <dd>{statusLabel}</dd>
+        </div>
+        <div>
+          <dt className="ui-card__eyebrow">Embedding model</dt>
+          <dd>
+            <code>{EMBEDDING_MODEL_ID}</code> — managed by Archi
+          </dd>
+        </div>
+      </dl>
+      <footer className="ui-card__footer connection-card-footer">
         <button
           type="button"
-          className="settings-search-reindex"
+          className="ui-btn ui-btn--secondary"
           onClick={onReindex}
           disabled={reindexDisabled}
         >
           Re-index now
         </button>
-      </div>
-    </div>
+      </footer>
+    </section>
   );
 }
 
@@ -149,7 +165,7 @@ export function SettingsScreen(props: Props): JSX.Element {
 
   return (
     <section className="settings-screen">
-      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+      <div className="ui-tabs" role="tablist" aria-label="Settings sections">
         {tabOrder.map((tab) => {
           const ids = tabIds[tab];
           const active = activeTab === tab;
@@ -164,7 +180,7 @@ export function SettingsScreen(props: Props): JSX.Element {
               aria-selected={active}
               aria-controls={ids.panelId}
               tabIndex={active ? 0 : -1}
-              className={`settings-tab-button${active ? " settings-tab-button-active" : ""}`}
+              className="ui-tab"
               onClick={() => setActiveTab(tab)}
               onKeyDown={(event) => onTabKeyDown(event, tab)}
             >

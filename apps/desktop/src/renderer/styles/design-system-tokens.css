@@ -1,0 +1,48 @@
+/* ─────────────────────────────────────────────────────────────
+   Design System — Tokens (Paper Layer)
+   Source: docs/superpowers/specs/2026-06-15-design-system-design.md §3
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* Warm rules — clearly brown hairlines (replace grey ink-300/40).
+     Uses a richer saddle-brown anchor (#6b4a32) so the low-alpha mix
+     still reads brown against the cream paper, not taupe. */
+  --rule-warm: color-mix(in srgb, #6b4a32 36%, transparent);
+  --rule-warm-strong: color-mix(in srgb, #6b4a32 62%, transparent);
+
+  /* Ink shades for chrome */
+  --ink-warm: color-mix(in srgb, var(--ink-700) 70%, #6b4a32);
+
+  /* Wax-seal red — used sparingly */
+  --wax-red: var(--accent-strong);
+  --wax-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+
+  /* Paper background atmosphere */
+  --paper-warm-bg:
+    radial-gradient(
+      120% 90% at 50% 0%,
+      color-mix(in srgb, var(--paper-50) 96%, #fff) 0%,
+      var(--paper-100) 60%,
+      color-mix(in srgb, var(--paper-100) 88%, #d9c8b6) 100%
+    );
+
+  /* Subtle paper grain (SVG noise data-url) */
+  --paper-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.25  0 0 0 0 0.16  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+
+  /* Radius */
+  --radius-line: 0;
+  --radius-control: 4px;
+  --radius-card: 10px;
+  --radius-modal: 14px;
+  --radius-pill: 999px;
+
+  /* Shadow */
+  --shadow-hairline: inset 0 0 0 1px var(--rule-warm);
+  --shadow-card:
+    0 4px 14px -8px rgba(72, 53, 41, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --shadow-raised: 0 12px 32px -12px rgba(72, 53, 41, 0.32);
+  --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+}

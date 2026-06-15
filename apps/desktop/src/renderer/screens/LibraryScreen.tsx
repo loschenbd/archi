@@ -118,12 +118,12 @@ export function LibraryScreen({
 
   return (
     <section className="library-screen">
-      <div className="library-tabs" role="tablist" aria-label="Library views">
+      <div className="ui-tabs" role="tablist" aria-label="Library views">
         <button
           type="button"
           role="tab"
+          className="ui-tab"
           aria-selected={activeTab === "by-book"}
-          className={`library-tab-button${activeTab === "by-book" ? " library-tab-button-active" : ""}`}
           onClick={() => setActiveTab("by-book")}
         >
           By book
@@ -131,8 +131,8 @@ export function LibraryScreen({
         <button
           type="button"
           role="tab"
+          className="ui-tab"
           aria-selected={activeTab === "all-highlights"}
-          className={`library-tab-button${activeTab === "all-highlights" ? " library-tab-button-active" : ""}`}
           onClick={() => setActiveTab("all-highlights")}
         >
           All highlights
@@ -146,7 +146,7 @@ export function LibraryScreen({
               <p>Browse imported works and drill into exact highlight locations.</p>
             </header>
             <input
-              className="library-search-input"
+              className="ui-input"
               placeholder="Search works..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}

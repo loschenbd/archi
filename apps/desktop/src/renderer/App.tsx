@@ -6,6 +6,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
+import { ChatScreen } from "./screens/ChatScreen.js";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { maskConnectionForBanner } from "./lib/syncBannerMapping";
@@ -15,30 +16,17 @@ import { WindowTitleBar } from "./components/WindowTitleBar";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { IndexerStatusProvider } from "./state/IndexerStatusContext";
+import { House, BookOpen, MessageSquareText, Sliders } from "lucide-react";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Library", "Settings"] as const;
+const screens = ["Home", "Library", "Chat", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
-  Home: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2.5 7L8 2.5L13.5 7v6a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V7z" />
-      <path d="M6 14V9.5h4V14" />
-    </svg>
-  ),
-  Library: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 3h4.5a1.5 1.5 0 0 1 1.5 1.5v8.5a1 1 0 0 0-1-1H3z" />
-      <path d="M13 3H8.5A1.5 1.5 0 0 0 7 4.5v8.5a1 1 0 0 1 1-1h5z" />
-    </svg>
-  ),
-  Settings: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="8" cy="8" r="2" />
-      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
-    </svg>
-  )
+  Home: <House size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Library: <BookOpen size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Chat: <MessageSquareText size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Settings: <Sliders size={18} strokeWidth={1.6} aria-hidden="true" />,
 };
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 
@@ -671,6 +659,7 @@ export function App(): JSX.Element {
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
+            works={works}
             recentPassages={recentActivity.passages}
             passages={passages}
             highlightCount={passages.length}
@@ -726,6 +715,15 @@ export function App(): JSX.Element {
             onOpenWork={(workId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Chat":
+        return (
+          <ChatScreen
+            onOpenWork={(workId, _passageId) => {
+              setActiveScreen("Library");
+              setSelectedLibraryWorkId(workId);
             }}
           />
         );
@@ -899,22 +897,18 @@ export function App(): JSX.Element {
               </button>
             </aside>
             <section className="content" data-screen={activeScreen}>
-              {activeScreen !== "Home" ? (
+              {selectedWork ? (
                 <header className="content-header">
                   <div>
-                    {selectedWork ? (
-                      <button
-                        type="button"
-                        className="content-eyebrow content-eyebrow-link"
-                        onClick={() => setSelectedLibraryWorkId(null)}
-                      >
-                        <span aria-hidden="true">‹</span> Library
-                      </button>
-                    ) : (
-                      <p className="content-eyebrow">Workspace</p>
-                    )}
-                    <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
-                    {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
+                    <button
+                      type="button"
+                      className="content-eyebrow content-eyebrow-link"
+                      onClick={() => setSelectedLibraryWorkId(null)}
+                    >
+                      <span aria-hidden="true">‹</span> Library
+                    </button>
+                    <h1>{selectedWork.title}</h1>
+                    <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p>
                   </div>
                 </header>
               ) : null}

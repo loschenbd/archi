@@ -36,7 +36,7 @@ export function WizardChrome({
   return (
     <main className="onboarding-layout">
       <WindowTitleBar />
-      <section className="screen-card onboarding-card onboarding-wizard-card">
+      <section className="ui-card ui-card--ruled ui-card--loose wizard-chrome-card">
         <div
           className="onboarding-wizard-progress"
           role="progressbar"
@@ -60,29 +60,29 @@ export function WizardChrome({
         <div key={currentStep} className="onboarding-wizard-step-body">{children}</div>
         {stepError ? <p className="error banner-error">{stepError}</p> : null}
         {showFooter ? (
-          <div className="onboarding-wizard-footer">
-            {showBack ? (
-              <button type="button" className="button-ghost onboarding-wizard-back" onClick={onBack}>
-                ← Back
+          <div className="wizard-chrome-actions">
+            <div className="left-actions">
+              {showBack ? (
+                <button type="button" className="ui-btn ui-btn--ghost" onClick={onBack}>
+                  ← Back
+                </button>
+              ) : null}
+            </div>
+            <div className="right-actions">
+              {showSkip ? (
+                <button type="button" className="ui-btn ui-btn--secondary" onClick={onSkip}>
+                  Skip for now
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="ui-btn ui-btn--primary"
+                disabled={continueDisabled}
+                onClick={onContinue}
+              >
+                {continueLabel}
               </button>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-            {showSkip ? (
-              <button type="button" className="onboarding-wizard-skip-link" onClick={onSkip}>
-                Skip for now
-              </button>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-            <button
-              type="button"
-              className="button-primary onboarding-wizard-continue"
-              disabled={continueDisabled}
-              onClick={onContinue}
-            >
-              {continueLabel}
-            </button>
+            </div>
           </div>
         ) : null}
       </section>

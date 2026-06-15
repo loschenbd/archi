@@ -82,13 +82,14 @@ export function LibraryAllHighlights({ passages, onOpenWork }: Props): JSX.Eleme
       </header>
       <div className="passages-filters">
         <input
-          className="library-search-input"
+          type="text"
+          className="ui-input"
           placeholder="Search passages..."
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         <select
-          className="select-input"
+          className="ui-select"
           value={workFilter}
           onChange={(event) => setWorkFilter(event.target.value)}
         >
