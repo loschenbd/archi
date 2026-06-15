@@ -8,6 +8,7 @@ type TurnStatus = "streaming" | "done" | "aborted" | "error" | "skipped";
 
 export type UseChatTurnResult = {
   turnId: string | null;
+  conversationId: string | null;
   status: TurnStatus | null;
   text: string;
   citations: ChatTurnDoneEvent["citations"];
@@ -24,6 +25,7 @@ function uuid(): string {
 
 export function useChatTurn(): UseChatTurnResult {
   const [turnId, setTurnId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [status, setStatus] = useState<TurnStatus | null>(null);
   const [text, setText] = useState("");
   const [citations, setCitations] = useState<ChatTurnDoneEvent["citations"]>([]);
@@ -39,6 +41,7 @@ export function useChatTurn(): UseChatTurnResult {
     const offDone = window.archi.chat.onDone((e) => {
       if (e.turnId !== activeTurnIdRef.current) return;
       setCitations(e.citations);
+      setConversationId(e.conversationId);
       if (e.skipped) {
         setStatus("skipped");
         setSkipReason(e.skipReason ?? null);
@@ -48,11 +51,13 @@ export function useChatTurn(): UseChatTurnResult {
     });
     const offError = window.archi.chat.onError((e) => {
       if (e.turnId !== activeTurnIdRef.current) return;
+      if (e.conversationId) setConversationId(e.conversationId);
       setStatus("error");
       setErrorMessage(e.message);
     });
     const offAborted = window.archi.chat.onAborted((e) => {
       if (e.turnId !== activeTurnIdRef.current) return;
+      if (e.conversationId) setConversationId(e.conversationId);
       setStatus("aborted");
     });
     return () => {
@@ -66,6 +71,7 @@ export function useChatTurn(): UseChatTurnResult {
   const reset = useCallback(() => {
     activeTurnIdRef.current = null;
     setTurnId(null);
+    setConversationId(null);
     setStatus(null);
     setText("");
     setCitations([]);
@@ -73,17 +79,20 @@ export function useChatTurn(): UseChatTurnResult {
     setSkipReason(null);
   }, []);
 
-  const send = useCallback(async (req: Omit<ChatTurnRequest, "turnId">) => {
-    const id = uuid();
-    activeTurnIdRef.current = id;
-    setTurnId(id);
-    setStatus("streaming");
-    setText("");
-    setCitations([]);
-    setErrorMessage(null);
-    setSkipReason(null);
-    await window.archi.chat.turn({ ...req, turnId: id });
-  }, []);
+  const send = useCallback(
+    async (req: Omit<ChatTurnRequest, "turnId">) => {
+      const id = uuid();
+      activeTurnIdRef.current = id;
+      setTurnId(id);
+      setStatus("streaming");
+      setText("");
+      setCitations([]);
+      setErrorMessage(null);
+      setSkipReason(null);
+      await window.archi.chat.turn({ ...req, turnId: id });
+    },
+    []
+  );
 
   const cancel = useCallback(() => {
     const id = activeTurnIdRef.current;
@@ -91,5 +100,16 @@ export function useChatTurn(): UseChatTurnResult {
     void window.archi.chat.cancel(id);
   }, []);
 
-  return { turnId, status, text, citations, errorMessage, skipReason, send, cancel, reset };
+  return {
+    turnId,
+    conversationId,
+    status,
+    text,
+    citations,
+    errorMessage,
+    skipReason,
+    send,
+    cancel,
+    reset,
+  };
 }
