@@ -6,6 +6,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
+import { ChatScreen } from "./screens/ChatScreen.js";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { maskConnectionForBanner } from "./lib/syncBannerMapping";
@@ -17,7 +18,7 @@ import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { IndexerStatusProvider } from "./state/IndexerStatusContext";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Library", "Settings"] as const;
+const screens = ["Home", "Library", "Chat", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
@@ -31,6 +32,11 @@ const screenIcons: Record<Screen, JSX.Element> = {
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 3h4.5a1.5 1.5 0 0 1 1.5 1.5v8.5a1 1 0 0 0-1-1H3z" />
       <path d="M13 3H8.5A1.5 1.5 0 0 0 7 4.5v8.5a1 1 0 0 1 1-1h5z" />
+    </svg>
+  ),
+  Chat: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 9.33A5.67 5.67 0 0 1 10.43 14.8L8 14l-5 1 1-5A5.67 5.67 0 1 1 14 9.33z" />
     </svg>
   ),
   Settings: (
@@ -726,6 +732,15 @@ export function App(): JSX.Element {
             onOpenWork={(workId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Chat":
+        return (
+          <ChatScreen
+            onOpenWork={(workId, _passageId) => {
+              setActiveScreen("Library");
+              setSelectedLibraryWorkId(workId);
             }}
           />
         );
