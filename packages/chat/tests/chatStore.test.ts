@@ -133,3 +133,44 @@ describe("ChatStore.appendTurn", () => {
     expect(loaded.conversation.updatedAt).toBe(1);
   });
 });
+
+describe("ChatStore.renameConversation", () => {
+  it("updates the title, trimming + clipping to 60 chars", () => {
+    const store = makeStore();
+    const c = store.createConversation({ title: "T", modelName: "m", now: 1 });
+    store.renameConversation(c.id, "  " + "y".repeat(80) + "  ");
+    const loaded = store.loadConversation(c.id);
+    expect(loaded.conversation.title).toBe("y".repeat(60) + "…");
+  });
+
+  it("throws if the conversation does not exist", () => {
+    const store = makeStore();
+    expect(() => store.renameConversation("nope", "x")).toThrow();
+  });
+});
+
+describe("ChatStore.deleteConversation", () => {
+  it("removes the conversation and its messages", () => {
+    const store = makeStore();
+    const c = store.createConversation({ title: "T", modelName: "m", now: 1 });
+    store.appendTurn({
+      conversationId: c.id,
+      now: 2,
+      userMessage: { content: "q" },
+      assistantMessage: {
+        content: "a",
+        citations: [],
+        status: "done",
+        durationMs: 1,
+      },
+    });
+    store.deleteConversation(c.id);
+    expect(store.listConversations()).toEqual([]);
+    expect(() => store.loadConversation(c.id)).toThrow();
+  });
+
+  it("is a no-op for unknown ids (no throw)", () => {
+    const store = makeStore();
+    expect(() => store.deleteConversation("ghost")).not.toThrow();
+  });
+});

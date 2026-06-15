@@ -198,4 +198,19 @@ export class ChatStore {
     });
     tx();
   }
+
+  renameConversation(id: string, title: string): void {
+    const clipped = clipTitle(title) || "Untitled";
+    const result = this.db
+      .prepare(`UPDATE conversations SET title = ? WHERE id = ?`)
+      .run(clipped, id);
+    if (result.changes === 0) {
+      throw new Error(`Conversation not found: ${id}`);
+    }
+  }
+
+  deleteConversation(id: string): void {
+    this.db.prepare(`DELETE FROM conversations WHERE id = ?`).run(id);
+    // messages cascade via FK
+  }
 }
