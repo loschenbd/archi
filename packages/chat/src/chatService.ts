@@ -1,6 +1,7 @@
-import type { SearchService } from "@archi/search";
+import type { SearchService, SearchResult } from "@archi/search";
 import { buildRagPrompt } from "./prompt/buildRagPrompt.js";
 import type { LLMClient } from "./llmClient.js";
+import type { ChatStore } from "./persistence/chatStore.js";
 import {
   DEFAULT_TOP_K,
   type ChatTurnAbortedEvent,
@@ -18,14 +19,18 @@ export type ChatServiceEvent =
 
 export type ChatEventSink = (event: ChatServiceEvent) => void;
 
+const EMPTY_CONVERSATION_ID = "";
+
 export class ChatService {
   private readonly search: SearchService;
   private readonly llm: LLMClient;
+  private readonly store: ChatStore | null;
   private readonly active = new Map<string, AbortController>();
 
-  constructor(opts: { search: SearchService; llm: LLMClient }) {
+  constructor(opts: { search: SearchService; llm: LLMClient; store?: ChatStore }) {
     this.search = opts.search;
     this.llm = opts.llm;
+    this.store = opts.store ?? null;
   }
 
   cancel(turnId: string): void {
@@ -38,6 +43,34 @@ export class ChatService {
     const controller = new AbortController();
     this.active.set(turnId, controller);
     const tag = `[chat:${turnId.slice(0, 8)}]`;
+
+    const conversationId = this.ensureConversationId(req);
+    let assistantText = "";
+    let citations: SearchResult[] = [];
+
+    const persistTurn = (
+      status: "done" | "error" | "aborted" | "skipped",
+      opts: { errorCode?: string } = {}
+    ): void => {
+      if (!this.store || conversationId === EMPTY_CONVERSATION_ID) return;
+      try {
+        this.store.appendTurn({
+          conversationId,
+          now: Date.now(),
+          userMessage: { content: req.question },
+          assistantMessage: {
+            content: assistantText,
+            citations: citations.map((c) => c.passageId),
+            status,
+            errorCode: opts.errorCode,
+            durationMs: Math.round(performance.now() - started),
+          },
+        });
+      } catch (err) {
+        console.error(`${tag} persistence write failed:`, err);
+      }
+    };
+
     try {
       console.log(`${tag} start — question="${req.question.slice(0, 80)}" model=${req.modelName}`);
       const topK = req.options?.topK ?? DEFAULT_TOP_K;
@@ -47,21 +80,18 @@ export class ChatService {
 
       let searchResponse;
       try {
-        console.log(`${tag} searching (topK=${topK})`);
         searchResponse = await this.search.query({
           text: req.question,
           limit: topK,
           filters,
         });
-        console.log(
-          `${tag} search returned ${searchResponse.results.length} passage(s) in ${searchResponse.durationMs}ms`
-        );
       } catch (err) {
         console.error(`${tag} search threw:`, err);
+        persistTurn("error", { errorCode: "unknown" });
         sink({
           type: "error",
           turnId,
-          conversationId: req.conversationId ?? null,
+          conversationId: conversationId || null,
           code: "unknown",
           message: `Search failed: ${(err as Error).message ?? String(err)}`,
         });
@@ -69,11 +99,11 @@ export class ChatService {
       }
 
       if (searchResponse.results.length === 0) {
-        console.log(`${tag} no passages matched — emitting skipped`);
+        persistTurn("skipped");
         sink({
           type: "done",
           turnId,
-          conversationId: req.conversationId ?? "",
+          conversationId,
           citations: [],
           durationMs: Math.round(performance.now() - started),
           skipped: true,
@@ -82,24 +112,24 @@ export class ChatService {
         return;
       }
 
+      citations = searchResponse.results;
+
       let prompt;
       try {
         prompt = buildRagPrompt(req.question, searchResponse.results, req.history);
       } catch (err) {
         console.error(`${tag} buildRagPrompt threw:`, err);
+        persistTurn("error", { errorCode: "unknown" });
         sink({
           type: "error",
           turnId,
-          conversationId: req.conversationId ?? null,
+          conversationId: conversationId || null,
           code: "unknown",
           message: `Prompt build failed: ${(err as Error).message ?? String(err)}`,
         });
         return;
       }
 
-      console.log(
-        `${tag} calling Ollama (system=${prompt.system.length}ch, messages=${prompt.messages.length})`
-      );
       try {
         let tokenChunks = 0;
         for await (const delta of this.llm.chat({
@@ -109,8 +139,8 @@ export class ChatService {
           signal: controller.signal,
         })) {
           if (controller.signal.aborted) {
-            console.log(`${tag} aborted mid-stream`);
-            sink({ type: "aborted", turnId, conversationId: req.conversationId ?? null });
+            persistTurn("aborted");
+            sink({ type: "aborted", turnId, conversationId: conversationId || null });
             return;
           }
           if (delta.text) {
@@ -118,54 +148,67 @@ export class ChatService {
               console.log(`${tag} first token after ${Math.round(performance.now() - started)}ms`);
             }
             tokenChunks++;
+            assistantText += delta.text;
             sink({ type: "token", turnId, delta: delta.text });
           }
           if (delta.done) break;
         }
         if (controller.signal.aborted) {
-          sink({ type: "aborted", turnId, conversationId: req.conversationId ?? null });
+          persistTurn("aborted");
+          sink({ type: "aborted", turnId, conversationId: conversationId || null });
           return;
         }
-        console.log(
-          `${tag} stream done — ${tokenChunks} chunks, total ${Math.round(performance.now() - started)}ms`
-        );
       } catch (err) {
         if (controller.signal.aborted) {
-          sink({ type: "aborted", turnId, conversationId: req.conversationId ?? null });
+          persistTurn("aborted");
+          sink({ type: "aborted", turnId, conversationId: conversationId || null });
           return;
         }
-        console.error(`${tag} llm.chat threw:`, err);
+        const code = classifyError(err);
+        persistTurn("error", { errorCode: code });
         sink({
           type: "error",
           turnId,
-          conversationId: req.conversationId ?? null,
-          code: classifyError(err),
+          conversationId: conversationId || null,
+          code,
           message: (err as Error).message ?? "Unknown error",
         });
         return;
       }
 
+      persistTurn("done");
       sink({
         type: "done",
         turnId,
-        conversationId: req.conversationId ?? "",
-        citations: searchResponse.results,
+        conversationId,
+        citations,
         durationMs: Math.round(performance.now() - started),
       });
     } catch (err) {
-      // Belt-and-suspenders: anything that escapes the per-phase catches still
-      // surfaces as an error event instead of hanging the UI on "Thinking…".
       console.error(`${tag} runTurn threw unexpectedly:`, err);
+      persistTurn("error", { errorCode: "unknown" });
       sink({
         type: "error",
         turnId,
-        conversationId: req.conversationId ?? null,
+        conversationId: conversationId || null,
         code: "unknown",
         message: `Unexpected error: ${(err as Error).message ?? String(err)}`,
       });
     } finally {
       this.active.delete(turnId);
     }
+  }
+
+  private ensureConversationId(req: ChatTurnRequest): string {
+    if (!this.store) return EMPTY_CONVERSATION_ID;
+    if (req.conversationId) return req.conversationId;
+    const now = Date.now();
+    const conv = this.store.createConversation({
+      title: req.question,
+      modelName: req.modelName,
+      now,
+    });
+    return conv.id;
   }
 }
 
