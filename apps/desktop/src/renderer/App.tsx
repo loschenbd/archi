@@ -890,6 +890,9 @@ export function App(): JSX.Element {
                       }
                     }}
                   >
+                    <span className="sidebar-nav-seal" aria-hidden="true">
+                      {activeScreen === screen ? <span className="ui-wax-mark" /> : null}
+                    </span>
                     <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
                     <span className="sidebar-nav-label">{screen}</span>
                     {screen === "Settings" && sidebarUnhealthy ? (

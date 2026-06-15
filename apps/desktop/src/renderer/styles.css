@@ -4032,3 +4032,20 @@ body::before {
   z-index: 1;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Design System — Sidebar shell (spec §5.2)
+   ───────────────────────────────────────────────────────────── */
+
+.sidebar-nav-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  margin-right: 4px;
+}
+
+.sidebar-divider {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
