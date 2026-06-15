@@ -302,3 +302,79 @@
   border-radius: 999px;
   background: currentColor;
 }
+
+/* ───── Tabs (spec §4.5) ───── */
+
+.ui-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--rule-warm);
+  margin: 0 0 18px;
+}
+.ui-tab {
+  position: relative;
+  padding: 10px 4px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink-500);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.ui-tab:hover:not([aria-selected="true"]) {
+  color: var(--ink-700);
+}
+.ui-tab[aria-selected="true"] {
+  color: var(--ink-900);
+}
+.ui-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+  background: var(--accent-strong);
+}
+.ui-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  border-radius: 4px;
+}
+
+/* ───── Dividers & decorations (spec §4.6) ───── */
+
+.ui-hr {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--rule-warm);
+}
+.ui-rule-strong {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--rule-warm-strong);
+}
+
+.ui-fleuron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Newsreader, Georgia, serif;
+  color: var(--ink-warm);
+  font-size: 18px;
+  line-height: 1;
+}
+.ui-fleuron::before { content: "❦"; }
+
+.ui-drop-cap::first-letter {
+  float: left;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 52px;
+  line-height: 0.86;
+  font-weight: 600;
+  color: var(--accent-strong);
+  padding: 4px 8px 0 0;
+}
