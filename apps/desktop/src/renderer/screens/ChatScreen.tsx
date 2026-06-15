@@ -102,7 +102,12 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
   }, [turn]);
 
   if (needsSetup === null) {
-    return <div className="chat-screen chat-screen-loading">Loading chat…</div>;
+    return (
+      <div className="chat-screen chat-screen-loading">
+        <span className="chat-spinner" aria-hidden="true" />
+        <span>Loading chat…</span>
+      </div>
+    );
   }
   if (needsSetup) {
     return <ChatSetupScreen onConfigured={(name) => void handleConfigured(name)} />;
@@ -144,12 +149,33 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
               />
             );
           }
+          if (m.status === "streaming" && !m.content) {
+            return (
+              <div key={i} className="chat-bubble chat-bubble-assistant chat-bubble-thinking">
+                <span className="chat-typing" aria-label="Thinking">
+                  <span className="chat-typing-dot" />
+                  <span className="chat-typing-dot" />
+                  <span className="chat-typing-dot" />
+                </span>
+                <span className="chat-typing-caption">Thinking…</span>
+              </div>
+            );
+          }
           return (
             <div key={i}>
               <ChatMessageBubble
                 role="assistant"
-                text={m.content || (m.status === "streaming" ? "…" : "")}
+                text={m.content}
                 ghosted={m.status === "aborted"}
+                footer={
+                  m.status === "streaming" ? (
+                    <span className="chat-typing chat-typing-inline" aria-hidden="true">
+                      <span className="chat-typing-dot" />
+                      <span className="chat-typing-dot" />
+                      <span className="chat-typing-dot" />
+                    </span>
+                  ) : null
+                }
               />
               {m.status === "done" || m.status === "aborted" ? (
                 <ChatCitationList citations={m.citations} onOpenWork={onOpenWork} />

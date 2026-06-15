@@ -59,7 +59,12 @@ export function ChatSetupScreen({ onConfigured }: ChatSetupScreenProps): JSX.Ele
   }, [selected, onConfigured]);
 
   if (!detect) {
-    return <div className="chat-setup chat-setup-loading">Checking for Ollama…</div>;
+    return (
+      <div className="chat-setup chat-setup-loading">
+        <span className="chat-spinner" aria-hidden="true" />
+        <span>Checking for Ollama…</span>
+      </div>
+    );
   }
 
   if (detect.status === "not_installed") {
