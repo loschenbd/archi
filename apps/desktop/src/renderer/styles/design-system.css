@@ -591,3 +591,24 @@
   flex-direction: column;
   gap: 16px;
 }
+
+/* ───── Onboarding ───── */
+
+.wizard-chrome-card {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.wizard-chrome-card .ui-card__title {
+  font-size: 24px;
+  line-height: 1.2;
+}
+.wizard-chrome-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+}
+.wizard-chrome-actions .left-actions { display: flex; gap: 8px; }
+.wizard-chrome-actions .right-actions { display: flex; gap: 8px; }
