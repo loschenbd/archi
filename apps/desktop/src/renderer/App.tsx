@@ -16,35 +16,17 @@ import { WindowTitleBar } from "./components/WindowTitleBar";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { IndexerStatusProvider } from "./state/IndexerStatusContext";
+import { House, BookOpen, MessageSquareText, Sliders } from "lucide-react";
 import appLogo from "./assets/logo.png";
 
 const screens = ["Home", "Library", "Chat", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
-  Home: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2.5 7L8 2.5L13.5 7v6a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V7z" />
-      <path d="M6 14V9.5h4V14" />
-    </svg>
-  ),
-  Library: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 3h4.5a1.5 1.5 0 0 1 1.5 1.5v8.5a1 1 0 0 0-1-1H3z" />
-      <path d="M13 3H8.5A1.5 1.5 0 0 0 7 4.5v8.5a1 1 0 0 1 1-1h5z" />
-    </svg>
-  ),
-  Chat: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 9.33A5.67 5.67 0 0 1 10.43 14.8L8 14l-5 1 1-5A5.67 5.67 0 1 1 14 9.33z" />
-    </svg>
-  ),
-  Settings: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="8" cy="8" r="2" />
-      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
-    </svg>
-  )
+  Home: <House size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Library: <BookOpen size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Chat: <MessageSquareText size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Settings: <Sliders size={18} strokeWidth={1.6} aria-hidden="true" />,
 };
 type ConnectionProvider = "notion" | "cloud_notebook" | "device_export";
 
@@ -890,9 +872,6 @@ export function App(): JSX.Element {
                       }
                     }}
                   >
-                    <span className="sidebar-nav-seal" aria-hidden="true">
-                      {activeScreen === screen ? <span className="ui-wax-mark" /> : null}
-                    </span>
                     <span className="sidebar-nav-icon">{screenIcons[screen]}</span>
                     <span className="sidebar-nav-label">{screen}</span>
                     {screen === "Settings" && sidebarUnhealthy ? (
