@@ -183,20 +183,38 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
       conversationIdRef.current = id;
       setActiveConversationId(id);
       setModelName(loaded.conversation.modelName);
-      // Re-hydrate transcript. Citations are stored as passage-id arrays;
-      // we keep them empty here and let the user re-search if they want
-      // fresh hydration. (A future task can re-resolve them via the search index.)
+
+      // Collect all passage ids referenced by the assistant messages, hydrate
+      // them in a single IPC call, then map back per-message. Hydration is
+      // tolerant of missing passages — re-ingestion or deletion silently drops
+      // them from the array.
+      const allIds: string[] = [];
+      for (const m of loaded.messages) {
+        if (m.role === "assistant" && m.citations.length > 0) {
+          for (const cid of m.citations) {
+            if (!allIds.includes(cid)) allIds.push(cid);
+          }
+        }
+      }
+      const hydrated = allIds.length > 0
+        ? await window.archi.search.getByPassageIds(allIds)
+        : [];
+      const byPassageId = new Map(hydrated.map((r) => [r.passageId, r]));
+
       const rebuilt: RenderedMessage[] = [];
       for (const m of loaded.messages) {
         if (m.role === "user") {
           rebuilt.push({ kind: "user", content: m.content });
         } else {
+          const citations = m.citations
+            .map((cid) => byPassageId.get(cid))
+            .filter((r): r is SearchResult => r !== undefined);
           rebuilt.push({
             kind: "assistant",
             content: m.content,
             status: m.status === "done" ? "done" : m.status,
-            citations: [],
-            errorMessage: m.status === "error" ? m.errorCode : null,
+            citations,
+            errorMessage: m.status === "error" ? (m.content || m.errorCode) : null,
             skipReason: m.status === "skipped" ? "no_passages" : null,
           });
         }
