@@ -316,7 +316,7 @@ select {
   height: 18px;
 }
 
-.sidebar button:hover:not(:disabled) .sidebar-nav-icon {
+.sidebar button:hover:not(:disabled):not(.active) .sidebar-nav-icon {
   opacity: 1;
   background: color-mix(in srgb, var(--accent-soft) 50%, var(--surface));
 }
