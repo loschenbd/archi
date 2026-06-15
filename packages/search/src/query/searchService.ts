@@ -92,6 +92,29 @@ export class SearchService {
     };
   }
 
+  getResultsByIds(passageIds: string[]): SearchResult[] {
+    if (passageIds.length === 0) return [];
+    const placeholders = passageIds.map(() => "?").join(",");
+    const rows = this.options.db
+      .prepare(
+        `SELECT p.id AS passage_id, p.body, p.reader_note, p.position_start, p.position_end,
+                p.marked_at, p.is_starred, p.labels_json,
+                w.id AS work_id, w.display_title, w.creator, w.cover_image_url
+         FROM passages p
+         JOIN works w ON p.work_id = w.id
+         WHERE p.id IN (${placeholders})`
+      )
+      .all(...passageIds) as Array<Record<string, unknown>>;
+    const byId = new Map<string, Record<string, unknown>>();
+    for (const row of rows) {
+      byId.set(String(row.passage_id), row);
+    }
+    return passageIds
+      .map((id) => byId.get(id))
+      .filter((r): r is Record<string, unknown> => r !== undefined)
+      .map((row) => hydrateResult(row, { fused: 0 }, "fts5"));
+  }
+
   private findSimilarMode(
     sourceEmbedding: Float32Array,
     candidateIds: string[],

@@ -36,6 +36,7 @@ export type ChatTurnOptions = {
 
 export type ChatTurnRequest = {
   turnId: string;
+  conversationId?: string;
   question: string;
   history: ChatMessage[];
   modelName: string;
@@ -44,6 +45,7 @@ export type ChatTurnRequest = {
 
 export type ChatTurnDoneEvent = {
   turnId: string;
+  conversationId: string;
   citations: SearchResult[];
   durationMs: number;
   skipped?: boolean;
@@ -52,6 +54,7 @@ export type ChatTurnDoneEvent = {
 
 export type ChatTurnErrorEvent = {
   turnId: string;
+  conversationId: string | null;
   code: "ollama_unreachable" | "model_missing" | "context_overflow" | "unknown";
   message: string;
 };
@@ -63,6 +66,7 @@ export type ChatTurnTokenEvent = {
 
 export type ChatTurnAbortedEvent = {
   turnId: string;
+  conversationId: string | null;
 };
 
 export type ChatDelta = {

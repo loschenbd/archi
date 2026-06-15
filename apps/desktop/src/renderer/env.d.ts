@@ -2,12 +2,14 @@ export {};
 
 import type { IndexerStatus, SearchQuery, SearchResponse, SearchResult } from "@archi/search";
 import type {
+  ChatConversation,
   ChatTurnRequest,
   ChatTurnDoneEvent,
   ChatTurnErrorEvent,
   ChatTurnTokenEvent,
   ChatTurnAbortedEvent,
   DetectResult,
+  LoadedConversation,
   ModelInfo,
   PullProgress,
 } from "@archi/chat";
@@ -220,6 +222,7 @@ declare global {
         indexerStatus: () => Promise<IndexerStatus>;
         startIndexing: () => Promise<{ started: boolean }>;
         facets: () => Promise<{ creators: string[]; labels: string[] }>;
+        getByPassageIds: (ids: string[]) => Promise<SearchResult[]>;
       };
       chat: {
         detect: () => Promise<DetectResult>;
@@ -232,6 +235,11 @@ declare global {
         onDone: (cb: (e: ChatTurnDoneEvent) => void) => () => void;
         onError: (cb: (e: ChatTurnErrorEvent) => void) => () => void;
         onAborted: (cb: (e: ChatTurnAbortedEvent) => void) => () => void;
+        listConversations: () => Promise<ChatConversation[]>;
+        loadConversation: (id: string) => Promise<LoadedConversation>;
+        renameConversation: (id: string, title: string) => Promise<void>;
+        deleteConversation: (id: string) => Promise<void>;
+        onHistoryChanged: (cb: () => void) => () => void;
       };
     };
   }

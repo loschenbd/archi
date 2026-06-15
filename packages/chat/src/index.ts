@@ -29,3 +29,11 @@ export {
 } from "./recommendations.js";
 export { OllamaClient } from "./ollama/ollamaClient.js";
 export { ChatService, type ChatEventSink, type ChatServiceEvent } from "./chatService.js";
+export {
+  ChatStore,
+  type ChatConversation,
+  type ChatStoredMessage,
+  type LoadedConversation,
+  type AppendTurnInput,
+} from "./persistence/chatStore.js";
+export { openChatDatabase, type ChatDatabase } from "./persistence/openChatDatabase.js";

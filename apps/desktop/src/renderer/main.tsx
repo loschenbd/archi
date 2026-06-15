@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./styles.css";
 import "./styles/design-system-tokens.css";
 import "./styles/design-system.css";
+import "./styles/chat-history.css";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

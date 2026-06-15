@@ -18,4 +18,8 @@ export function registerSearchIpc(module: SearchModule): void {
     module.indexer.tick();
     return { started: true };
   });
+
+  ipcMain.handle("archi:search:getByPassageIds", async (_event, ids: string[]) => {
+    return module.search.getResultsByIds(ids);
+  });
 }
