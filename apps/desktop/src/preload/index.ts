@@ -1,11 +1,13 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
+  ChatConversation,
   ChatTurnRequest,
   ChatTurnDoneEvent,
   ChatTurnErrorEvent,
   ChatTurnTokenEvent,
   ChatTurnAbortedEvent,
   DetectResult,
+  LoadedConversation,
   ModelInfo,
   PullProgress,
 } from "@archi/chat";
@@ -267,6 +269,19 @@ const api = {
       const handler = (_e: unknown, p: ChatTurnAbortedEvent) => cb(p);
       ipcRenderer.on("archi:chat:aborted", handler);
       return () => ipcRenderer.removeListener("archi:chat:aborted", handler);
+    },
+    listConversations: (): Promise<ChatConversation[]> =>
+      ipcRenderer.invoke("archi:chat:listConversations"),
+    loadConversation: (id: string): Promise<LoadedConversation> =>
+      ipcRenderer.invoke("archi:chat:loadConversation", id),
+    renameConversation: (id: string, title: string): Promise<void> =>
+      ipcRenderer.invoke("archi:chat:renameConversation", id, title),
+    deleteConversation: (id: string): Promise<void> =>
+      ipcRenderer.invoke("archi:chat:deleteConversation", id),
+    onHistoryChanged: (cb: () => void): (() => void) => {
+      const handler = (): void => cb();
+      ipcRenderer.on("archi:chat:historyChanged", handler);
+      return () => ipcRenderer.removeListener("archi:chat:historyChanged", handler);
     },
   },
 };
