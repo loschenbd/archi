@@ -45,3 +45,91 @@ describe("ChatStore.createConversation + listConversations", () => {
     expect(ids).toEqual([c.id, b.id, a.id]);
   });
 });
+
+describe("ChatStore.appendTurn", () => {
+  it("writes user + assistant rows and bumps updated_at", () => {
+    const store = makeStore();
+    const c = store.createConversation({ title: "T", modelName: "m", now: 100 });
+    store.appendTurn({
+      conversationId: c.id,
+      now: 200,
+      userMessage: { content: "what is it?" },
+      assistantMessage: {
+        content: "an answer",
+        citations: ["p1", "p2"],
+        status: "done",
+        durationMs: 1234,
+      },
+    });
+    const loaded = store.loadConversation(c.id);
+    expect(loaded.messages).toHaveLength(2);
+    expect(loaded.messages[0]?.role).toBe("user");
+    expect(loaded.messages[0]?.content).toBe("what is it?");
+    expect(loaded.messages[1]?.role).toBe("assistant");
+    expect(loaded.messages[1]?.content).toBe("an answer");
+    expect(loaded.messages[1]?.citations).toEqual(["p1", "p2"]);
+    expect(loaded.messages[1]?.status).toBe("done");
+    expect(loaded.messages[1]?.durationMs).toBe(1234);
+    expect(loaded.conversation.updatedAt).toBe(200);
+  });
+
+  it("stores null citations_json when no citations are passed", () => {
+    const store = makeStore();
+    const c = store.createConversation({ title: "T", modelName: "m", now: 1 });
+    store.appendTurn({
+      conversationId: c.id,
+      now: 2,
+      userMessage: { content: "q" },
+      assistantMessage: {
+        content: "a",
+        citations: [],
+        status: "skipped",
+        durationMs: 10,
+      },
+    });
+    const loaded = store.loadConversation(c.id);
+    expect(loaded.messages[1]?.citations).toEqual([]);
+  });
+
+  it("persists assistant errors with code", () => {
+    const store = makeStore();
+    const c = store.createConversation({ title: "T", modelName: "m", now: 1 });
+    store.appendTurn({
+      conversationId: c.id,
+      now: 2,
+      userMessage: { content: "q" },
+      assistantMessage: {
+        content: "",
+        citations: [],
+        status: "error",
+        errorCode: "ollama_unreachable",
+        durationMs: 5,
+      },
+    });
+    const loaded = store.loadConversation(c.id);
+    expect(loaded.messages[1]?.status).toBe("error");
+    expect(loaded.messages[1]?.errorCode).toBe("ollama_unreachable");
+  });
+
+  it("rolls back both inserts if assistant insert fails", () => {
+    const store = makeStore();
+    const c = store.createConversation({ title: "T", modelName: "m", now: 1 });
+    expect(() =>
+      store.appendTurn({
+        conversationId: c.id,
+        now: 2,
+        userMessage: { content: "q" },
+        assistantMessage: {
+          content: "a",
+          citations: [],
+          status: "bogus" as never,
+          durationMs: 1,
+        },
+      })
+    ).toThrow();
+    const loaded = store.loadConversation(c.id);
+    expect(loaded.messages).toHaveLength(0);
+    // updated_at should also NOT have been bumped
+    expect(loaded.conversation.updatedAt).toBe(1);
+  });
+});
