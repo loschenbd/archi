@@ -914,22 +914,18 @@ export function App(): JSX.Element {
               </button>
             </aside>
             <section className="content" data-screen={activeScreen}>
-              {activeScreen !== "Home" ? (
+              {selectedWork ? (
                 <header className="content-header">
                   <div>
-                    {selectedWork ? (
-                      <button
-                        type="button"
-                        className="content-eyebrow content-eyebrow-link"
-                        onClick={() => setSelectedLibraryWorkId(null)}
-                      >
-                        <span aria-hidden="true">‹</span> Library
-                      </button>
-                    ) : (
-                      <p className="content-eyebrow">Workspace</p>
-                    )}
-                    <h1>{selectedWork ? selectedWork.title : activeScreen}</h1>
-                    {selectedWork ? <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p> : null}
+                    <button
+                      type="button"
+                      className="content-eyebrow content-eyebrow-link"
+                      onClick={() => setSelectedLibraryWorkId(null)}
+                    >
+                      <span aria-hidden="true">‹</span> Library
+                    </button>
+                    <h1>{selectedWork.title}</h1>
+                    <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p>
                   </div>
                 </header>
               ) : null}

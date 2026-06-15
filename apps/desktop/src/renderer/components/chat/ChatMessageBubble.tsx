@@ -4,7 +4,7 @@ export type ChatBubbleRole = "user" | "assistant";
 
 export type ChatMessageBubbleProps = {
   role: ChatBubbleRole;
-  text: string;
+  text: ReactNode;
   footer?: ReactNode;
   ghosted?: boolean;
 };

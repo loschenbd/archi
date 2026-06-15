@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { ChatMessage } from "@archi/chat";
 import type { SearchResult } from "@archi/search";
 import { ChatMessageBubble } from "../components/chat/ChatMessageBubble.js";
@@ -24,11 +25,52 @@ export type ChatScreenProps = {
   onOpenWork: (workId: string, passageId: string) => void;
 };
 
+function jumpToCitation(messageId: string, n: number): void {
+  const el = document.getElementById(`citation-${messageId}-${n}`);
+  if (!el) return;
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.classList.remove("chat-citation-flash");
+  void el.offsetWidth;
+  el.classList.add("chat-citation-flash");
+  window.setTimeout(() => el.classList.remove("chat-citation-flash"), 1600);
+}
+
+function renderWithCitations(text: string, messageId: string, maxN: number): ReactNode {
+  if (!text || maxN === 0) return text;
+  const parts: ReactNode[] = [];
+  const re = /\[(\d+)\]/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const raw = match[1];
+    if (raw === undefined) continue;
+    const n = parseInt(raw, 10);
+    if (Number.isNaN(n) || n < 1 || n > maxN) continue;
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    parts.push(
+      <button
+        key={`${messageId}-ref-${match.index}-${n}`}
+        type="button"
+        className="chat-citation-ref"
+        onClick={() => jumpToCitation(messageId, n)}
+        aria-label={`Jump to source ${n}`}
+      >
+        {n}
+      </button>
+    );
+    last = match.index + match[0].length;
+  }
+  if (parts.length === 0) return text;
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
 export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
   const [modelName, setModelName] = useState<string | null>(null);
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [draft, setDraft] = useState("");
   const [transcript, setTranscript] = useState<RenderedMessage[]>([]);
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
   const turn = useChatTurn();
 
   useEffect(() => {
@@ -62,6 +104,13 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
       return next;
     });
   }, [turn.text, turn.status, turn.citations, turn.errorMessage, turn.skipReason, turn.turnId]);
+
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
+  }, [transcript]);
 
   const handleConfigured = useCallback(async (name: string) => {
     await window.archi.preferences.set(PREF_MODEL, name);
@@ -126,7 +175,7 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
       <div className="chat-screen-empty-hint">
         Conversations are not saved — close this window and they're gone.
       </div>
-      <div className="chat-transcript" role="log" aria-live="polite">
+      <div className="chat-transcript" role="log" aria-live="polite" ref={transcriptRef}>
         {transcript.map((m, i) => {
           if (m.kind === "user") {
             return <ChatMessageBubble key={i} role="user" text={m.content} />;
@@ -161,11 +210,15 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
               </div>
             );
           }
+          const messageId = `m${i}`;
+          const hasCitations =
+            (m.status === "done" || m.status === "aborted") && m.citations.length > 0;
+          const richText = renderWithCitations(m.content, messageId, m.citations.length);
           return (
-            <div key={i}>
+            <div key={i} className="chat-message-block">
               <ChatMessageBubble
                 role="assistant"
-                text={m.content}
+                text={richText}
                 ghosted={m.status === "aborted"}
                 footer={
                   m.status === "streaming" ? (
@@ -177,8 +230,12 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
                   ) : null
                 }
               />
-              {m.status === "done" || m.status === "aborted" ? (
-                <ChatCitationList citations={m.citations} onOpenWork={onOpenWork} />
+              {hasCitations ? (
+                <ChatCitationList
+                  citations={m.citations}
+                  messageId={messageId}
+                  onOpenWork={onOpenWork}
+                />
               ) : null}
             </div>
           );
