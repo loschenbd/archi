@@ -1,2 +1,29 @@
-// Package exports are populated by Task 4 onward.
-export {};
+export type {
+  ChatDelta,
+  ChatMessage,
+  ChatRequestMessages,
+  ChatTurnAbortedEvent,
+  ChatTurnDoneEvent,
+  ChatTurnErrorEvent,
+  ChatTurnOptions,
+  ChatTurnRequest,
+  ChatTurnTokenEvent,
+  DetectResult,
+  ModelInfo,
+  PullProgress,
+} from "./types.js";
+export {
+  DEFAULT_TOP_K,
+  HISTORY_WINDOW_TURNS,
+  MAX_PASSAGE_BODY_TOKENS,
+  SYSTEM_PROMPT_VERSION,
+} from "./types.js";
+export { SYSTEM_PROMPT } from "./prompt/systemPrompt.js";
+export { buildRagPrompt } from "./prompt/buildRagPrompt.js";
+export type { ChatRequest, LLMClient } from "./llmClient.js";
+export {
+  RECOMMENDED_MODELS,
+  defaultRecommendation,
+  isRecommended,
+  type RecommendedModel,
+} from "./recommendations.js";
