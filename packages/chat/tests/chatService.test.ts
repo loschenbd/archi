@@ -3,6 +3,19 @@ import { ChatService } from "../src/chatService.js";
 import type { LLMClient, ChatRequest } from "../src/llmClient.js";
 import type { ChatDelta, ChatTurnRequest } from "../src/types.js";
 
+function passage(id: string, body = "body"): import("@archi/search").SearchResult {
+  return {
+    passageId: id,
+    body,
+    snippet: "",
+    work: { id: `w-${id}`, displayTitle: "T", creator: "C" },
+    labels: [],
+    isStarred: false,
+    scores: { fused: 0 },
+    matchedVia: "vector" as const,
+  };
+}
+
 type Event =
   | { type: "token"; turnId: string; delta: string }
   | { type: "done"; turnId: string; citations: unknown; skipped?: boolean; skipReason?: string }
@@ -45,7 +58,7 @@ function makeRequest(overrides: Partial<ChatTurnRequest> = {}): ChatTurnRequest 
 describe("ChatService.runTurn", () => {
   it("emits token events for each chat delta and a done event with citations", async () => {
     const events: Event[] = [];
-    const passages = [{ passageId: "p1", body: "body" }];
+    const passages = [passage("p1", "body")];
     const service = new ChatService({
       search: makeSearch(passages) as never,
       llm: makeLLM([
@@ -72,7 +85,7 @@ describe("ChatService.runTurn", () => {
   });
 
   it("passes the system prompt and history to the LLM via buildRagPrompt", async () => {
-    const passages = [{ passageId: "p1", body: "B", creator: "C", workTitle: "T" }];
+    const passages = [passage("p1", "B")];
     const llm = makeLLM([{ text: "x", done: true }]);
     const service = new ChatService({ search: makeSearch(passages) as never, llm });
     await service.runTurn(
@@ -106,7 +119,7 @@ describe("ChatService.runTurn", () => {
         yield* stalledStream;
       }) as unknown as LLMClient["chat"],
     };
-    const service = new ChatService({ search: makeSearch([{ passageId: "p1" }]) as never, llm });
+    const service = new ChatService({ search: makeSearch([passage("p1")]) as never, llm });
     const p = service.runTurn(makeRequest(), (e) => events.push(e as Event));
     await new Promise((r) => setTimeout(r, 5));
     service.cancel("t1");
@@ -125,7 +138,7 @@ describe("ChatService.runTurn", () => {
         throw new TypeError("fetch failed");
       }) as unknown as LLMClient["chat"],
     };
-    const service = new ChatService({ search: makeSearch([{ passageId: "p1" }]) as never, llm });
+    const service = new ChatService({ search: makeSearch([passage("p1")]) as never, llm });
     await service.runTurn(makeRequest(), (e) => events.push(e as Event));
     const err = events.find((e) => e.type === "error") as { code: string };
     expect(err.code).toBe("ollama_unreachable");
