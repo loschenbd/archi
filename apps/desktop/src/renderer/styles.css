@@ -4004,3 +4004,31 @@ select {
 }
 
 
+/* ─────────────────────────────────────────────────────────────
+   Design System — Atmosphere (spec §5.1)
+   Append-only, overrides body background and adds grain overlay.
+   ───────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--paper-warm-bg);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--paper-grain);
+  background-size: 160px 160px;
+  opacity: 0.5;
+  z-index: 0;
+}
+
+/* Keep app content above the grain overlay */
+#root,
+.layout,
+.onboarding-layout {
+  position: relative;
+  z-index: 1;
+}
+
