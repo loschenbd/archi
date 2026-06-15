@@ -4,9 +4,11 @@
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  /* Warm rules — replace ink-300/40 grey hairlines */
-  --rule-warm: color-mix(in srgb, var(--ink-700) 28%, transparent);
-  --rule-warm-strong: color-mix(in srgb, var(--ink-700) 50%, transparent);
+  /* Warm rules — clearly brown hairlines (replace grey ink-300/40).
+     Uses a richer saddle-brown anchor (#6b4a32) so the low-alpha mix
+     still reads brown against the cream paper, not taupe. */
+  --rule-warm: color-mix(in srgb, #6b4a32 36%, transparent);
+  --rule-warm-strong: color-mix(in srgb, #6b4a32 62%, transparent);
 
   /* Ink shades for chrome */
   --ink-warm: color-mix(in srgb, var(--ink-700) 70%, #6b4a32);
