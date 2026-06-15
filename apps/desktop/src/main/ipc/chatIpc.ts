@@ -1,19 +1,27 @@
 import { ipcMain, BrowserWindow } from "electron";
 import type {
+  ChatConversation,
   ChatTurnRequest,
+  LoadedConversation,
   ModelInfo,
   PullProgress,
 } from "@archi/chat";
 import type { ChatModule } from "../chatModule.js";
 
-export function registerChatIpc(module: ChatModule): void {
-  ipcMain.handle("archi:chat:detect", async () => {
-    return module.llm.detect();
-  });
+function broadcastHistoryChanged(): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send("archi:chat:historyChanged");
+    }
+  }
+}
 
-  ipcMain.handle("archi:chat:listModels", async (): Promise<ModelInfo[]> => {
-    return module.llm.listModels();
-  });
+export function registerChatIpc(module: ChatModule): void {
+  ipcMain.handle("archi:chat:detect", async () => module.llm.detect());
+
+  ipcMain.handle("archi:chat:listModels", async (): Promise<ModelInfo[]> =>
+    module.llm.listModels()
+  );
 
   ipcMain.handle("archi:chat:pullModel", async (event, name: string) => {
     const sender = event.sender;
@@ -49,21 +57,29 @@ export function registerChatIpc(module: ChatModule): void {
           case "done":
             sender.send("archi:chat:done", {
               turnId: e.turnId,
+              conversationId: e.conversationId,
               citations: e.citations,
               durationMs: e.durationMs,
               skipped: e.skipped,
               skipReason: e.skipReason,
             });
+            broadcastHistoryChanged();
             break;
           case "error":
             sender.send("archi:chat:error", {
               turnId: e.turnId,
+              conversationId: e.conversationId,
               code: e.code,
               message: e.message,
             });
+            broadcastHistoryChanged();
             break;
           case "aborted":
-            sender.send("archi:chat:aborted", { turnId: e.turnId });
+            sender.send("archi:chat:aborted", {
+              turnId: e.turnId,
+              conversationId: e.conversationId,
+            });
+            broadcastHistoryChanged();
             break;
         }
       })
@@ -72,6 +88,7 @@ export function registerChatIpc(module: ChatModule): void {
         if (!sender.isDestroyed()) {
           sender.send("archi:chat:error", {
             turnId: req.turnId,
+            conversationId: req.conversationId ?? null,
             code: "unknown",
             message: `Chat service crashed: ${(err as Error).message ?? String(err)}`,
           });
@@ -83,6 +100,33 @@ export function registerChatIpc(module: ChatModule): void {
   ipcMain.handle("archi:chat:cancel", async (_event, turnId: string) => {
     module.service.cancel(turnId);
   });
+
+  ipcMain.handle("archi:chat:listConversations", async (): Promise<ChatConversation[]> => {
+    return module.store.listConversations();
+  });
+
+  ipcMain.handle(
+    "archi:chat:loadConversation",
+    async (_event, id: string): Promise<LoadedConversation> => {
+      return module.store.loadConversation(id);
+    }
+  );
+
+  ipcMain.handle(
+    "archi:chat:renameConversation",
+    async (_event, id: string, title: string): Promise<void> => {
+      module.store.renameConversation(id, title);
+      broadcastHistoryChanged();
+    }
+  );
+
+  ipcMain.handle(
+    "archi:chat:deleteConversation",
+    async (_event, id: string): Promise<void> => {
+      module.store.deleteConversation(id);
+      broadcastHistoryChanged();
+    }
+  );
 }
 
 export function chatBroadcast(window: BrowserWindow, channel: string, payload: unknown): void {
