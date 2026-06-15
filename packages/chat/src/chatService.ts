@@ -61,6 +61,7 @@ export class ChatService {
         sink({
           type: "error",
           turnId,
+          conversationId: req.conversationId ?? null,
           code: "unknown",
           message: `Search failed: ${(err as Error).message ?? String(err)}`,
         });
@@ -72,6 +73,7 @@ export class ChatService {
         sink({
           type: "done",
           turnId,
+          conversationId: req.conversationId ?? "",
           citations: [],
           durationMs: Math.round(performance.now() - started),
           skipped: true,
@@ -88,6 +90,7 @@ export class ChatService {
         sink({
           type: "error",
           turnId,
+          conversationId: req.conversationId ?? null,
           code: "unknown",
           message: `Prompt build failed: ${(err as Error).message ?? String(err)}`,
         });
@@ -107,7 +110,7 @@ export class ChatService {
         })) {
           if (controller.signal.aborted) {
             console.log(`${tag} aborted mid-stream`);
-            sink({ type: "aborted", turnId });
+            sink({ type: "aborted", turnId, conversationId: req.conversationId ?? null });
             return;
           }
           if (delta.text) {
@@ -120,7 +123,7 @@ export class ChatService {
           if (delta.done) break;
         }
         if (controller.signal.aborted) {
-          sink({ type: "aborted", turnId });
+          sink({ type: "aborted", turnId, conversationId: req.conversationId ?? null });
           return;
         }
         console.log(
@@ -128,13 +131,14 @@ export class ChatService {
         );
       } catch (err) {
         if (controller.signal.aborted) {
-          sink({ type: "aborted", turnId });
+          sink({ type: "aborted", turnId, conversationId: req.conversationId ?? null });
           return;
         }
         console.error(`${tag} llm.chat threw:`, err);
         sink({
           type: "error",
           turnId,
+          conversationId: req.conversationId ?? null,
           code: classifyError(err),
           message: (err as Error).message ?? "Unknown error",
         });
@@ -144,6 +148,7 @@ export class ChatService {
       sink({
         type: "done",
         turnId,
+        conversationId: req.conversationId ?? "",
         citations: searchResponse.results,
         durationMs: Math.round(performance.now() - started),
       });
@@ -154,6 +159,7 @@ export class ChatService {
       sink({
         type: "error",
         turnId,
+        conversationId: req.conversationId ?? null,
         code: "unknown",
         message: `Unexpected error: ${(err as Error).message ?? String(err)}`,
       });
