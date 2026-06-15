@@ -171,7 +171,7 @@ export function SearchFilterChips({ filters, onChange }: Props): JSX.Element {
 
       <button
         type="button"
-        className="search-filter-chip search-filter-chip--add"
+        className="ui-chip"
         onClick={() => setPopoverOpen((v) => !v)}
         aria-expanded={popoverOpen}
       >

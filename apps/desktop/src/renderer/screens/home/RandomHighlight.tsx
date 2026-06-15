@@ -48,17 +48,17 @@ export function RandomHighlight({ passages, onOpenWork }: Props): JSX.Element {
 
   if (passages.length === 0) {
     return (
-      <section className="random-highlight-card random-highlight-card-empty">
-        <p className="content-eyebrow">A random highlight</p>
-        <p className="random-highlight-empty">No highlights yet.</p>
+      <section className="ui-card ui-card--ruled ui-card--loose">
+        <header className="ui-card__eyebrow">A random highlight</header>
+        <p className="ui-card__body">No highlights yet.</p>
       </section>
     );
   }
 
   if (!selected) {
     return (
-      <section className="random-highlight-card">
-        <p className="content-eyebrow">A random highlight</p>
+      <section className="ui-card ui-card--ruled ui-card--loose">
+        <header className="ui-card__eyebrow">A random highlight</header>
       </section>
     );
   }
@@ -66,32 +66,49 @@ export function RandomHighlight({ passages, onOpenWork }: Props): JSX.Element {
   const canShuffle = passages.length > 1;
 
   return (
-    <section className="random-highlight-card">
-      <header className="random-highlight-head">
-        <p className="content-eyebrow">A random highlight</p>
-        {canShuffle ? (
+    <section className="ui-card ui-card--ruled ui-card--loose">
+      <header className="ui-card__eyebrow">A random highlight</header>
+      <p
+        className="ui-card__body ui-drop-cap"
+        style={{ fontFamily: "Newsreader, Georgia, serif", fontSize: 18, lineHeight: 1.55 }}
+      >
+        {excerptOf(selected.body, 360)}
+      </p>
+      <p
+        className="ui-card__body"
+        style={{ marginTop: 8, fontSize: 12, color: "var(--ink-500)" }}
+      >
+        <button
+          type="button"
+          onClick={() => onOpenWork(selected.workId)}
+          style={{
+            background: "none",
+            border: 0,
+            padding: 0,
+            font: "inherit",
+            color: "inherit",
+            cursor: "pointer",
+            textAlign: "left"
+          }}
+        >
+          {selected.workTitle}
+        </button>
+      </p>
+      {canShuffle ? (
+        <footer className="ui-card__footer">
           <button
             type="button"
-            className="random-highlight-shuffle"
+            className="ui-btn ui-btn--ghost"
             onClick={(event) => {
               event.stopPropagation();
               setSelected(pickRandom(passages, selected.id));
             }}
             aria-label="Shuffle to a different highlight"
           >
-            Shuffle ↻
+            Shuffle
           </button>
-        ) : null}
-      </header>
-      <button
-        type="button"
-        className="random-highlight-body-button"
-        onClick={() => onOpenWork(selected.workId)}
-      >
-        <span className="random-highlight-quote-mark" aria-hidden="true">&ldquo;</span>
-        <p className="random-highlight-quote">{excerptOf(selected.body, 360)}</p>
-        <p className="random-highlight-attribution">{selected.workTitle}</p>
-      </button>
+        </footer>
+      ) : null}
     </section>
   );
 }
