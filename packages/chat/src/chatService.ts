@@ -37,17 +37,38 @@ export class ChatService {
     const started = performance.now();
     const controller = new AbortController();
     this.active.set(turnId, controller);
+    const tag = `[chat:${turnId.slice(0, 8)}]`;
     try {
+      console.log(`${tag} start — question="${req.question.slice(0, 80)}" model=${req.modelName}`);
       const topK = req.options?.topK ?? DEFAULT_TOP_K;
       const filters: Parameters<SearchService["query"]>[0]["filters"] = {};
       if (req.options?.includeArchived !== true) filters.isArchived = false;
       if (req.options?.includeHidden !== true) filters.isHidden = false;
-      const searchResponse = await this.search.query({
-        text: req.question,
-        limit: topK,
-        filters,
-      });
+
+      let searchResponse;
+      try {
+        console.log(`${tag} searching (topK=${topK})`);
+        searchResponse = await this.search.query({
+          text: req.question,
+          limit: topK,
+          filters,
+        });
+        console.log(
+          `${tag} search returned ${searchResponse.results.length} passage(s) in ${searchResponse.durationMs}ms`
+        );
+      } catch (err) {
+        console.error(`${tag} search threw:`, err);
+        sink({
+          type: "error",
+          turnId,
+          code: "unknown",
+          message: `Search failed: ${(err as Error).message ?? String(err)}`,
+        });
+        return;
+      }
+
       if (searchResponse.results.length === 0) {
+        console.log(`${tag} no passages matched — emitting skipped`);
         sink({
           type: "done",
           turnId,
@@ -58,19 +79,42 @@ export class ChatService {
         });
         return;
       }
-      const { system, messages } = buildRagPrompt(req.question, searchResponse.results, req.history);
+
+      let prompt;
       try {
+        prompt = buildRagPrompt(req.question, searchResponse.results, req.history);
+      } catch (err) {
+        console.error(`${tag} buildRagPrompt threw:`, err);
+        sink({
+          type: "error",
+          turnId,
+          code: "unknown",
+          message: `Prompt build failed: ${(err as Error).message ?? String(err)}`,
+        });
+        return;
+      }
+
+      console.log(
+        `${tag} calling Ollama (system=${prompt.system.length}ch, messages=${prompt.messages.length})`
+      );
+      try {
+        let tokenChunks = 0;
         for await (const delta of this.llm.chat({
           model: req.modelName,
-          system,
-          messages,
+          system: prompt.system,
+          messages: prompt.messages,
           signal: controller.signal,
         })) {
           if (controller.signal.aborted) {
+            console.log(`${tag} aborted mid-stream`);
             sink({ type: "aborted", turnId });
             return;
           }
           if (delta.text) {
+            if (tokenChunks === 0) {
+              console.log(`${tag} first token after ${Math.round(performance.now() - started)}ms`);
+            }
+            tokenChunks++;
             sink({ type: "token", turnId, delta: delta.text });
           }
           if (delta.done) break;
@@ -79,11 +123,15 @@ export class ChatService {
           sink({ type: "aborted", turnId });
           return;
         }
+        console.log(
+          `${tag} stream done — ${tokenChunks} chunks, total ${Math.round(performance.now() - started)}ms`
+        );
       } catch (err) {
         if (controller.signal.aborted) {
           sink({ type: "aborted", turnId });
           return;
         }
+        console.error(`${tag} llm.chat threw:`, err);
         sink({
           type: "error",
           turnId,
@@ -92,11 +140,22 @@ export class ChatService {
         });
         return;
       }
+
       sink({
         type: "done",
         turnId,
         citations: searchResponse.results,
         durationMs: Math.round(performance.now() - started),
+      });
+    } catch (err) {
+      // Belt-and-suspenders: anything that escapes the per-phase catches still
+      // surfaces as an error event instead of hanging the UI on "Thinking…".
+      console.error(`${tag} runTurn threw unexpectedly:`, err);
+      sink({
+        type: "error",
+        turnId,
+        code: "unknown",
+        message: `Unexpected error: ${(err as Error).message ?? String(err)}`,
       });
     } finally {
       this.active.delete(turnId);

@@ -39,33 +39,44 @@ export function registerChatIpc(module: ChatModule): void {
 
   ipcMain.handle("archi:chat:turn", async (event, req: ChatTurnRequest) => {
     const sender = event.sender;
-    void module.service.runTurn(req, (e) => {
-      if (sender.isDestroyed()) return;
-      switch (e.type) {
-        case "token":
-          sender.send("archi:chat:token", { turnId: e.turnId, delta: e.delta });
-          break;
-        case "done":
-          sender.send("archi:chat:done", {
-            turnId: e.turnId,
-            citations: e.citations,
-            durationMs: e.durationMs,
-            skipped: e.skipped,
-            skipReason: e.skipReason,
-          });
-          break;
-        case "error":
+    module.service
+      .runTurn(req, (e) => {
+        if (sender.isDestroyed()) return;
+        switch (e.type) {
+          case "token":
+            sender.send("archi:chat:token", { turnId: e.turnId, delta: e.delta });
+            break;
+          case "done":
+            sender.send("archi:chat:done", {
+              turnId: e.turnId,
+              citations: e.citations,
+              durationMs: e.durationMs,
+              skipped: e.skipped,
+              skipReason: e.skipReason,
+            });
+            break;
+          case "error":
+            sender.send("archi:chat:error", {
+              turnId: e.turnId,
+              code: e.code,
+              message: e.message,
+            });
+            break;
+          case "aborted":
+            sender.send("archi:chat:aborted", { turnId: e.turnId });
+            break;
+        }
+      })
+      .catch((err) => {
+        console.error(`[chat ipc] runTurn rejected for turn ${req.turnId}:`, err);
+        if (!sender.isDestroyed()) {
           sender.send("archi:chat:error", {
-            turnId: e.turnId,
-            code: e.code,
-            message: e.message,
+            turnId: req.turnId,
+            code: "unknown",
+            message: `Chat service crashed: ${(err as Error).message ?? String(err)}`,
           });
-          break;
-        case "aborted":
-          sender.send("archi:chat:aborted", { turnId: e.turnId });
-          break;
-      }
-    });
+        }
+      });
     return { accepted: true, turnId: req.turnId };
   });
 
