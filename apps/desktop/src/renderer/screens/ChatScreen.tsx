@@ -145,7 +145,7 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
               <ChatMessageBubble
                 key={i}
                 role="assistant"
-                text={`Ollama disconnected: ${m.errorMessage ?? "unknown error"}.`}
+                text={m.errorMessage ?? "Something went wrong."}
               />
             );
           }
