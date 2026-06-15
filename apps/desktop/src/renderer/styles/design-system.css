@@ -583,3 +583,11 @@
   padding: 1px 6px;
   border-radius: 4px;
 }
+
+/* ───── Book detail ───── */
+
+.book-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
