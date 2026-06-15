@@ -21,9 +21,10 @@
     "predev": "pnpm run fetch:model",
     "healthcheck": "node ./scripts/doctor.mjs",
     "lint": "eslint src --ext .ts,.tsx",
-    "package": "pnpm build && electron-builder --config electron-builder.yml --mac dmg && node ./scripts/verify-packaged-runtime.mjs",
-    "package:universal": "pnpm build && electron-builder --config electron-builder.yml --mac dmg --universal && node ./scripts/verify-packaged-runtime.mjs",
-    "release": "pnpm build && electron-builder --config electron-builder.yml --mac dmg --publish always && node ./scripts/verify-packaged-runtime.mjs",
+    "package": "pnpm build && electron-builder --config electron-builder.yml --mac dmg && node ./scripts/verify-packaged-runtime.mjs && node ./scripts/verify-signing.mjs",
+    "package:universal": "pnpm build && electron-builder --config electron-builder.yml --mac dmg --universal && node ./scripts/verify-packaged-runtime.mjs && node ./scripts/verify-signing.mjs",
+    "release": "pnpm build && electron-builder --config electron-builder.yml --mac dmg --publish always && node ./scripts/verify-packaged-runtime.mjs && node ./scripts/verify-signing.mjs",
+    "verify:signing": "node ./scripts/verify-signing.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
   },
