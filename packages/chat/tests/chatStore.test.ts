@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, beforeEach } from "vitest";
 import { openChatDatabase } from "../src/persistence/openChatDatabase.js";
 import { ChatStore } from "../src/persistence/chatStore.js";
@@ -172,5 +175,31 @@ describe("ChatStore.deleteConversation", () => {
   it("is a no-op for unknown ids (no throw)", () => {
     const store = makeStore();
     expect(() => store.deleteConversation("ghost")).not.toThrow();
+  });
+});
+
+describe("openChatDatabase migrations", () => {
+  let tmpDir: string;
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "archi-chat-test-"));
+  });
+
+  it("applies the v1 migration once and is idempotent across opens", () => {
+    const path = join(tmpDir, "chat.sqlite");
+    const db1 = openChatDatabase(path);
+    const count1 = db1
+      .prepare("SELECT COUNT(*) AS n FROM migrations")
+      .get() as { n: number };
+    expect(count1.n).toBe(1);
+    db1.close();
+
+    const db2 = openChatDatabase(path);
+    const count2 = db2
+      .prepare("SELECT COUNT(*) AS n FROM migrations")
+      .get() as { n: number };
+    expect(count2.n).toBe(1);
+    db2.close();
+
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 });
