@@ -378,3 +378,75 @@
   color: var(--accent-strong);
   padding: 4px 8px 0 0;
 }
+
+/* ───── Wax-seal marker (spec §4.7) ───── */
+
+.ui-wax-mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      color-mix(in srgb, var(--wax-red) 92%, #fff) 0%,
+      var(--wax-red) 60%,
+      color-mix(in srgb, var(--wax-red) 70%, #000) 100%
+    );
+  box-shadow:
+    var(--wax-shadow),
+    0 0 0 1px color-mix(in srgb, var(--wax-red) 50%, transparent);
+}
+
+/* ───── Footnote reference (spec §4.8) ───── */
+
+.ui-footnote-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-family: Newsreader, Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--accent-strong);
+  background: transparent;
+  border: 1px solid var(--rule-warm);
+  border-radius: 999px;
+  vertical-align: super;
+  margin: 0 2px;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.ui-footnote-ref:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+}
+.ui-footnote-ref:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+@keyframes ui-footnote-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    border-color: var(--rule-warm);
+  }
+  25% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 32%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    border-color: var(--rule-warm);
+  }
+}
+.ui-footnote-flash {
+  animation: ui-footnote-flash 1.4s ease-out;
+  border-radius: 14px;
+}
