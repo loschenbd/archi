@@ -27,6 +27,8 @@ import { CredentialStore } from "./credentialStore.js";
 import { ElectronCloudNetValidator } from "./cloudNetValidator.js";
 import { createSearchModule, type SearchModule } from "./searchModule.js";
 import { registerSearchIpc } from "./ipc/searchIpc.js";
+import { createChatModule } from "./chatModule.js";
+import { registerChatIpc } from "./ipc/chatIpc.js";
 import { nextCloudAuthSurfaced } from "./cloudAuthSurfaced.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1764,6 +1766,9 @@ app.whenReady().then(() => {
   });
 
   registerSearchIpc(searchModule);
+
+  const chatModule = createChatModule({ search: searchModule.search });
+  registerChatIpc(chatModule);
 
   ipcMain.handle("archi:search:facets", async () => {
     return searchModule.search.getFacets();
