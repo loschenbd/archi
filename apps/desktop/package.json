@@ -28,6 +28,7 @@
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
   },
   "dependencies": {
+    "@archi/chat": "workspace:*",
     "@archi/core": "workspace:*",
     "@archi/destination-notion": "workspace:*",
     "@archi/search": "workspace:*",
@@ -64,6 +65,9 @@
     "universalify": "^2.0.1"
   },
   "dependenciesMeta": {
+    "@archi/chat": {
+      "injected": true
+    },
     "@archi/core": {
       "injected": true
     },
