@@ -14,16 +14,18 @@ export function ChatCitationList({
 }: ChatCitationListProps): JSX.Element {
   if (citations.length === 0) return <></>;
   return (
-    <div className="chat-sources">
-      <h3 className="chat-sources-header">Sources</h3>
-      <ol className="chat-citations">
+    <div className="chat-sources-v2">
+      <h3 className="ui-card__eyebrow">Sources</h3>
+      <ol className="chat-citations-v2">
         {citations.map((c, i) => (
           <li
             key={c.passageId}
             id={`citation-${messageId}-${i + 1}`}
-            className="chat-citation"
+            className="chat-citation-v2"
           >
-            <div className="chat-citation-number">[{i + 1}]</div>
+            <span className="chat-citation-v2__number">
+              <span className="ui-footnote-ref" aria-hidden="true">{i + 1}</span>
+            </span>
             <SearchResultCard
               result={c}
               showMatchSource={false}

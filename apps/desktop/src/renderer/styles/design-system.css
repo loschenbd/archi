@@ -450,3 +450,96 @@
   animation: ui-footnote-flash 1.4s ease-out;
   border-radius: 14px;
 }
+
+/* ───── Chat composer (spec §6.3) ───── */
+
+.chat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ───── Chat bubbles (spec §6.3) ───── */
+
+.chat-bubble-v2 {
+  max-width: 720px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.chat-bubble-v2__text { white-space: pre-wrap; }
+.chat-bubble-v2__footer {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.chat-bubble-v2--assistant { align-self: flex-start; }
+.chat-bubble-v2--user {
+  align-self: flex-end;
+}
+.chat-bubble-v2--ghosted {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.chat-bubble-user-v2 {
+  padding: 14px 18px;
+  background: linear-gradient(180deg, var(--accent-500) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--accent) 56%, transparent);
+  border-radius: var(--radius-card);
+  border-bottom-right-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 6px 14px -8px rgba(178, 63, 47, 0.35);
+}
+
+/* ───── Chat sources panel ───── */
+
+.chat-sources-v2 {
+  max-width: 720px;
+  margin-top: 6px;
+  align-self: flex-start;
+  width: 100%;
+}
+.chat-citations-v2 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.chat-citation-v2 {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.chat-citation-v2__number {
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ───── Chat setup shell ───── */
+
+.chat-setup-shell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 48px 24px;
+  overflow-y: auto;
+}
+.chat-setup-card {
+  width: min(640px, 100%);
+}
+.chat-setup-card .ui-card__footer {
+  justify-content: center;
+  flex-wrap: wrap;
+}

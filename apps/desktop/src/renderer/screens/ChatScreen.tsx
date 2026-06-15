@@ -29,10 +29,10 @@ function jumpToCitation(messageId: string, n: number): void {
   const el = document.getElementById(`citation-${messageId}-${n}`);
   if (!el) return;
   el.scrollIntoView({ block: "center", behavior: "smooth" });
-  el.classList.remove("chat-citation-flash");
+  el.classList.remove("ui-footnote-flash");
   void el.offsetWidth;
-  el.classList.add("chat-citation-flash");
-  window.setTimeout(() => el.classList.remove("chat-citation-flash"), 1600);
+  el.classList.add("ui-footnote-flash");
+  window.setTimeout(() => el.classList.remove("ui-footnote-flash"), 1600);
 }
 
 function renderWithCitations(text: string, messageId: string, maxN: number): ReactNode {
@@ -51,7 +51,7 @@ function renderWithCitations(text: string, messageId: string, maxN: number): Rea
       <button
         key={`${messageId}-ref-${match.index}-${n}`}
         type="button"
-        className="chat-citation-ref"
+        className="ui-footnote-ref"
         onClick={() => jumpToCitation(messageId, n)}
         aria-label={`Jump to source ${n}`}
       >
@@ -168,7 +168,11 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
     <div className="chat-screen">
       <header className="chat-screen-header">
         <ChatStatusBadge modelName={modelName} />
-        <button type="button" className="chat-screen-new" onClick={handleNewChat}>
+        <button
+          type="button"
+          className="ui-btn ui-btn--secondary ui-btn--sm"
+          onClick={handleNewChat}
+        >
           New chat
         </button>
       </header>
@@ -242,28 +246,39 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
         })}
       </div>
       <form
-        className="chat-input"
+        className="chat-composer"
         onSubmit={(e) => {
           e.preventDefault();
           void handleSend();
         }}
       >
         <textarea
+          className="ui-textarea"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Ask something about your library…"
           disabled={sending}
           rows={3}
         />
-        {sending ? (
-          <button type="button" onClick={turn.cancel}>
-            Stop
-          </button>
-        ) : (
-          <button type="submit" disabled={!draft.trim()}>
-            Send
-          </button>
-        )}
+        <div className="chat-composer-actions">
+          {sending ? (
+            <button
+              type="button"
+              className="ui-btn ui-btn--secondary"
+              onClick={turn.cancel}
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="ui-btn ui-btn--primary"
+              disabled={!draft.trim()}
+            >
+              Send
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

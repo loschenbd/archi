@@ -10,17 +10,19 @@ export type ChatMessageBubbleProps = {
 };
 
 export function ChatMessageBubble(props: ChatMessageBubbleProps): JSX.Element {
+  const isUser = props.role === "user";
   const className = [
-    "chat-bubble",
-    `chat-bubble-${props.role}`,
-    props.ghosted ? "chat-bubble-ghosted" : "",
+    isUser ? "chat-bubble-user-v2" : "ui-card ui-card--tight",
+    "chat-bubble-v2",
+    `chat-bubble-v2--${props.role}`,
+    props.ghosted ? "chat-bubble-v2--ghosted" : "",
   ]
     .filter(Boolean)
     .join(" ");
   return (
     <div className={className}>
-      <div className="chat-bubble-text">{props.text}</div>
-      {props.footer ? <div className="chat-bubble-footer">{props.footer}</div> : null}
+      <div className="chat-bubble-v2__text">{props.text}</div>
+      {props.footer ? <div className="chat-bubble-v2__footer">{props.footer}</div> : null}
     </div>
   );
 }
