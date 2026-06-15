@@ -5,10 +5,13 @@ import type { SearchResult } from "@archi/search";
 import { ChatMessageBubble } from "../components/chat/ChatMessageBubble.js";
 import { ChatCitationList } from "../components/chat/ChatCitationList.js";
 import { ChatStatusBadge } from "../components/chat/ChatStatusBadge.js";
+import { ChatHistoryRail } from "../components/chat/ChatHistoryRail.js";
 import { ChatSetupScreen } from "./ChatSetupScreen.js";
 import { useChatTurn } from "../hooks/useChatTurn.js";
+import { useChatHistory } from "../hooks/useChatHistory.js";
 
 const PREF_MODEL = "chat.modelName";
+const PREF_RAIL_COLLAPSED = "chat.historyRailCollapsed";
 
 type RenderedMessage =
   | { kind: "user"; content: string }
@@ -70,12 +73,18 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [draft, setDraft] = useState("");
   const [transcript, setTranscript] = useState<RenderedMessage[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const turn = useChatTurn();
+  const history = useChatHistory();
+  const conversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     void (async () => {
       const stored = await window.archi.preferences.get<string | null>(PREF_MODEL, null);
+      const railPref = await window.archi.preferences.get<boolean>(PREF_RAIL_COLLAPSED, false);
+      setRailCollapsed(railPref);
       const detect = await window.archi.chat.detect();
       if (detect.status !== "ready" || !stored) {
         setNeedsSetup(true);
@@ -85,6 +94,15 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
       setNeedsSetup(false);
     })();
   }, []);
+
+  // Keep the ref in sync with the turn-hook's reported conversationId so the
+  // first turn's id propagates to follow-ups.
+  useEffect(() => {
+    if (turn.conversationId && turn.conversationId !== conversationIdRef.current) {
+      conversationIdRef.current = turn.conversationId;
+      setActiveConversationId(turn.conversationId);
+    }
+  }, [turn.conversationId]);
 
   useEffect(() => {
     if (turn.turnId === null) return;
@@ -141,14 +159,60 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
         skipReason: null,
       },
     ]);
-    await turn.send({ question, history, modelName });
+    await turn.send({
+      question,
+      history,
+      modelName,
+      conversationId: conversationIdRef.current ?? undefined,
+    });
   }, [draft, modelName, transcript, turn]);
 
   const handleNewChat = useCallback(() => {
     turn.reset();
+    conversationIdRef.current = null;
+    setActiveConversationId(null);
     setTranscript([]);
     setDraft("");
   }, [turn]);
+
+  const handleSelectConversation = useCallback(
+    async (id: string) => {
+      turn.cancel();
+      turn.reset();
+      const loaded = await window.archi.chat.loadConversation(id);
+      conversationIdRef.current = id;
+      setActiveConversationId(id);
+      setModelName(loaded.conversation.modelName);
+      // Re-hydrate transcript. Citations are stored as passage-id arrays;
+      // we keep them empty here and let the user re-search if they want
+      // fresh hydration. (A future task can re-resolve them via the search index.)
+      const rebuilt: RenderedMessage[] = [];
+      for (const m of loaded.messages) {
+        if (m.role === "user") {
+          rebuilt.push({ kind: "user", content: m.content });
+        } else {
+          rebuilt.push({
+            kind: "assistant",
+            content: m.content,
+            status: m.status === "done" ? "done" : m.status,
+            citations: [],
+            errorMessage: m.status === "error" ? m.errorCode : null,
+            skipReason: m.status === "skipped" ? "no_passages" : null,
+          });
+        }
+      }
+      setTranscript(rebuilt);
+    },
+    [turn]
+  );
+
+  const handleToggleRail = useCallback(() => {
+    setRailCollapsed((prev) => {
+      const next = !prev;
+      void window.archi.preferences.set(PREF_RAIL_COLLAPSED, next);
+      return next;
+    });
+  }, []);
 
   if (needsSetup === null) {
     return (
@@ -165,121 +229,134 @@ export function ChatScreen({ onOpenWork }: ChatScreenProps): JSX.Element {
   const sending = turn.status === "streaming";
 
   return (
-    <div className="chat-screen">
-      <header className="chat-screen-header">
-        <ChatStatusBadge modelName={modelName} />
-        <button
-          type="button"
-          className="ui-btn ui-btn--secondary ui-btn--sm"
-          onClick={handleNewChat}
-        >
-          New chat
-        </button>
-      </header>
-      <div className="chat-screen-empty-hint">
-        Conversations are not saved — close this window and they're gone.
-      </div>
-      <div className="chat-transcript" role="log" aria-live="polite" ref={transcriptRef}>
-        {transcript.map((m, i) => {
-          if (m.kind === "user") {
-            return <ChatMessageBubble key={i} role="user" text={m.content} />;
-          }
-          if (m.status === "skipped") {
+    <div
+      className={`chat-screen-with-rail${
+        railCollapsed ? " chat-screen-with-rail--collapsed" : ""
+      }`}
+    >
+      <ChatHistoryRail
+        conversations={history.conversations}
+        activeId={activeConversationId}
+        collapsed={railCollapsed}
+        onToggleCollapsed={handleToggleRail}
+        onSelect={(id) => void handleSelectConversation(id)}
+        onNewChat={handleNewChat}
+        onRename={history.rename}
+        onDelete={history.remove}
+      />
+      <div className="chat-screen">
+        <header className="chat-screen-header">
+          <ChatStatusBadge modelName={modelName} />
+          <button
+            type="button"
+            className="ui-btn ui-btn--secondary ui-btn--sm"
+            onClick={handleNewChat}
+          >
+            New chat
+          </button>
+        </header>
+        <div className="chat-transcript" role="log" aria-live="polite" ref={transcriptRef}>
+          {transcript.map((m, i) => {
+            if (m.kind === "user") {
+              return <ChatMessageBubble key={i} role="user" text={m.content} />;
+            }
+            if (m.status === "skipped") {
+              return (
+                <ChatMessageBubble
+                  key={i}
+                  role="assistant"
+                  text="No passages in your library matched that. Try a broader question."
+                />
+              );
+            }
+            if (m.status === "error") {
+              return (
+                <ChatMessageBubble
+                  key={i}
+                  role="assistant"
+                  text={m.errorMessage ?? "Something went wrong."}
+                />
+              );
+            }
+            if (m.status === "streaming" && !m.content) {
+              return (
+                <div key={i} className="chat-bubble chat-bubble-assistant chat-bubble-thinking">
+                  <span className="chat-typing" aria-label="Thinking">
+                    <span className="chat-typing-dot" />
+                    <span className="chat-typing-dot" />
+                    <span className="chat-typing-dot" />
+                  </span>
+                  <span className="chat-typing-caption">Thinking…</span>
+                </div>
+              );
+            }
+            const messageId = `m${i}`;
+            const hasCitations =
+              (m.status === "done" || m.status === "aborted") && m.citations.length > 0;
+            const richText = renderWithCitations(m.content, messageId, m.citations.length);
             return (
-              <ChatMessageBubble
-                key={i}
-                role="assistant"
-                text="No passages in your library matched that. Try a broader question."
-              />
-            );
-          }
-          if (m.status === "error") {
-            return (
-              <ChatMessageBubble
-                key={i}
-                role="assistant"
-                text={m.errorMessage ?? "Something went wrong."}
-              />
-            );
-          }
-          if (m.status === "streaming" && !m.content) {
-            return (
-              <div key={i} className="chat-bubble chat-bubble-assistant chat-bubble-thinking">
-                <span className="chat-typing" aria-label="Thinking">
-                  <span className="chat-typing-dot" />
-                  <span className="chat-typing-dot" />
-                  <span className="chat-typing-dot" />
-                </span>
-                <span className="chat-typing-caption">Thinking…</span>
+              <div key={i} className="chat-message-block">
+                <ChatMessageBubble
+                  role="assistant"
+                  text={richText}
+                  ghosted={m.status === "aborted"}
+                  footer={
+                    m.status === "streaming" ? (
+                      <span className="chat-typing chat-typing-inline" aria-hidden="true">
+                        <span className="chat-typing-dot" />
+                        <span className="chat-typing-dot" />
+                        <span className="chat-typing-dot" />
+                      </span>
+                    ) : null
+                  }
+                />
+                {hasCitations ? (
+                  <ChatCitationList
+                    citations={m.citations}
+                    messageId={messageId}
+                    onOpenWork={onOpenWork}
+                  />
+                ) : null}
               </div>
             );
-          }
-          const messageId = `m${i}`;
-          const hasCitations =
-            (m.status === "done" || m.status === "aborted") && m.citations.length > 0;
-          const richText = renderWithCitations(m.content, messageId, m.citations.length);
-          return (
-            <div key={i} className="chat-message-block">
-              <ChatMessageBubble
-                role="assistant"
-                text={richText}
-                ghosted={m.status === "aborted"}
-                footer={
-                  m.status === "streaming" ? (
-                    <span className="chat-typing chat-typing-inline" aria-hidden="true">
-                      <span className="chat-typing-dot" />
-                      <span className="chat-typing-dot" />
-                      <span className="chat-typing-dot" />
-                    </span>
-                  ) : null
-                }
-              />
-              {hasCitations ? (
-                <ChatCitationList
-                  citations={m.citations}
-                  messageId={messageId}
-                  onOpenWork={onOpenWork}
-                />
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      <form
-        className="chat-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void handleSend();
-        }}
-      >
-        <textarea
-          className="ui-textarea"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Ask something about your library…"
-          disabled={sending}
-          rows={3}
-        />
-        <div className="chat-composer-actions">
-          {sending ? (
-            <button
-              type="button"
-              className="ui-btn ui-btn--secondary"
-              onClick={turn.cancel}
-            >
-              Stop
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="ui-btn ui-btn--primary"
-              disabled={!draft.trim()}
-            >
-              Send
-            </button>
-          )}
+          })}
         </div>
-      </form>
+        <form
+          className="chat-composer"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSend();
+          }}
+        >
+          <textarea
+            className="ui-textarea"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Ask something about your library…"
+            disabled={sending}
+            rows={3}
+          />
+          <div className="chat-composer-actions">
+            {sending ? (
+              <button
+                type="button"
+                className="ui-btn ui-btn--secondary"
+                onClick={turn.cancel}
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="ui-btn ui-btn--primary"
+                disabled={!draft.trim()}
+              >
+                Send
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
