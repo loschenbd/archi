@@ -55,7 +55,7 @@ export type ChatTurnDoneEvent = {
 export type ChatTurnErrorEvent = {
   turnId: string;
   conversationId: string | null;
-  code: "ollama_unreachable" | "model_missing" | "context_overflow" | "persistence_failed" | "unknown";
+  code: "ollama_unreachable" | "model_missing" | "context_overflow" | "unknown";
   message: string;
 };
 

@@ -136,6 +136,31 @@ describe("ChatService persistence", () => {
     expect(loaded.messages[1]?.errorCode).toBe("ollama_unreachable");
   });
 
+  it("persists the human error message in the assistant content", async () => {
+    const store = makeStore();
+    const llm = {
+      detect: async () => ({ status: "ready", modelCount: 1 }),
+      listModels: async () => [],
+      pullModel: async function* () {},
+      chat: async function* () {
+        throw new Error("ECONNREFUSED at 127.0.0.1:11434");
+      },
+    } as unknown as LLMClient;
+    const events: Array<{ type: string; conversationId?: string | null; message?: string }> = [];
+    const service = new ChatService({
+      search: makeSearch([passage("p1")]) as never,
+      llm,
+      store,
+    });
+    await service.runTurn(makeRequest(), (e) => events.push(e));
+    const err = events.find((e) => e.type === "error");
+    expect(err?.message).toContain("ECONNREFUSED");
+    const loaded = store.loadConversation((err as { conversationId: string }).conversationId);
+    // The human message is now persisted in content, not just the code
+    expect(loaded.messages[1]?.content).toContain("ECONNREFUSED");
+    expect(loaded.messages[1]?.errorCode).toBe("ollama_unreachable");
+  });
+
   it("works without a store (existing pre-persistence behavior)", async () => {
     const events: Array<{ type: string; conversationId?: string | null }> = [];
     const service = new ChatService({

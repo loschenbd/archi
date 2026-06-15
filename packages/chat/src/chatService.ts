@@ -50,7 +50,7 @@ export class ChatService {
 
     const persistTurn = (
       status: "done" | "error" | "aborted" | "skipped",
-      opts: { errorCode?: string } = {}
+      opts: { errorCode?: string; errorMessage?: string } = {}
     ): void => {
       if (!this.store || conversationId === EMPTY_CONVERSATION_ID) return;
       try {
@@ -59,7 +59,7 @@ export class ChatService {
           now: Date.now(),
           userMessage: { content: req.question },
           assistantMessage: {
-            content: assistantText,
+            content: opts.errorMessage ?? assistantText,
             citations: citations.map((c) => c.passageId),
             status,
             errorCode: opts.errorCode,
@@ -87,7 +87,7 @@ export class ChatService {
         });
       } catch (err) {
         console.error(`${tag} search threw:`, err);
-        persistTurn("error", { errorCode: "unknown" });
+        persistTurn("error", { errorCode: "unknown", errorMessage: `Search failed: ${(err as Error).message ?? String(err)}` });
         sink({
           type: "error",
           turnId,
@@ -119,7 +119,7 @@ export class ChatService {
         prompt = buildRagPrompt(req.question, searchResponse.results, req.history);
       } catch (err) {
         console.error(`${tag} buildRagPrompt threw:`, err);
-        persistTurn("error", { errorCode: "unknown" });
+        persistTurn("error", { errorCode: "unknown", errorMessage: `Prompt build failed: ${(err as Error).message ?? String(err)}` });
         sink({
           type: "error",
           turnId,
@@ -165,7 +165,7 @@ export class ChatService {
           return;
         }
         const code = classifyError(err);
-        persistTurn("error", { errorCode: code });
+        persistTurn("error", { errorCode: code, errorMessage: (err as Error).message ?? "Unknown error" });
         sink({
           type: "error",
           turnId,
@@ -186,7 +186,7 @@ export class ChatService {
       });
     } catch (err) {
       console.error(`${tag} runTurn threw unexpectedly:`, err);
-      persistTurn("error", { errorCode: "unknown" });
+      persistTurn("error", { errorCode: "unknown", errorMessage: `Unexpected error: ${(err as Error).message ?? String(err)}` });
       sink({
         type: "error",
         turnId,
