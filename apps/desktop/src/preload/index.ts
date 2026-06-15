@@ -11,7 +11,7 @@ import type {
   ModelInfo,
   PullProgress,
 } from "@archi/chat";
-import type { Facets, IndexerStatus, SearchQuery, SearchResponse } from "@archi/search";
+import type { Facets, IndexerStatus, SearchQuery, SearchResponse, SearchResult } from "@archi/search";
 
 type SyncState = {
   status: string;
@@ -235,7 +235,9 @@ const api = {
     startIndexing: (): Promise<{ started: boolean }> =>
       ipcRenderer.invoke("archi:search:startIndexing"),
     facets: (): Promise<Facets> =>
-      ipcRenderer.invoke("archi:search:facets")
+      ipcRenderer.invoke("archi:search:facets"),
+    getByPassageIds: (ids: string[]): Promise<SearchResult[]> =>
+      ipcRenderer.invoke("archi:search:getByPassageIds", ids)
   },
   chat: {
     detect: (): Promise<DetectResult> => ipcRenderer.invoke("archi:chat:detect"),

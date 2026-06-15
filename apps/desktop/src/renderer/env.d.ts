@@ -222,6 +222,7 @@ declare global {
         indexerStatus: () => Promise<IndexerStatus>;
         startIndexing: () => Promise<{ started: boolean }>;
         facets: () => Promise<{ creators: string[]; labels: string[] }>;
+        getByPassageIds: (ids: string[]) => Promise<SearchResult[]>;
       };
       chat: {
         detect: () => Promise<DetectResult>;
