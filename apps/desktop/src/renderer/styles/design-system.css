@@ -612,3 +612,22 @@
 }
 .wizard-chrome-actions .left-actions { display: flex; gap: 8px; }
 .wizard-chrome-actions .right-actions { display: flex; gap: 8px; }
+
+/* ───── Modal (spec §6.7) ───── */
+
+.ui-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 38, 26, 0.36);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+.ui-modal-card {
+  width: min(480px, 100%);
+  border-radius: var(--radius-modal);
+  box-shadow: var(--shadow-raised);
+}
+

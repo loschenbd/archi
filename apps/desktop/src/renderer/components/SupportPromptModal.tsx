@@ -30,7 +30,7 @@ export function SupportPromptModal({ open, onClose }: Props): JSX.Element | null
 
   return (
     <div
-      className="support-prompt-backdrop"
+      className="ui-modal-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -38,23 +38,30 @@ export function SupportPromptModal({ open, onClose }: Props): JSX.Element | null
         }
       }}
     >
-      <div className="support-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="support-prompt-heading">
-        <h2 id="support-prompt-heading" className="support-prompt-heading">
+      <div
+        className="ui-card ui-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="support-prompt-heading"
+      >
+        <h2 id="support-prompt-heading" className="ui-card__title">
           Enjoying Archi?
         </h2>
-        <p>
-          Archi is an independent project — no team, no investors, no ads. It's built and maintained one feature at a time,
-          in service of a calmer reading library that stays yours.
-        </p>
-        <p>
-          If it's earned a place in your day, you can chip in to keep new features shipping and the bugs at bay.
-        </p>
-        <div className="support-prompt-actions">
-          <button type="button" className="support-prompt-primary" onClick={handleBuy}>
-            Buy me a coffee
-          </button>
-          <button type="button" className="support-prompt-secondary" onClick={onClose}>
+        <div className="ui-card__body">
+          <p>
+            Archi is an independent project — no team, no investors, no ads. It's built and maintained one feature at a time,
+            in service of a calmer reading library that stays yours.
+          </p>
+          <p>
+            If it's earned a place in your day, you can chip in to keep new features shipping and the bugs at bay.
+          </p>
+        </div>
+        <div className="ui-card__footer">
+          <button type="button" className="ui-btn ui-btn--secondary" onClick={onClose}>
             Maybe later
+          </button>
+          <button type="button" className="ui-btn ui-btn--primary" onClick={handleBuy}>
+            Buy me a coffee
           </button>
         </div>
       </div>
