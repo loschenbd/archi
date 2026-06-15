@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { excerptOf } from "./utils";
 
 type Passage = {
@@ -8,8 +8,14 @@ type Passage = {
   workTitle: string;
 };
 
+type WorkRef = {
+  id: string;
+  creator?: string;
+};
+
 type Props = {
   passages: Passage[];
+  works?: WorkRef[];
   onOpenWork: (workId: string) => void;
 };
 
@@ -33,10 +39,18 @@ function pickRandom<T>(items: T[], excludeId?: string): T | null {
   return candidate;
 }
 
-export function RandomHighlight({ passages, onOpenWork }: Props): JSX.Element {
+export function RandomHighlight({ passages, works, onOpenWork }: Props): JSX.Element {
   const [selected, setSelected] = useState<Passage | null>(() =>
     pickRandom(passages)
   );
+
+  const creatorByWorkId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const w of works ?? []) {
+      if (w.creator) map.set(w.id, w.creator);
+    }
+    return map;
+  }, [works]);
 
   // If the passages list changes (sync brought new ones) and we don't have a
   // selection yet, pick one. Don't re-roll automatically otherwise.
@@ -49,25 +63,20 @@ export function RandomHighlight({ passages, onOpenWork }: Props): JSX.Element {
   if (passages.length === 0) {
     return (
       <section className="ui-card ui-card--ruled ui-card--loose">
-        <header className="ui-card__eyebrow">A random highlight</header>
         <p className="ui-card__body">No highlights yet.</p>
       </section>
     );
   }
 
   if (!selected) {
-    return (
-      <section className="ui-card ui-card--ruled ui-card--loose">
-        <header className="ui-card__eyebrow">A random highlight</header>
-      </section>
-    );
+    return <section className="ui-card ui-card--ruled ui-card--loose" />;
   }
 
   const canShuffle = passages.length > 1;
+  const creator = creatorByWorkId.get(selected.workId);
 
   return (
     <section className="ui-card ui-card--ruled ui-card--loose">
-      <header className="ui-card__eyebrow">A random highlight</header>
       <p
         className="ui-card__body ui-drop-cap"
         style={{ fontFamily: "Newsreader, Georgia, serif", fontSize: 18, lineHeight: 1.55 }}
@@ -91,7 +100,8 @@ export function RandomHighlight({ passages, onOpenWork }: Props): JSX.Element {
             textAlign: "left"
           }}
         >
-          {selected.workTitle}
+          <span style={{ fontWeight: 600 }}>{selected.workTitle}</span>
+          {creator ? <span> — {creator}</span> : null}
         </button>
       </p>
       {canShuffle ? (

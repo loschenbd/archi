@@ -659,6 +659,7 @@ export function App(): JSX.Element {
             isCancelingSync={isCancelingSync}
             syncProgress={syncProgress}
             recentWorks={recentActivity.works}
+            works={works}
             recentPassages={recentActivity.passages}
             passages={passages}
             highlightCount={passages.length}

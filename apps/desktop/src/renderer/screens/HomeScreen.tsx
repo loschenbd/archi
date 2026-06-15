@@ -49,6 +49,7 @@ type Props = {
     };
   } | null;
   recentWorks: RecentWork[];
+  works: Array<{ id: string; creator?: string }>;
   recentPassages: RecentPassage[];
   passages: SearchPassage[];
   highlightCount: number;
@@ -78,6 +79,7 @@ export function HomeScreen({
   isCancelingSync,
   syncProgress,
   recentWorks,
+  works,
   recentPassages,
   passages,
   highlightCount,
@@ -144,6 +146,7 @@ export function HomeScreen({
           <div className="highlights-split">
             <RandomHighlight
               passages={passages}
+              works={works}
               onOpenWork={(workId) => onOpenWork(workId)}
             />
             <LatestHighlights
