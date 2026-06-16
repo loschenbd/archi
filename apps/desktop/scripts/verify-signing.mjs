@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -17,12 +17,14 @@ function ok(msg) {
 }
 
 function run(cmd, args, { allowFail = false } = {}) {
-  try {
-    return execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-  } catch (err) {
-    if (allowFail) return { failed: true, stderr: err.stderr?.toString() ?? "", stdout: err.stdout?.toString() ?? "" };
-    fail(`${cmd} ${args.join(" ")} failed:\n${err.stderr?.toString() ?? err.message}`);
+  const result = spawnSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const stdout = result.stdout ?? "";
+  const stderr = result.stderr ?? "";
+  if (result.status !== 0) {
+    if (allowFail) return { failed: true, stderr, stdout };
+    fail(`${cmd} ${args.join(" ")} failed:\n${stderr || result.error?.message || "(no stderr)"}`);
   }
+  return stdout + stderr;
 }
 
 function findDmgs() {
