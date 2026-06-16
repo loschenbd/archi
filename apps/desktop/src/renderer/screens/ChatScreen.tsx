@@ -38,7 +38,7 @@ function jumpToCitation(messageId: string, n: number): void {
   target.classList.remove("ui-footnote-flash");
   void target.offsetWidth;
   target.classList.add("ui-footnote-flash");
-  window.setTimeout(() => target.classList.remove("ui-footnote-flash"), 1800);
+  window.setTimeout(() => target.classList.remove("ui-footnote-flash"), 2600);
 }
 
 function renderWithCitations(text: string, messageId: string, maxN: number): ReactNode {

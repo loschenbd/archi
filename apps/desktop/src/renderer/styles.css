@@ -1513,6 +1513,7 @@ select {
   min-height: 0;
   overflow: hidden;
   padding: 0;
+  background: var(--paper-warm-bg);
 }
 
 .passages-screen {
@@ -2447,7 +2448,7 @@ select {
 
 /* ---- Search results (FTS5 + vector hybrid) ---- */
 
-.search-result-card {
+.search-result-card.ui-card {
   display: grid;
   gap: 8px;
   padding: 14px 16px 14px 18px;
@@ -2511,16 +2512,6 @@ select {
   border-radius: 1px;
   background: color-mix(in srgb, var(--accent) 28%, transparent);
   transition: background-color 160ms ease;
-}
-
-.search-result-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
-  box-shadow: 0 10px 22px rgba(88, 63, 43, 0.08);
-  transform: translateY(-1px);
-}
-
-.search-result-card:hover::before {
-  background: var(--accent);
 }
 
 .search-result-card__header {

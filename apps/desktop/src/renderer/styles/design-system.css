@@ -435,17 +435,22 @@
   0% {
     box-shadow: 0 0 0 0 transparent;
   }
-  18% {
+  10% {
     box-shadow:
       0 0 0 1px color-mix(in srgb, #6b4a32 42%, transparent),
       0 0 40px 14px color-mix(in srgb, #c89858 22%, transparent);
+  }
+  28% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, #6b4a32 38%, transparent),
+      0 0 40px 14px color-mix(in srgb, #c89858 20%, transparent);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
   }
 }
 .ui-footnote-flash {
-  animation: ui-footnote-flash 1.8s ease-out;
+  animation: ui-footnote-flash 2.6s cubic-bezier(0.22, 0, 0.36, 1);
 }
 
 /* ───── Chat composer (spec §6.3) ───── */
