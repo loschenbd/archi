@@ -437,8 +437,8 @@
   }
   18% {
     box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent),
-      0 0 40px 14px color-mix(in srgb, var(--accent) 14%, transparent);
+      0 0 0 1px color-mix(in srgb, #6b4a32 42%, transparent),
+      0 0 40px 14px color-mix(in srgb, #c89858 22%, transparent);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
