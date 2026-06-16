@@ -446,7 +446,6 @@
 }
 .ui-footnote-flash {
   animation: ui-footnote-flash 1.8s ease-out;
-  border-radius: inherit;
 }
 
 /* ───── Chat composer (spec §6.3) ───── */
