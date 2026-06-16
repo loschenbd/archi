@@ -48,3 +48,8 @@ publish:
     owner: loschenbd
     repo: archi
     releaseType: release
+# Run our DMG notarization hook AFTER electron-builder finishes building all
+# artifacts but BEFORE the publish step. electron-builder's mac.notarize only
+# covers the .app; the DMG container needs its own notarization+staple on
+# macOS Sequoia+ for `spctl --assess --type install` to accept the download.
+afterAllArtifactBuild: scripts/afterAllArtifactBuild.cjs
