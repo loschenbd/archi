@@ -106,7 +106,10 @@ git push origin v0.2.1
 DMG=$(curl -sL -o /tmp/Archi-arm64.dmg \
   https://github.com/loschenbd/archi/releases/latest/download/Archi-arm64.dmg \
   && echo /tmp/Archi-arm64.dmg)
-spctl --assess --type install -vvv "$DMG"      # expect "accepted"
+spctl --assess --type open --context context:primary-signature -vvv "$DMG"
+# expect: source=Notarized Developer ID (this matches what Safari/Gatekeeper
+# do when a user downloads and opens the DMG. `--type install` is for .pkg
+# installers, not DMGs, and gives misleading "no usable signature" rejections.)
 stapler validate "$DMG"                         # expect "worked"
 hdiutil attach -nobrowse -mountpoint /tmp/m "$DMG"
 spctl --assess --type execute -vvv /tmp/m/Archi.app   # expect "Notarized Developer ID"

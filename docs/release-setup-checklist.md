@@ -62,8 +62,9 @@ artifact named `archi-dmg-dry-run`. Download it and sanity-check locally:
 
 ```bash
 unzip -d /tmp/archi-dry ~/Downloads/archi-dmg-dry-run.zip
-spctl --assess --type install -vvv /tmp/archi-dry/Archi-arm64.dmg
-# must print: accepted
+spctl --assess --type open --context context:primary-signature -vvv \
+  /tmp/archi-dry/Archi-arm64.dmg
+# must print: source=Notarized Developer ID
 stapler validate /tmp/archi-dry/Archi-arm64.dmg
 # must print: The validate action worked!
 ```
@@ -101,8 +102,9 @@ The workflow runs `pnpm release` which signs, notarizes, staples, runs
 ```bash
 curl -sL -o /tmp/archi.dmg \
   https://github.com/loschenbd/archi/releases/latest/download/Archi-arm64.dmg
-spctl --assess --type install -vvv /tmp/archi.dmg
-# must print: accepted
+spctl --assess --type open --context context:primary-signature -vvv \
+  /tmp/archi.dmg
+# must print: source=Notarized Developer ID
 stapler validate /tmp/archi.dmg
 # must print: The validate action worked!
 ```

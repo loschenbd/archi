@@ -85,10 +85,21 @@ function verifyDmg(dmgPath) {
   if (staple?.failed) fail(`stapler validate failed on DMG (notarization ticket missing):\n${staple.stdout || staple.stderr}`);
   ok("notarization ticket stapled to DMG");
 
-  const spctl = run("spctl", ["--assess", "--type", "install", "-vvv", dmgPath], { allowFail: true });
+  // For DMGs, `--type install` is the wrong spctl flag — that's for .pkg
+  // installer packages. Apple's notarization docs use
+  // `--type open --context context:primary-signature` to verify a notarized
+  // DMG matches what Safari/Gatekeeper does when a user opens the download.
+  const spctl = run(
+    "spctl",
+    ["--assess", "--type", "open", "--context", "context:primary-signature", "-vvv", dmgPath],
+    { allowFail: true },
+  );
   const spctlOut = spctl?.failed ? spctl.stderr : spctl;
-  if (spctl?.failed) fail(`spctl --assess --type install rejected the DMG:\n${spctlOut}`);
-  ok("spctl accepts DMG for install");
+  if (spctl?.failed) fail(`spctl --assess --type open rejected the DMG:\n${spctlOut}`);
+  if (!/source=Notarized Developer ID/.test(spctlOut ?? "")) {
+    fail(`spctl did not confirm "Notarized Developer ID" on the DMG:\n${spctlOut}`);
+  }
+  ok("spctl accepts DMG: Notarized Developer ID");
 }
 
 const dmgs = findDmgs();
