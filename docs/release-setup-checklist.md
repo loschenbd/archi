@@ -46,7 +46,7 @@ Go to <https://github.com/loschenbd/archi/settings/secrets/actions> →
 | `MAC_CERT_P12_BASE64` | paste from clipboard (step 2.5) |
 | `MAC_CERT_PASSWORD` | the .p12 password from step 2.4 |
 | `KEYCHAIN_PASSWORD` | run `openssl rand -hex 32` and paste |
-| `APPLE_ID` | `ben@benjaminloschen.com` |
+| `APPLE_ID` | `loschenbd@gmail.com` |
 | `APPLE_APP_SPECIFIC_PASSWORD` | the app-specific password from step 1 |
 | `APPLE_TEAM_ID` | `74KV536J36` |
 
@@ -118,7 +118,7 @@ You can also confirm visually: download the DMG in Safari, double-click — no
 ```bash
 # one-time
 xcrun notarytool store-credentials archi-notarize \
-  --apple-id ben@benjaminloschen.com \
+  --apple-id loschenbd@gmail.com \
   --team-id 74KV536J36 \
   --password <app-specific-password>
 
