@@ -91,19 +91,12 @@ jobs:
           fi
           echo "Releasing v$PKG_VERSION"
 
-      - name: Build, sign, notarize, publish
-        if: github.event_name == 'push' || github.event.inputs.dry_run == 'false'
-        working-directory: apps/desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_KEYCHAIN: ${{ env.BUILD_KEYCHAIN }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm release
-
-      - name: Build, sign, notarize (dry run — no publish)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+      - name: Build, sign, notarize
+        # Always uses `pnpm package` (--publish never) regardless of trigger.
+        # Publishing is handled by a separate `gh release` step below — this
+        # is more reliable than electron-builder's electron-publish HTTP
+        # uploader, which times out on the 224MB DMG against GitHub's API.
+        if: github.event_name == 'push' || github.event.inputs.dry_run == 'false' || github.event.inputs.dry_run == 'true'
         working-directory: apps/desktop
         env:
           CSC_KEYCHAIN: ${{ env.BUILD_KEYCHAIN }}
@@ -111,6 +104,36 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm package
+
+      - name: Publish to GitHub Release (via gh CLI)
+        # Only on tag push or explicit non-dry workflow_dispatch.
+        # Uses gh CLI's chunked-upload API path which handles large files
+        # gracefully — the electron-publish HTTP uploader hits "Request
+        # timed out" on the 224MB DMG against GitHub's API.
+        if: github.event_name == 'push' || github.event.inputs.dry_run == 'false'
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "Publishing release v$VERSION"
+          # Idempotent: if release already exists (e.g. retry), upload to it.
+          gh release view "v$VERSION" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "v$VERSION" \
+              -R "$GITHUB_REPOSITORY" \
+              --title "v$VERSION" \
+              --notes "macOS arm64 — signed, notarized, stapled."
+          gh release upload "v$VERSION" \
+            -R "$GITHUB_REPOSITORY" \
+            release/Archi-arm64.dmg \
+            release/latest-mac.yml \
+            release/Archi-arm64.dmg.blockmap \
+            --clobber
 
       - name: Upload DMG as workflow artifact (dry run)
         # Run even on previous-step failure so a verify-signing rejection
@@ -122,6 +145,7 @@ jobs:
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/latest-mac.yml
+            apps/desktop/release/*.dmg.blockmap
           if-no-files-found: warn
 
       - name: Cleanup temp keychain
