@@ -113,14 +113,16 @@ jobs:
         run: pnpm package
 
       - name: Upload DMG as workflow artifact (dry run)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        # Run even on previous-step failure so a verify-signing rejection
+        # still lets us inspect the built DMG locally.
+        if: always() && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: archi-dmg-dry-run
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/latest-mac.yml
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Cleanup temp keychain
         if: always() && env.BUILD_KEYCHAIN != ''
