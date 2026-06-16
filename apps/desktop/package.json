@@ -67,27 +67,6 @@
     "universalify": "^2.0.1"
   },
   "dependenciesMeta": {
-    "@archi/chat": {
-      "injected": true
-    },
-    "@archi/core": {
-      "injected": true
-    },
-    "@archi/destination-notion": {
-      "injected": true
-    },
-    "@archi/search": {
-      "injected": true
-    },
-    "@archi/source-cloud-notebook": {
-      "injected": true
-    },
-    "@archi/source-device-export": {
-      "injected": true
-    },
-    "@archi/ui": {
-      "injected": true
-    },
     "electron-updater": {
       "injected": true
     }

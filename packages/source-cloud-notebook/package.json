@@ -23,10 +23,5 @@
     "@archi/core": "workspace:*",
     "playwright": "^1.53.0",
     "playwright-core": "^1.60.0"
-  },
-  "dependenciesMeta": {
-    "@archi/core": {
-      "injected": true
-    }
   }
 }

@@ -26,10 +26,5 @@
     "tr46": "^0.0.3",
     "webidl-conversions": "^3.0.1",
     "whatwg-url": "^5.0.0"
-  },
-  "dependenciesMeta": {
-    "@archi/core": {
-      "injected": true
-    }
   }
 }

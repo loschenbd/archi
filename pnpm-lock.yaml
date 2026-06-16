@@ -139,20 +139,6 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
     dependenciesMeta:
-      '@archi/chat':
-        injected: true
-      '@archi/core':
-        injected: true
-      '@archi/destination-notion':
-        injected: true
-      '@archi/search':
-        injected: true
-      '@archi/source-cloud-notebook':
-        injected: true
-      '@archi/source-device-export':
-        injected: true
-      '@archi/ui':
-        injected: true
       electron-updater:
         injected: true
     devDependencies:
@@ -264,9 +250,6 @@ importers:
       whatwg-url:
         specifier: ^5.0.0
         version: 5.0.0
-    dependenciesMeta:
-      '@archi/core':
-        injected: true
 
   packages/search:
     dependencies:
@@ -298,9 +281,6 @@ importers:
       playwright-core:
         specifier: ^1.60.0
         version: 1.60.0
-    dependenciesMeta:
-      '@archi/core':
-        injected: true
 
   packages/source-device-export:
     dependencies:
