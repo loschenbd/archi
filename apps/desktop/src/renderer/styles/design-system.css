@@ -401,35 +401,34 @@
 /* ───── Footnote reference (spec §4.8) ───── */
 
 .ui-footnote-ref {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
+  display: inline;
   font-family: Newsreader, Georgia, serif;
   font-style: italic;
-  font-size: 12px;
+  font-size: 0.78em;
   font-weight: 500;
   line-height: 1;
   color: var(--accent-strong);
   background: transparent;
-  border: 1px solid var(--rule-warm);
-  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  margin: 0 1px 0 2px;
   vertical-align: super;
-  margin: 0 2px;
   cursor: pointer;
+  text-decoration: none;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
   transition:
-    border-color 120ms ease,
-    background 120ms ease;
+    color 120ms ease,
+    text-decoration-color 120ms ease;
 }
 .ui-footnote-ref:hover {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  color: var(--accent);
+  text-decoration: underline;
 }
 .ui-footnote-ref:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-ring);
+  text-decoration: underline;
+  color: var(--accent);
 }
 
 @keyframes ui-footnote-flash {
@@ -515,23 +514,19 @@
 }
 .chat-citation-v2 {
   display: grid;
-  grid-template-columns: 24px 1fr;
+  grid-template-columns: 32px 1fr;
   gap: 8px;
   align-items: start;
 }
 .chat-citation-v2__number {
-  margin-top: 6px;
-  text-align: center;
+  margin-top: 8px;
+  text-align: right;
+  padding-right: 4px;
 }
 .chat-citation-v2__number .ui-footnote-ref {
-  width: 22px;
-  height: 22px;
-  min-width: 0;
-  padding: 0;
-  font-size: 13px;
-  line-height: 22px;
+  font-size: 15px;
   vertical-align: baseline;
-  padding-right: 1px;
+  margin: 0;
 }
 
 /* ───── Chat setup shell ───── */

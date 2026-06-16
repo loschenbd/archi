@@ -9,6 +9,7 @@ import { ChatHistoryRail } from "../components/chat/ChatHistoryRail.js";
 import { ChatSetupScreen } from "./ChatSetupScreen.js";
 import { useChatTurn } from "../hooks/useChatTurn.js";
 import { useChatHistory } from "../hooks/useChatHistory.js";
+import { toRoman } from "../utils/roman.js";
 
 const PREF_MODEL = "chat.modelName";
 const PREF_RAIL_COLLAPSED = "chat.historyRailCollapsed";
@@ -58,7 +59,7 @@ function renderWithCitations(text: string, messageId: string, maxN: number): Rea
         onClick={() => jumpToCitation(messageId, n)}
         aria-label={`Jump to source ${n}`}
       >
-        {n}
+        {toRoman(n)}
       </button>
     );
     last = match.index + match[0].length;

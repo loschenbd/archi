@@ -1,5 +1,6 @@
 import type { SearchResult } from "@archi/search";
 import { SearchResultCard } from "../SearchResultCard.js";
+import { toRoman } from "../../utils/roman.js";
 
 export type ChatCitationListProps = {
   citations: SearchResult[];
@@ -24,7 +25,7 @@ export function ChatCitationList({
             className="chat-citation-v2"
           >
             <span className="chat-citation-v2__number">
-              <span className="ui-footnote-ref" aria-hidden="true">{i + 1}</span>
+              <span className="ui-footnote-ref" aria-hidden="true">{toRoman(i + 1)}</span>
             </span>
             <SearchResultCard
               result={c}
