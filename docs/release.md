@@ -26,29 +26,39 @@ change (commit `286b5a6`) landed *after* the tag, so the local
 `pnpm release` ran without notarize credentials and silently produced an
 unnotarized DMG. Don't repeat this.
 
-## Prerequisite — store the notarize keychain profile (one-time)
+## Prerequisite — notarize credentials in env vars (local builds)
 
 The Apple ID password used here must be an **app-specific password**
 generated at https://appleid.apple.com/account/manage > Sign-In and
 Security > App-Specific Passwords. Do **not** use your regular Apple ID
 password.
 
+electron-builder 24+ does not support `keychainProfile` on `mac.notarize`,
+so for local releases you must export the credentials in your shell
+before running `pnpm release`:
+
 ```bash
-xcrun notarytool store-credentials archi-notarize \
-  --apple-id "<your-apple-id>" \
-  --team-id 74KV536J36 \
-  --password "<app-specific-password>"
+export APPLE_ID="loschenbd@gmail.com"
+export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+export APPLE_TEAM_ID="74KV536J36"
 ```
 
-Verify it stuck:
+You can keep these in a per-shell secret store (1Password, Apple
+Passwords) and paste before each release, or in a `~/.zshrc.local` that
+isn't committed. Do **not** put them in `.envrc` or the repo.
+
+Optional — store a notarytool keychain profile for ad-hoc submissions:
 
 ```bash
+xcrun notarytool store-credentials archi-notarize \
+  --apple-id "loschenbd@gmail.com" \
+  --team-id 74KV536J36 \
+  --password "<app-specific-password>"
 xcrun notarytool history --keychain-profile archi-notarize
 ```
 
-If that prints a recent history, you're good. If it errors with
-`No Keychain password item found`, the profile wasn't created — re-run
-`store-credentials`. The keychain must be unlocked for builds.
+That profile is only useful if you call `xcrun notarytool submit`
+directly — `pnpm release` ignores it.
 
 ## Prerequisite — Developer ID Application cert
 

@@ -44,22 +44,16 @@ jobs:
           path: apps/desktop/resources/models
           key: bge-small-en-v1.5-${{ hashFiles('apps/desktop/scripts/fetch-embedding-model.mjs') }}
 
-      - name: Import Developer ID cert + notarytool creds into temp keychain
+      - name: Import Developer ID cert into temp keychain
         env:
           MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
           MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           : "${MAC_CERT_P12_BASE64:?missing MAC_CERT_P12_BASE64 secret}"
           : "${MAC_CERT_PASSWORD:?missing MAC_CERT_PASSWORD secret}"
           : "${KEYCHAIN_PASSWORD:?missing KEYCHAIN_PASSWORD secret}"
-          : "${APPLE_ID:?missing APPLE_ID secret}"
-          : "${APPLE_APP_SPECIFIC_PASSWORD:?missing APPLE_APP_SPECIFIC_PASSWORD secret}"
-          : "${APPLE_TEAM_ID:?missing APPLE_TEAM_ID secret}"
 
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           CERT_PATH="$RUNNER_TEMP/cert.p12"
@@ -80,14 +74,6 @@ jobs:
 
           # Verify the signing identity is now resolvable.
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-
-          # Store notarytool creds in the same keychain so electron-builder's
-          # `keychainProfile: archi-notarize` config works without changes.
-          xcrun notarytool store-credentials archi-notarize \
-            --apple-id "$APPLE_ID" \
-            --team-id "$APPLE_TEAM_ID" \
-            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-            --keychain "$KEYCHAIN_PATH"
 
           rm "$CERT_PATH"
 
@@ -111,6 +97,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_KEYCHAIN: ${{ env.BUILD_KEYCHAIN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm release
 
       - name: Build, sign, notarize (dry run — no publish)
@@ -118,6 +107,9 @@ jobs:
         working-directory: apps/desktop
         env:
           CSC_KEYCHAIN: ${{ env.BUILD_KEYCHAIN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm package
 
       - name: Upload DMG as workflow artifact (dry run)

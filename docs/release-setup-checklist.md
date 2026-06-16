@@ -116,15 +116,11 @@ You can also confirm visually: download the DMG in Safari, double-click — no
 ## Fallback — laptop release (if CI isn't an option right now)
 
 ```bash
-# one-time
-xcrun notarytool store-credentials archi-notarize \
-  --apple-id loschenbd@gmail.com \
-  --team-id 74KV536J36 \
-  --password <app-specific-password>
-
-# verify the profile exists (this is the check the original v0.2.0 release missed)
-xcrun notarytool history --keychain-profile archi-notarize
-# must NOT error with "No Keychain password item found"
+# export notarize creds for this shell (electron-builder 24+ reads them
+# directly; the keychainProfile route was removed from the schema).
+export APPLE_ID="loschenbd@gmail.com"
+export APPLE_APP_SPECIFIC_PASSWORD="<app-specific-password>"
+export APPLE_TEAM_ID="74KV536J36"
 
 # delete the broken v0.2.0 dmg asset first so electron-builder re-uploads
 gh release delete-asset v0.2.0 Archi-arm64.dmg -y
@@ -135,9 +131,10 @@ sed -i '' 's/"version": "0.2.0"/"version": "0.2.1"/' package.json
 pnpm release
 ```
 
-Laptop release works but is fragile — keychain profile lives on one machine,
-and the v0.2.0 trap is exactly what happens when that machine state drifts
-from the config in the repo. CI is the preferred long-term path.
+Laptop release works but is fragile — secrets live in shell history /
+exported env, and the v0.2.0 trap is exactly what happens when that
+shell state drifts from the config in the repo. CI is the preferred
+long-term path.
 
 ---
 
