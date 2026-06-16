@@ -30,13 +30,15 @@ export type ChatScreenProps = {
 };
 
 function jumpToCitation(messageId: string, n: number): void {
-  const el = document.getElementById(`citation-${messageId}-${n}`);
-  if (!el) return;
-  el.scrollIntoView({ block: "center", behavior: "smooth" });
-  el.classList.remove("ui-footnote-flash");
-  void el.offsetWidth;
-  el.classList.add("ui-footnote-flash");
-  window.setTimeout(() => el.classList.remove("ui-footnote-flash"), 1600);
+  const row = document.getElementById(`citation-${messageId}-${n}`);
+  if (!row) return;
+  const card = row.querySelector(".search-result-card") as HTMLElement | null;
+  const target = card ?? row;
+  row.scrollIntoView({ block: "center", behavior: "smooth" });
+  target.classList.remove("ui-footnote-flash");
+  void target.offsetWidth;
+  target.classList.add("ui-footnote-flash");
+  window.setTimeout(() => target.classList.remove("ui-footnote-flash"), 1800);
 }
 
 function renderWithCitations(text: string, messageId: string, maxN: number): ReactNode {

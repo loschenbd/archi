@@ -435,17 +435,17 @@
   0% {
     box-shadow: 0 0 0 0 transparent;
   }
-  20% {
+  18% {
     box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
-      0 0 24px 6px color-mix(in srgb, var(--accent) 22%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent),
+      0 0 40px 14px color-mix(in srgb, var(--accent) 14%, transparent);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
   }
 }
 .ui-footnote-flash {
-  animation: ui-footnote-flash 1.6s ease-out;
+  animation: ui-footnote-flash 1.8s ease-out;
   border-radius: inherit;
 }
 
@@ -510,7 +510,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 14px;
 }
 .chat-citation-v2 {
   display: grid;
