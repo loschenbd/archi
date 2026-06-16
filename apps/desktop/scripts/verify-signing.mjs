@@ -74,32 +74,54 @@ function verifyApp(appPath) {
 function verifyDmg(dmgPath) {
   console.log(`\n[verify-signing] checking dmg: ${dmgPath}`);
 
+  // electron-builder workflows produce DMGs that are NOT codesigned at the
+  // container level — they rely entirely on the notarization staple for
+  // Gatekeeper acceptance. `codesign --verify` on the container therefore
+  // fails on shipping-correct DMGs; treat it as informational only.
   const codesign = run("codesign", ["--verify", "--verbose=2", dmgPath], { allowFail: true });
   if (codesign?.failed) {
-    console.warn(`[verify-signing] WARN : DMG container is not codesigned (notarization staple still validates and is what Gatekeeper checks)`);
+    console.warn(
+      `[verify-signing] note : DMG container is not codesigned (expected for electron-builder; the notarization staple is what Gatekeeper checks)`,
+    );
   } else {
     ok("DMG container codesigned");
   }
 
+  // Required: the notarization staple must be present on the DMG.
   const staple = run("stapler", ["validate", dmgPath], { allowFail: true });
   if (staple?.failed) fail(`stapler validate failed on DMG (notarization ticket missing):\n${staple.stdout || staple.stderr}`);
   ok("notarization ticket stapled to DMG");
 
-  // For DMGs, `--type install` is the wrong spctl flag — that's for .pkg
-  // installer packages. Apple's notarization docs use
-  // `--type open --context context:primary-signature` to verify a notarized
-  // DMG matches what Safari/Gatekeeper does when a user opens the download.
-  const spctl = run(
-    "spctl",
-    ["--assess", "--type", "open", "--context", "context:primary-signature", "-vvv", dmgPath],
-    { allowFail: true },
-  );
-  const spctlOut = spctl?.failed ? spctl.stderr : spctl;
-  if (spctl?.failed) fail(`spctl --assess --type open rejected the DMG:\n${spctlOut}`);
-  if (!/source=Notarized Developer ID/.test(spctlOut ?? "")) {
-    fail(`spctl did not confirm "Notarized Developer ID" on the DMG:\n${spctlOut}`);
+  // Preferred: `gktool scan` is Apple's modern Gatekeeper assessment tool
+  // (Sequoia+). It is the authoritative "would Gatekeeper accept this on
+  // download?" check. Unlike `spctl --assess` (which expects a codesign
+  // signature on the container and rejects notarized-only DMGs with
+  // "no usable signature"), gktool understands the notarized-staple-only
+  // case and returns "allowed by system policy" for valid DMGs.
+  //
+  // gktool is not present on macOS Sonoma (14.x) — GitHub Actions' macos-14
+  // runner falls in that bucket. Skip on platforms where it's missing.
+  const which = run("which", ["gktool"], { allowFail: true });
+  const gktoolPath = (typeof which === "string" ? which : "").trim();
+  if (gktoolPath) {
+    const gk = run("gktool", ["scan", dmgPath], { allowFail: true });
+    const gkOut = (gk?.failed ? gk.stderr : gk) ?? "";
+    // gktool emits two flavors of success:
+    //   "Scan completed and software is allowed by system policy."
+    //   "Scan completed, and would be allowed but the user still needs to
+    //    approve it on first launch."
+    // Both are valid (the second is normal Sequoia behavior for a
+    // notarized app on first launch). Match either via /allowed/i.
+    // A real rejection would say "blocked" or "denied".
+    if (gk?.failed || /\b(blocked|denied)\b/i.test(gkOut) || !/allowed/i.test(gkOut)) {
+      fail(`gktool scan did not accept the DMG:\n${gkOut}`);
+    }
+    ok(`gktool: ${gkOut.trim().split("\n")[0]}`);
+  } else {
+    console.log(
+      "[verify-signing] note : gktool not present (macOS < Sequoia); relying on stapler + .app verification",
+    );
   }
-  ok("spctl accepts DMG: Notarized Developer ID");
 }
 
 const dmgs = findDmgs();
