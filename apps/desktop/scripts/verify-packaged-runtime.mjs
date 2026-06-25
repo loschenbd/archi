@@ -36,6 +36,28 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+// @xenova/transformers eagerly imports these transitive deps during module
+// init (jinja in tokenizers.js, onnxruntime-web in backends/onnx.js). They are
+// NOT direct deps of @xenova, so electron-builder's pnpm walk strips them
+// unless they are declared as direct deps of apps/desktop. Match by substring
+// because the exact nesting path varies. (sharp is checked on the unpacked
+// filesystem below, since asarUnpack pulls it out of the asar.)
+const requiredSubstrings = ["@huggingface/jinja", "onnxruntime-web"];
+const allEntries = [...asarEntries];
+const missingSubstrings = requiredSubstrings.filter(
+  (needle) => !allEntries.some((entry) => entry.includes(needle))
+);
+
+if (missingSubstrings.length > 0) {
+  console.error(
+    "Packaged app is missing transitive @xenova/transformers deps (search will fail at module init):"
+  );
+  for (const needle of missingSubstrings) {
+    console.error(` - ${needle}`);
+  }
+  process.exit(1);
+}
+
 const appRoot = path.join(macDir, "Archi.app");
 
 const modelOnnx = path.join(

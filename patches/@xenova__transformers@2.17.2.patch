@@ -1,0 +1,30 @@
+diff --git a/src/utils/image.js b/src/utils/image.js
+index 89bb2481ba0afa67fc8967c2b8c1b156e3df590a..99ae658f416e0041f43db12a37fff68d6e3b7b71 100644
+--- a/src/utils/image.js
++++ b/src/utils/image.js
+@@ -12,8 +12,23 @@ import { getFile } from './hub.js';
+ import { env } from '../env.js';
+ import { Tensor } from './tensor.js';
+ 
+-// Will be empty (or not used) if running in browser or web-worker
+-import sharp from 'sharp';
++// Will be empty (or not used) if running in browser or web-worker.
++//
++// PATCH (Archi): sharp is only used for image decoding, which this app never
++// does (text-only feature-extraction). Upstream imports it statically, which
++// makes the WHOLE transformers package unloadable whenever sharp's native
++// binary/libvips/transitive deps aren't bundled — exactly what happens in our
++// pnpm + electron-builder packaged build. Load it optionally instead: if sharp
++// (or its native binary) can't load, `sharp` stays null and the `else if
++// (sharp)` guards below fall through harmlessly. Avoids bundling a ~10MB native
++// libvips we never call.
++import { createRequire as __archiCreateRequire } from 'module';
++let sharp = null;
++try {
++    sharp = __archiCreateRequire(import.meta.url)('sharp');
++} catch {
++    sharp = null;
++}
+ 
+ const BROWSER_ENV = typeof self !== 'undefined';
+ const WEBWORKER_ENV = BROWSER_ENV && self.constructor.name === 'DedicatedWorkerGlobalScope';
