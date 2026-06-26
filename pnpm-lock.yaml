@@ -7,7 +7,7 @@ settings:
 
 patchedDependencies:
   '@xenova/transformers@2.17.2':
-    hash: 2b23f32282b78649ae39cd8b740365ea33e7750b139d93f49a1333afc7f5e5c9
+    hash: 5ff2663c72c3401d3d2db740069802a686a03f52f82f9c97eede401fd80685f9
     path: patches/@xenova__transformers@2.17.2.patch
 
 importers:
@@ -64,7 +64,7 @@ importers:
         version: 3.13.25(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@xenova/transformers':
         specifier: ^2.17.2
-        version: 2.17.2(patch_hash=2b23f32282b78649ae39cd8b740365ea33e7750b139d93f49a1333afc7f5e5c9)
+        version: 2.17.2(patch_hash=5ff2663c72c3401d3d2db740069802a686a03f52f82f9c97eede401fd80685f9)
       argparse:
         specifier: ^2.0.1
         version: 2.0.1
@@ -269,7 +269,7 @@ importers:
         version: link:../core
       '@xenova/transformers':
         specifier: ^2.17.2
-        version: 2.17.2(patch_hash=2b23f32282b78649ae39cd8b740365ea33e7750b139d93f49a1333afc7f5e5c9)
+        version: 2.17.2(patch_hash=5ff2663c72c3401d3d2db740069802a686a03f52f82f9c97eede401fd80685f9)
       better-sqlite3:
         specifier: ^11.10.0
         version: 11.10.0
@@ -3895,10 +3895,12 @@ packages:
 
   sqlite-vec-darwin-arm64@0.1.9:
     resolution: {integrity: sha512-jSsZpE42OfBkGL/ItyJTVCUwl6o6Ka3U5rc4j+UBDIQzC1ulSSKMEhQLthsOnF/MdAf1MuAkYhkdKmmcjaIZQg==}
+    cpu: [arm64]
     os: [darwin]
 
   sqlite-vec-darwin-x64@0.1.9:
     resolution: {integrity: sha512-KDlVyqQT7pnOhU1ymB9gs7dMbSoVmKHitT+k1/xkjarcX8bBqPxWrGlK/R+C5WmWkfvWwyq5FfXfiBYCBs6PlA==}
+    cpu: [x64]
     os: [darwin]
 
   sqlite-vec-linux-arm64@0.1.9:
@@ -5927,7 +5929,7 @@ snapshots:
 
   '@vscode/l10n@0.0.18': {}
 
-  '@xenova/transformers@2.17.2(patch_hash=2b23f32282b78649ae39cd8b740365ea33e7750b139d93f49a1333afc7f5e5c9)':
+  '@xenova/transformers@2.17.2(patch_hash=5ff2663c72c3401d3d2db740069802a686a03f52f82f9c97eede401fd80685f9)':
     dependencies:
       '@huggingface/jinja': 0.2.2
       onnxruntime-web: 1.14.0

@@ -36,13 +36,21 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// @xenova/transformers eagerly imports these transitive deps during module
-// init (jinja in tokenizers.js, onnxruntime-web in backends/onnx.js). They are
-// NOT direct deps of @xenova, so electron-builder's pnpm walk strips them
-// unless they are declared as direct deps of apps/desktop. Match by substring
-// because the exact nesting path varies. (sharp is checked on the unpacked
-// filesystem below, since asarUnpack pulls it out of the asar.)
-const requiredSubstrings = ["@huggingface/jinja", "onnxruntime-web"];
+// @xenova/transformers eagerly loads a deep transitive tree at module init
+// (jinja in tokenizers.js; onnxruntime-node + onnxruntime-web in backends/
+// onnx.js, which in turn require onnxruntime-common, flatbuffers, protobufjs,
+// long, …). With pnpm's isolated linker, electron-builder's dependency walk
+// strips everything that isn't a DIRECT dep of apps/desktop — which is why the
+// repo uses `node-linker=hoisted` (.npmrc) to flatten node_modules so the whole
+// closure gets bundled. These are the load-bearing members whose absence makes
+// packaged search crash at runtime; assert by substring (nesting path varies).
+const requiredSubstrings = [
+  "@huggingface/jinja",
+  "onnxruntime-web",
+  "onnxruntime-common", // required by onnxruntime-node/dist/index.js
+  "/protobufjs/",       // onnx-proto → protobufjs closure
+  "/flatbuffers/",
+];
 const allEntries = [...asarEntries];
 const missingSubstrings = requiredSubstrings.filter(
   (needle) => !allEntries.some((entry) => entry.includes(needle))
