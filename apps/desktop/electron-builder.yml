@@ -31,16 +31,11 @@ mac:
   gatekeeperAssess: false
   entitlements: assets/entitlements.mac.plist
   entitlementsInherit: assets/entitlements.mac.plist
-  notarize:
-    teamId: "74KV536J36"
-    # Credentials come from env vars at build time:
-    #   APPLE_ID                       — Apple ID email
-    #   APPLE_APP_SPECIFIC_PASSWORD    — app-specific password from
-    #                                    https://appleid.apple.com
-    # In CI these come from GitHub Actions secrets (see
-    # .github/workflows/desktop-release.yml). For local releases, export
-    # them in your shell before running `pnpm release`. electron-builder
-    # 24+ does not support `keychainProfile` on `mac.notarize`.
+  # NOTE: no `notarize:` block here. electron-builder's built-in notarize only
+  # accepts Apple-ID env creds — it can't use a local `notarytool` keychain
+  # profile (electron-builder 24.x limitation). We notarize the .app ourselves
+  # in the afterSign hook via @electron/notarize, which supports BOTH env creds
+  # (CI) and a keychain profile (local). See scripts/notary-credentials.cjs.
   target:
     - dmg
 publish:
@@ -48,8 +43,9 @@ publish:
     owner: loschenbd
     repo: archi
     releaseType: release
-# Run our DMG notarization hook AFTER electron-builder finishes building all
-# artifacts but BEFORE the publish step. electron-builder's mac.notarize only
-# covers the .app; the DMG container needs its own notarization+staple on
-# macOS Sequoia+ for `spctl --assess --type install` to accept the download.
+# afterSign: notarize + staple the signed .app (replaces mac.notarize).
+afterSign: scripts/afterSign.cjs
+# afterAllArtifactBuild: notarize + staple the DMG container after it's built but
+# before publish. The .app staple alone isn't enough — on macOS Sequoia+ the DMG
+# needs its own ticket for `spctl --assess --type install` to accept the download.
 afterAllArtifactBuild: scripts/afterAllArtifactBuild.cjs

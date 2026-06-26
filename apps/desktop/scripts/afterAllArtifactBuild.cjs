@@ -1,27 +1,29 @@
 // electron-builder hook: notarize + staple any .dmg artifact AFTER it is built
-// but BEFORE publishing. Necessary because electron-builder's mac.notarize config
-// only notarizes the .app, not the DMG container — and on macOS Sequoia+ the DMG
+// but BEFORE publishing. Necessary because the .app notarization (afterSign hook)
+// only covers the app, not the DMG container — and on macOS Sequoia+ the DMG
 // also needs its own stapled notarization ticket for `spctl --assess --type install`
 // to accept it on download.
 //
 // Triggered automatically by electron-builder.yml's `afterAllArtifactBuild:` field.
 //
-// Reads creds from env: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID.
+// Credentials: Apple-ID env vars (CI) or a local `notarytool` keychain profile —
+// see notary-credentials.cjs. SKIP_NOTARIZE=1 bypasses (matches afterSign).
 
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
+const notaryCredentials = require("./notary-credentials.cjs");
 
 module.exports = async function afterAllArtifactBuild(buildResult) {
-  const APPLE_ID = process.env.APPLE_ID;
-  const APPLE_APP_SPECIFIC_PASSWORD = process.env.APPLE_APP_SPECIFIC_PASSWORD;
-  const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID;
-
-  if (!APPLE_ID || !APPLE_APP_SPECIFIC_PASSWORD || !APPLE_TEAM_ID) {
-    throw new Error(
-      "[afterAllArtifactBuild] missing required env vars. " +
-        "Need APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID for DMG notarization.",
-    );
+  if (process.env.SKIP_NOTARIZE === "1") {
+    console.log("[afterAllArtifactBuild] SKIP_NOTARIZE=1 — skipping DMG notarization");
+    return [];
   }
+
+  const creds = notaryCredentials();
+  const credArgs =
+    creds.kind === "apple-id"
+      ? ["--apple-id", creds.appleId, "--password", creds.appleIdPassword, "--team-id", creds.teamId]
+      : ["--keychain-profile", creds.keychainProfile];
 
   const dmgs = (buildResult.artifactPaths || []).filter((p) => p.endsWith(".dmg"));
   if (dmgs.length === 0) {
@@ -31,22 +33,13 @@ module.exports = async function afterAllArtifactBuild(buildResult) {
 
   for (const dmg of dmgs) {
     const name = path.basename(dmg);
-    console.log(`[afterAllArtifactBuild] submitting ${name} to Apple notarization (1-3 min)...`);
+    console.log(
+      `[afterAllArtifactBuild] submitting ${name} to Apple notarization via ${creds.kind} (1-3 min)...`,
+    );
 
     const submit = spawnSync(
       "xcrun",
-      [
-        "notarytool",
-        "submit",
-        dmg,
-        "--apple-id",
-        APPLE_ID,
-        "--password",
-        APPLE_APP_SPECIFIC_PASSWORD,
-        "--team-id",
-        APPLE_TEAM_ID,
-        "--wait",
-      ],
+      ["notarytool", "submit", dmg, ...credArgs, "--wait"],
       { stdio: ["ignore", "inherit", "inherit"] },
     );
 
