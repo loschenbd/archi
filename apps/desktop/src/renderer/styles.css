@@ -1407,6 +1407,23 @@ select {
   gap: 14px;
 }
 
+.library-quote-card--ringed {
+  animation: library-quote-ring 1500ms ease-out 1;
+  position: relative;
+}
+
+@keyframes library-quote-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
 .library-quote-card {
   display: flex;
   flex-direction: column;
@@ -1902,6 +1919,51 @@ select {
   height: 1px;
   margin: auto 8px 6px;
   background: color-mix(in srgb, var(--ink-300) 28%, transparent);
+}
+
+.indexer-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 24%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ink-300) 30%, transparent);
+  color: var(--ink-700);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: default;
+}
+
+.indexer-status-pill--error {
+  background: color-mix(in srgb, var(--error) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--error) 36%, transparent);
+  color: var(--accent-strong);
+}
+
+button.indexer-status-pill {
+  cursor: pointer;
+}
+
+button.indexer-status-pill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-soft) 48%, var(--surface));
+}
+
+button.indexer-status-pill:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.indexer-status-pill__dot {
+  font-size: 11px;
+}
+
+.layout.sidebar-collapsed .indexer-status-pill {
+  padding: 6px;
+  margin: 4px;
+  justify-content: center;
 }
 
 .settings-screen {
@@ -3062,6 +3124,16 @@ select {
 
 .search-hero-count-loading {
   color: var(--accent-strong);
+  font-style: italic;
+}
+
+.search-hero-partial {
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--ink-500);
   font-style: italic;
 }
 
