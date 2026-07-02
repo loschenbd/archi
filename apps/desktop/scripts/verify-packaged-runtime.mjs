@@ -18,15 +18,20 @@ const asarPath = path.join(macDir, "Archi.app", "Contents", "Resources", "app.as
 const output = execSync(`npx asar list "${asarPath}"`, { encoding: "utf8" });
 const asarEntries = new Set(output.split("\n").filter(Boolean));
 
+// Node resolution walks up from @archi/destination-notion to
+// app.asar/node_modules, so these may live either nested under the injected
+// workspace package (pnpm isolated layout) or hoisted at the top level
+// (node-linker=hoisted, the repo's current layout) — accept both.
 const requiredEntries = [
-  "/node_modules/@archi/destination-notion/node_modules/@notionhq/client/build/src/Client.js",
-  "/node_modules/@archi/destination-notion/node_modules/node-fetch/lib/index.js",
-  "/node_modules/@archi/destination-notion/node_modules/whatwg-url/lib/public-api.js",
-  "/node_modules/@archi/destination-notion/node_modules/tr46/index.js",
-  "/node_modules/@archi/destination-notion/node_modules/webidl-conversions/lib/index.js"
+  "node_modules/@notionhq/client/build/src/Client.js",
+  "node_modules/node-fetch/lib/index.js",
+  "node_modules/whatwg-url/lib/public-api.js",
+  "node_modules/tr46/index.js",
+  "node_modules/webidl-conversions/lib/index.js"
 ];
 
-const missing = requiredEntries.filter((entry) => !asarEntries.has(entry));
+const entryList = [...asarEntries];
+const missing = requiredEntries.filter((entry) => !entryList.some((e) => e.endsWith(entry)));
 
 if (missing.length > 0) {
   console.error("Packaged app is missing required runtime modules:");
