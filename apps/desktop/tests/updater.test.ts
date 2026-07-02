@@ -27,11 +27,12 @@ function makeFakeWebContents() {
 }
 
 describe("UpdaterController", () => {
-  it("sets autoDownload=false and autoInstallOnAppQuit=true on construction", () => {
+  it("sets autoDownload=true and autoInstallOnAppQuit=true on construction", () => {
     const { fake } = makeFakeAutoUpdater();
+    fake.autoDownload = false;
     const { wc } = makeFakeWebContents();
     new UpdaterController(fake, () => wc);
-    expect(fake.autoDownload).toBe(false);
+    expect(fake.autoDownload).toBe(true);
     expect(fake.autoInstallOnAppQuit).toBe(true);
   });
 

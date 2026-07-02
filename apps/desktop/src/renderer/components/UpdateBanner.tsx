@@ -8,7 +8,6 @@ type UpdaterStatusEvent = {
 };
 
 type BannerView =
-  | { mode: "available"; version: string }
   | { mode: "progress"; percent: number }
   | { mode: "downloaded"; version: string }
   | { mode: "error"; message: string }
@@ -22,11 +21,8 @@ export function UpdateBanner(): JSX.Element | null {
     const unsubscribe = window.archi.updater.onStatus((event: UpdaterStatusEvent) => {
       switch (event.kind) {
         case "available": {
-          const version = event.payload?.version ?? "?";
-          if (dismissedKey.current === `available:${version}`) {
-            return;
-          }
-          setView({ mode: "available", version });
+          // autoDownload is on: discovery means the download is starting.
+          setView({ mode: "progress", percent: 0 });
           break;
         }
         case "progress": {
@@ -44,9 +40,9 @@ export function UpdateBanner(): JSX.Element | null {
         }
         case "error": {
           const message = event.payload?.message ?? "unknown error";
-          // Only surface errors from a user-initiated download; background
-          // check failures (e.g. offline) shouldn't nag. They're still
-          // written to the main-process log via autoUpdater.logger.
+          // Only surface errors from an in-flight download; update-check
+          // failures (e.g. offline) shouldn't nag. They're still written
+          // to the main-process log via autoUpdater.logger.
           setView((prev) => (prev.mode === "progress" ? { mode: "error", message } : prev));
           break;
         }
@@ -66,29 +62,6 @@ export function UpdateBanner(): JSX.Element | null {
     dismissedKey.current = key;
     setView({ mode: "hidden" });
   };
-
-  if (view.mode === "available") {
-    return (
-      <div className="update-banner" role="status">
-        <span className="update-banner-message">Archi v{view.version} is available.</span>
-        <div className="update-banner-actions">
-          <button
-            type="button"
-            className="update-banner-primary"
-            onClick={() => {
-              void window.archi.updater.download();
-              setView({ mode: "progress", percent: 0 });
-            }}
-          >
-            Download
-          </button>
-          <button type="button" className="update-banner-secondary" onClick={() => dismiss(`available:${view.version}`)}>
-            Dismiss
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (view.mode === "error") {
     return (

@@ -23,7 +23,10 @@ export class UpdaterController {
     private readonly autoUpdater: AutoUpdaterLike,
     private readonly getWebContents: () => WebContentsLike | null
   ) {
-    autoUpdater.autoDownload = false;
+    // Updates download themselves as soon as they're discovered and install
+    // on quit — no user click required. The renderer banner still offers
+    // "Restart now" once the download lands.
+    autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on("update-available", (info) => {
       const version = (info as { version?: string } | undefined)?.version;
