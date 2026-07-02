@@ -31,13 +31,19 @@ mac:
   gatekeeperAssess: false
   entitlements: assets/entitlements.mac.plist
   entitlementsInherit: assets/entitlements.mac.plist
-  # NOTE: no `notarize:` block here. electron-builder's built-in notarize only
-  # accepts Apple-ID env creds — it can't use a local `notarytool` keychain
-  # profile (electron-builder 24.x limitation). We notarize the .app ourselves
-  # in the afterSign hook via @electron/notarize, which supports BOTH env creds
-  # (CI) and a keychain profile (local). See scripts/notary-credentials.cjs.
+  # Built-in notarization is EXPLICITLY disabled — the afterSign hook owns it
+  # (via @electron/notarize, which supports both Apple-ID env creds for CI and
+  # a local `notarytool` keychain profile; see scripts/notary-credentials.cjs).
+  # `notarize: false` matters: with the key merely ABSENT, electron-builder
+  # auto-attempts built-in notarization whenever APPLE_ID env vars are present
+  # (i.e. in CI) and crashes with "Cannot destructure property 'appBundleId'
+  # of 'options' as it is undefined". Locally (no env vars) it just skipped.
+  notarize: false
+  # zip is REQUIRED for macOS auto-update: electron-updater can only install
+  # from a zip target; a DMG-only release strands existing installs.
   target:
     - dmg
+    - zip
 publish:
   - provider: github
     owner: loschenbd
