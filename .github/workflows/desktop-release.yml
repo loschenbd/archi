@@ -128,12 +128,20 @@ jobs:
               -R "$GITHUB_REPOSITORY" \
               --title "v$VERSION" \
               --notes "macOS arm64 — signed, notarized, stapled."
+          # The zip is required: electron-updater on macOS can only install
+          # from a zip target — DMG-only releases strand existing installs.
           gh release upload "v$VERSION" \
             -R "$GITHUB_REPOSITORY" \
             release/Archi-arm64.dmg \
+            release/Archi-arm64.zip \
             release/latest-mac.yml \
             release/Archi-arm64.dmg.blockmap \
             --clobber
+          # zip blockmap enables differential updates; upload when produced.
+          if [ -f release/Archi-arm64.zip.blockmap ]; then
+            gh release upload "v$VERSION" -R "$GITHUB_REPOSITORY" \
+              release/Archi-arm64.zip.blockmap --clobber
+          fi
 
       - name: Upload DMG as workflow artifact (dry run)
         # Run even on previous-step failure so a verify-signing rejection
@@ -144,8 +152,9 @@ jobs:
           name: archi-dmg-dry-run
           path: |
             apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
             apps/desktop/release/latest-mac.yml
-            apps/desktop/release/*.dmg.blockmap
+            apps/desktop/release/*.blockmap
           if-no-files-found: warn
 
       - name: Cleanup temp keychain

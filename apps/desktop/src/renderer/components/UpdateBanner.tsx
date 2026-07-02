@@ -11,6 +11,7 @@ type BannerView =
   | { mode: "available"; version: string }
   | { mode: "progress"; percent: number }
   | { mode: "downloaded"; version: string }
+  | { mode: "error"; message: string }
   | { mode: "hidden" };
 
 export function UpdateBanner(): JSX.Element | null {
@@ -41,8 +42,15 @@ export function UpdateBanner(): JSX.Element | null {
           setView({ mode: "downloaded", version });
           break;
         }
+        case "error": {
+          const message = event.payload?.message ?? "unknown error";
+          // Only surface errors from a user-initiated download; background
+          // check failures (e.g. offline) shouldn't nag. They're still
+          // written to the main-process log via autoUpdater.logger.
+          setView((prev) => (prev.mode === "progress" ? { mode: "error", message } : prev));
+          break;
+        }
         case "none":
-        case "error":
         default:
           break;
       }
@@ -75,6 +83,21 @@ export function UpdateBanner(): JSX.Element | null {
             Download
           </button>
           <button type="button" className="update-banner-secondary" onClick={() => dismiss(`available:${view.version}`)}>
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (view.mode === "error") {
+    return (
+      <div className="update-banner" role="alert">
+        <span className="update-banner-message">
+          Update failed: {view.message} — you can download the latest version from the site.
+        </span>
+        <div className="update-banner-actions">
+          <button type="button" className="update-banner-secondary" onClick={() => dismiss("error")}>
             Dismiss
           </button>
         </div>

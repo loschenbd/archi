@@ -4,6 +4,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import electronUpdater from "electron-updater";
+import electronLog from "electron-log/main.js";
 const { autoUpdater } = electronUpdater;
 import { PreferencesStore } from "./preferences.js";
 import { UpdaterController, type AutoUpdaterLike } from "./updater.js";
@@ -1327,6 +1328,11 @@ app.whenReady().then(() => {
   };
 
   const preferences = new PreferencesStore(app.getPath("userData"));
+
+  // Log updater activity to ~/Library/Logs/Archi/main.log — without this,
+  // update-check failures are completely invisible (the renderer banner
+  // deliberately stays quiet for background-check errors).
+  autoUpdater.logger = electronLog;
 
   const updater = new UpdaterController(
     autoUpdater as unknown as AutoUpdaterLike,

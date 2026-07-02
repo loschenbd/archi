@@ -42,13 +42,27 @@ if (!gh?.owner || !gh?.repo) fail("no github publish provider (owner/repo) in el
 const repo = `${gh.owner}/${gh.repo}`;
 
 // --- artifacts (must exist from the prior `pnpm package` run) ---
+// The zip is REQUIRED: electron-updater on macOS can only install updates
+// from a zip target — a DMG-only release makes the in-app updater fail
+// with "ZIP file not provided" and existing installs stay stranded.
 const assets = [
   join(releaseDir, "Archi-arm64.dmg"),
+  join(releaseDir, "Archi-arm64.zip"),
   join(releaseDir, "latest-mac.yml"),
   join(releaseDir, "Archi-arm64.dmg.blockmap"),
 ];
 const missing = assets.filter((a) => !existsSync(a));
 if (missing.length) fail(`missing build artifacts (run \`pnpm package\` first):\n  ${missing.join("\n  ")}`);
+
+// zip blockmap enables differential updates; upload it when produced.
+const zipBlockmap = join(releaseDir, "Archi-arm64.zip.blockmap");
+if (existsSync(zipBlockmap)) assets.push(zipBlockmap);
+
+// Guard: the update feed must reference the zip, or in-app updates still break.
+const feed = yaml.load(readFileSync(join(releaseDir, "latest-mac.yml"), "utf8"));
+if (!(feed.files || []).some((f) => f.url?.endsWith(".zip"))) {
+  fail("latest-mac.yml does not reference a .zip file — macOS auto-update would fail");
+}
 
 // --- the release commit must be on the remote, else the tag points at nothing ---
 const head = sh("git", ["rev-parse", "HEAD"]).trim();
