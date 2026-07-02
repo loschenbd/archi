@@ -61,6 +61,7 @@
 .ui-card__footer {
   margin-top: 14px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
 }
@@ -554,6 +555,37 @@
 
 /* ───── Settings cards ───── */
 
+.connections-grid {
+  /* min(100%, 300px): below 300px of container width the column tracks
+     shrink with the container instead of forcing horizontal overflow */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+.connections-grid > .ui-card {
+  /* grid items default to min-width:auto — long unbreakable content
+     (URLs, tokens, code) would widen the track past the container */
+  min-width: 0;
+  /* the @container diagnostics rules query the card's inline size;
+     without a declared container they never apply */
+  container-type: inline-size;
+}
+.diagnostics-table {
+  /* with auto table layout, width:100% is only a minimum — column
+     min-content can push the table past its container */
+  table-layout: fixed;
+}
+.diagnostics-table td:first-child {
+  /* fixed columns can get narrower than the timestamp; wrap it
+     rather than spill into the next cell */
+  white-space: normal;
+}
+@container (max-width: 340px) {
+  /* below ~340px of card width the four columns can't fit even fully
+     wrapped — scroll the table inside the card instead of overflowing it */
+  .diagnostics-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
 .connection-card-header {
   display: flex;
   align-items: center;
@@ -583,6 +615,7 @@
   font-family: Inter, system-ui, sans-serif;
   font-size: 14px;
   color: var(--ink-700);
+  overflow-wrap: break-word;
 }
 .search-card-stats code {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
