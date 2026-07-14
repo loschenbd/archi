@@ -8,6 +8,7 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { ChatScreen } from "./screens/ChatScreen.js";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
+import { IndexerStatusPill } from "./components/IndexerStatusPill";
 import { SupportButton } from "./components/SupportButton";
 import { maskConnectionForBanner } from "./lib/syncBannerMapping";
 import { SupportPromptModal } from "./components/SupportPromptModal";
@@ -591,6 +592,25 @@ export function App(): JSX.Element {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [findSimilarPassage]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key === ",") {
+        event.preventDefault();
+        setActiveScreen("Settings");
+        return;
+      }
+      if (event.key === "k" || event.key === "K") {
+        if (activeScreen !== "Home") {
+          event.preventDefault();
+          setActiveScreen("Home");
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeScreen]);
+
   const updateConnection = (provider: ConnectionProvider, operation: Promise<ConnectionState>): void => {
     setConnections((current) => ({
       ...current,
@@ -882,6 +902,7 @@ export function App(): JSX.Element {
                 ))}
               </nav>
               <div className="sidebar-divider" aria-hidden="true" />
+              <IndexerStatusPill collapsed={sidebarCollapsed} />
               <SupportButton collapsed={sidebarCollapsed} />
               <button
                 type="button"

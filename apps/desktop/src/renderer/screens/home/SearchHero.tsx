@@ -269,6 +269,12 @@ export function SearchHero(props: Props): JSX.Element {
             {loading ? "Searching…" : summary}
           </p>
 
+          {(isIndexing || (totalToIndex > 0 && indexedCount < totalToIndex)) && response && response.results.length > 0 ? (
+            <p className="search-hero-partial" role="status">
+              Results may be partial — {indexedCount.toLocaleString()} / {totalToIndex.toLocaleString()} indexed
+            </p>
+          ) : null}
+
           {response && response.results.length === 0 && !loading ? (
             <div className="search-hero-empty">
               <p>No matches.</p>
