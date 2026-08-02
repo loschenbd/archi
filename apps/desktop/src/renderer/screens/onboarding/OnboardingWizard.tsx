@@ -172,8 +172,13 @@ export function OnboardingWizard({ ipcError, onComplete }: Props): JSX.Element {
       kindleAuthInProgress: false,
       stepError: null,
     }));
+    // Cloud notebook sync defaults to disabled on a fresh install, and the
+    // connect/reconnect path short-circuits when it's disabled — so without
+    // enabling it first the sign-in button silently no-ops. The main app guards
+    // every cloud connect with ensureCloudEnabled(); onboarding must do the same.
     void window.archi
-      .connectConnection("cloud_notebook")
+      .setCloudEnabled(true)
+      .then(() => window.archi.connectConnection("cloud_notebook"))
       .then((next) => {
         if (next.status === "connected") {
           setState((prev) => ({

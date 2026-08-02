@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { coverAtHeight, coverSrcSet } from "../../utils/coverImage";
 
 type Work = {
   id: string;
@@ -21,6 +22,7 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
   // Track ids we've already shown so we can flag genuinely new arrivals
   // (vs the initial mount, which would otherwise animate every tile).
   const previousIdsRef = useRef<Set<string> | null>(null);
+  const trackRef = useRef<HTMLUListElement>(null);
   const [newlyArrived, setNewlyArrived] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -44,6 +46,13 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
     if (arrivals.size === 0) {
       return;
     }
+
+    // Newest works are prepended to the front of the rail. The track's default
+    // scroll anchoring (overflow-anchor: auto) keeps previously-visible tiles
+    // stable by pushing scrollLeft to the right, which shoves the just-arrived
+    // items off-screen to the left. Snap back to the front so the most recent
+    // import stays front-and-center during a sync.
+    trackRef.current?.scrollTo({ left: 0, behavior: "smooth" });
 
     setNewlyArrived((current) => {
       const next = new Set(current);
@@ -76,7 +85,7 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
           <span className="books-rail-new-chip">+{deltaCount} new</span>
         ) : null}
       </header>
-      <ul className="books-rail-track">
+      <ul className="books-rail-track" ref={trackRef}>
         {visible.map((work) => {
           const isNew = newlyArrived.has(work.id);
           return (
@@ -94,7 +103,12 @@ export function BooksRail({ works, deltaCount, onOpenWork }: Props): JSX.Element
               >
                 <span className="books-rail-tile-cover" aria-hidden="true">
                   {work.coverImageUrl ? (
-                    <img src={work.coverImageUrl} alt="" loading="lazy" />
+                    <img
+                      src={coverAtHeight(work.coverImageUrl, 200)}
+                      srcSet={coverSrcSet(work.coverImageUrl, 200)}
+                      alt=""
+                      loading="lazy"
+                    />
                   ) : (
                     <span className="books-rail-tile-cover-letter">
                       {(work.title[0] ?? "?").toUpperCase()}

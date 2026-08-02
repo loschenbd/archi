@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { LibraryAllHighlights } from "./library/LibraryAllHighlights";
+import { coverAtHeight, coverSrcSet } from "../utils/coverImage";
 
 const LIBRARY_TAB_STORAGE_KEY = "archi.libraryTab";
 
@@ -197,7 +198,12 @@ export function LibraryScreen({
                     >
                       <div className="library-work-cover">
                         {work.coverImageUrl ? (
-                          <img src={work.coverImageUrl} alt={`${work.title} cover`} loading="lazy" />
+                          <img
+                            src={coverAtHeight(work.coverImageUrl, 120)}
+                            srcSet={coverSrcSet(work.coverImageUrl, 120)}
+                            alt={`${work.title} cover`}
+                            loading="lazy"
+                          />
                         ) : (
                           <span aria-hidden="true">{getPlaceholderInitial(work.title)}</span>
                         )}

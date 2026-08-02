@@ -4,6 +4,7 @@ import type { SearchFilters } from "@archi/search";
 import { type ConnectionState } from "./screens/ConnectionsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LibraryBookDetailScreen } from "./screens/LibraryBookDetailScreen";
+import { coverAtHeight, coverSrcSet } from "./utils/coverImage";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { ChatScreen } from "./screens/ChatScreen.js";
@@ -721,7 +722,7 @@ export function App(): JSX.Element {
       case "Chat":
         return (
           <ChatScreen
-            onOpenWork={(workId, _passageId) => {
+            onOpenWork={(workId) => {
               setActiveScreen("Library");
               setSelectedLibraryWorkId(workId);
             }}
@@ -898,17 +899,28 @@ export function App(): JSX.Element {
             </aside>
             <section className="content" data-screen={activeScreen}>
               {selectedWork ? (
-                <header className="content-header">
-                  <div>
-                    <button
-                      type="button"
-                      className="content-eyebrow content-eyebrow-link"
-                      onClick={() => setSelectedLibraryWorkId(null)}
-                    >
-                      <span aria-hidden="true">‹</span> Library
-                    </button>
-                    <h1>{selectedWork.title}</h1>
-                    <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p>
+                <header className="content-header content-header--book">
+                  <button
+                    type="button"
+                    className="content-eyebrow-link book-detail-back"
+                    onClick={() => setSelectedLibraryWorkId(null)}
+                  >
+                    <span aria-hidden="true">‹</span> Library
+                  </button>
+                  <div className="book-detail-headline">
+                    {selectedWork.coverImageUrl ? (
+                      <img
+                        className="book-detail-cover"
+                        src={coverAtHeight(selectedWork.coverImageUrl, 180)}
+                        srcSet={coverSrcSet(selectedWork.coverImageUrl, 180)}
+                        alt={`${selectedWork.title} cover`}
+                        loading="lazy"
+                      />
+                    ) : null}
+                    <div>
+                      <h1>{selectedWork.title}</h1>
+                      <p className="content-subtitle">{selectedWork.creator || "Unknown author"}</p>
+                    </div>
                   </div>
                 </header>
               ) : null}

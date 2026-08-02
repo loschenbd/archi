@@ -426,6 +426,41 @@ select {
   line-height: 1.06;
 }
 
+/* Book detail header: back link on its own row above a cover + title row. */
+.content-header--book {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.book-detail-headline {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+/* Bigger, easier-to-hit back target than the bare 12px text link. The negative
+   margin keeps the label visually flush with the cover/title left edge. */
+.book-detail-back {
+  padding: 8px 12px;
+  margin: -8px 0 -8px -12px;
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+.book-detail-back:hover {
+  background: color-mix(in srgb, var(--ink-300) 16%, transparent);
+}
+
+.book-detail-cover {
+  flex-shrink: 0;
+  height: 132px;
+  width: auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(72, 53, 41, 0.16);
+  background: color-mix(in srgb, var(--ink-300) 22%, var(--surface));
+}
+
 .content-eyebrow {
   margin-bottom: 4px;
   font-size: 12px;
@@ -2159,10 +2194,19 @@ select {
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  /* Newest works prepend to the front; without this the browser anchors scroll
+     to the old leading tile and pushes new arrivals off-screen left. BooksRail
+     also snaps scrollLeft back to 0 on arrival. */
+  overflow-anchor: none;
   scroll-snap-type: x proximity;
   padding-bottom: 8px;
   margin: 0;
   list-style: none;
+  /* Soften the right edge so the partially-scrolled tile fades out instead of
+     getting hard-clipped at the rail boundary. Left stays opaque — the newest
+     book lives there and should read crisp. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 52px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 52px), transparent);
 }
 
 .books-rail-tile {
