@@ -1,7 +1,7 @@
 export function WelcomeStep(): JSX.Element {
   return (
     <div className="onboarding-wizard-step">
-      <p className="content-eyebrow">Setup · Step 1 of 5</p>
+      <p className="content-eyebrow">Step 1 of 5 · Welcome</p>
       <h1 className="ui-card__title">Your library, finally searchable.</h1>
       <div className="ui-card__body">
         <p>
