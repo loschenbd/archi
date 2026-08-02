@@ -99,7 +99,6 @@ export function appendValidationReport(logPath: string, report: CloudValidationR
     fs.appendFileSync(logPath, `${JSON.stringify(report)}\n`, "utf8");
   } catch (error) {
     // Telemetry must never throw. Log to console and move on.
-    // eslint-disable-next-line no-console
     console.warn("[cloud-validation] append failed:", (error as Error).message);
   }
 }

@@ -53,7 +53,6 @@ export class ElectronCloudNetValidator implements CloudNetValidator {
     this.options.onDebug?.(message);
     // Mirror to console so it shows up in the dev log alongside Playwright
     // output. Tagged so it's grep-friendly.
-    // eslint-disable-next-line no-console
     console.log(`[cloud-net-validator] ${message}`);
   }
 

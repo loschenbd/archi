@@ -293,7 +293,6 @@ app.whenReady().then(() => {
     notebookUrl: settings.cloud.notebookUrl,
     storageStatePath: settings.cloud.storageStatePath,
     onDebug: (message) => {
-      // eslint-disable-next-line no-console
       console.log(`[cloud-net-validator] ${message}`);
     }
   });

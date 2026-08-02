@@ -27,6 +27,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Workspace packages are consumed through their `dist/` (package.json
+      # `types`/`exports`), which is gitignored — so on a fresh checkout every
+      # consumer fails to resolve `@archi/*` until the libraries are built.
+      # Only `packages/*` is needed: the apps are consumers, not dependencies,
+      # and building them here would pull the embedding model and the Astro
+      # site for no typecheck benefit.
+      - name: Build workspace packages
+        run: pnpm -r --filter "./packages/*" build
+
       - name: Typecheck
         run: pnpm typecheck
 

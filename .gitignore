@@ -17,3 +17,9 @@ apps/desktop/release-deploytest
 # Bundled embedding model assets (fetched at build time)
 apps/desktop/resources/models/bge-small-en-v1.5/
 !apps/desktop/resources/models/.gitkeep
+
+# Claude Code local state. `worktrees/` holds throwaway agent worktrees, and
+# settings.json here is machine-specific (absolute hook paths), so neither is
+# shareable. Drop these lines if you ever want to commit project-wide settings.
+.claude/worktrees/
+.claude/settings.json
