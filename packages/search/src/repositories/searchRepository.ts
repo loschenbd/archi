@@ -141,6 +141,42 @@ export class SearchRepository {
       .all(query, ...candidateIds) as FtsHit[];
   }
 
+  /**
+   * Passages belonging to works whose title or author matches the query.
+   *
+   * `passages_fts` indexes only `body` and `reader_note`, so searching for a
+   * book title or an author name matched nothing on its own — results came
+   * back only when the embedding happened to place the query near some
+   * passage. Searching your library for "Meditations" or "Aurelius" is an
+   * obvious thing to do, so those works' passages join the ranking as their
+   * own list.
+   *
+   * Ordered by title match before author match, then by reading position, so
+   * the fused ranking sees a stable, sensible order.
+   */
+  passageIdsByWorkText(query: string, candidateIds: string[], limit: number): string[] {
+    const trimmed = query.trim();
+    if (candidateIds.length === 0 || trimmed.length === 0) {
+      return [];
+    }
+    const like = `%${trimmed.replace(/[%_]/g, (c) => `\\${c}`)}%`;
+    const placeholders = candidateIds.map(() => "?").join(",");
+    return (
+      this.db
+        .prepare(
+          `SELECT p.id AS id
+           FROM passages p
+           JOIN works w ON p.work_id = w.id
+           WHERE p.id IN (${placeholders})
+             AND (w.display_title LIKE ? ESCAPE '\\' OR w.creator LIKE ? ESCAPE '\\')
+           ORDER BY (w.display_title LIKE ? ESCAPE '\\') DESC,
+                    p.position_start IS NULL, p.position_start
+           LIMIT ?`
+        )
+        .all(...candidateIds, like, like, like, limit) as Array<{ id: string }>
+    ).map((r) => r.id);
+  }
+
   // Used to build the candidate set when the user has filters but no free-text query.
   fetchCandidatesSql(sql: string, params: unknown[]): string[] {
     return (this.db.prepare(sql).all(...params) as Array<{ id: string }>).map((r) => r.id);

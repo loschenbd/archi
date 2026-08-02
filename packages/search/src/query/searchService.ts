@@ -25,6 +25,23 @@ const RRF_K = 60;
 // in knnByPassageIds/ftsSearchInIds. 30k is comfortably below
 // SQLITE_MAX_VARIABLE_NUMBER (typically 32766) even on older builds.
 const MAX_CANDIDATE_IDS = 30_000;
+/**
+ * Cosine-distance ceiling for a vector-only hit to count as a match.
+ *
+ * KNN always returns k neighbours, however far away they are, so without a
+ * floor a nonsense query ("xyzzy plugh frobnicate") returned a full page of
+ * confident-looking, unrelated passages and the "No matches" state was
+ * unreachable.
+ *
+ * Calibrated against a 3,135-passage library on bge-small-en-v1.5. Real
+ * queries land at 0.61–0.90 and keep every result at this ceiling; nonsense
+ * queries start at 0.89–0.95 and collapse to 0–1 results. 0.95 lets junk
+ * through; 0.90 starts trimming genuine matches.
+ *
+ * Only vector-only hits are gated — an exact keyword hit is meaningful
+ * regardless of how far apart the embeddings are.
+ */
+const MAX_VECTOR_DISTANCE = 0.92;
 
 export class SearchService {
   constructor(private readonly options: SearchServiceOptions) {}
@@ -197,11 +214,16 @@ export class SearchService {
       return [];
     }
 
-    const vecHits = this.options.repo.knnByPassageIds(queryVec, candidateIds, 100);
+    const vecHits = this.options.repo
+      .knnByPassageIds(queryVec, candidateIds, 100)
+      .filter((hit) => hit.distance < MAX_VECTOR_DISTANCE);
     const ftsHits = this.safeFts(text, candidateIds);
+    const workHits = this.options.repo
+      .passageIdsByWorkText(text, candidateIds, 100)
+      .map((passage_id) => ({ passage_id }));
 
     const fused = fuseRrf<{ passage_id: string }>(
-      [vecHits, ftsHits],
+      [vecHits, ftsHits, workHits],
       (h) => h.passage_id,
       { k: RRF_K, limit }
     );
@@ -235,8 +257,12 @@ export class SearchService {
       .map((fhit) => {
         const row = rowsById.get(fhit.key);
         if (!row) return null;
+        // List 0 is the vector search; lists 1 (passage text) and 2 (work
+        // title/author) are both literal matches, so they report as "fts5".
+        const viaVector = fhit.sourceIndices.includes(0);
+        const viaLiteral = fhit.sourceIndices.some((i) => i === 1 || i === 2);
         const matchedVia: SearchResult["matchedVia"] =
-          fhit.sourceIndices.length === 2 ? "both" : fhit.sourceIndices[0] === 0 ? "vector" : "fts5";
+          viaVector && viaLiteral ? "both" : viaVector ? "vector" : "fts5";
         return hydrateResult(
           row,
           {

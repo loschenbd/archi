@@ -120,6 +120,44 @@ describe("SearchService", () => {
     });
   });
 
+  describe("work title and author matching", () => {
+    it("returns a work's passages when the query is its title", async () => {
+      // passages_fts only indexes body/reader_note, and no fixture body
+      // contains "Meditations" — so this can only pass via work matching.
+      const res = await service.query({ text: "Meditations", filters: {}, limit: 10 });
+      expect(res.results.length).toBeGreaterThan(0);
+      expect(res.results.every((r) => r.work.displayTitle === "Meditations")).toBe(true);
+    }, 30_000);
+
+    it("returns a work's passages when the query is its author", async () => {
+      const res = await service.query({ text: "Marcus Aurelius", filters: {}, limit: 10 });
+      expect(res.results.length).toBeGreaterThan(0);
+      expect(res.results.some((r) => r.work.creator === "Marcus Aurelius")).toBe(true);
+    }, 30_000);
+  });
+
+  describe("relevance floor", () => {
+    it("returns nothing for a query with no semantic relation to the corpus", async () => {
+      // KNN always hands back k neighbours however distant, so without a
+      // distance ceiling this returned a full page of confident-looking
+      // nonsense and the "No matches" state was unreachable.
+      const res = await service.query({
+        text: "xyzzy plugh frobnicate quux",
+        filters: {},
+        limit: 20
+      });
+      expect(res.results).toEqual([]);
+    }, 30_000);
+
+    it("still returns results for a genuine semantic query", async () => {
+      // The floor must not cost recall on real queries — "rage" matches the
+      // anger passages by meaning, not by keyword.
+      const res = await service.query({ text: "rage", filters: {}, limit: 20 });
+      expect(res.results.length).toBeGreaterThan(0);
+      expect(res.results.some((r) => r.matchedVia === "vector" || r.matchedVia === "both")).toBe(true);
+    }, 30_000);
+  });
+
   describe("snippet output", () => {
     it("wraps matched tokens in <mark> for fts5 matches", async () => {
       const res = await service.query({ text: "anger", filters: {}, limit: 5 });

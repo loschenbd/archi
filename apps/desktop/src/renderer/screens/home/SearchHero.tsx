@@ -151,13 +151,16 @@ export function SearchHero(props: Props): JSX.Element {
 
   const summary = (() => {
     if (!response) return "";
-    if (prefs.showMatchSource) {
-      const keyword = response.results.filter((r) => r.matchedVia === "fts5").length;
-      const vector = response.results.filter((r) => r.matchedVia === "vector").length;
-      const both = response.results.filter((r) => r.matchedVia === "both").length;
-      return `${keyword} keyword · ${vector} vector · ${both} combined`;
-    }
-    return `${response.results.length} ${response.results.length === 1 ? "result" : "results"}`;
+    const total = response.results.length;
+    const count = `${total} ${total === 1 ? "result" : "results"}`;
+    // The retrieval breakdown is diagnostic detail, not the headline. It used
+    // to *replace* the count, so the default answer to "how many did you
+    // find?" was "12 keyword · 18 vector · 20 combined".
+    if (!prefs.showMatchSource) return count;
+    const keyword = response.results.filter((r) => r.matchedVia === "fts5").length;
+    const vector = response.results.filter((r) => r.matchedVia === "vector").length;
+    const both = response.results.filter((r) => r.matchedVia === "both").length;
+    return `${count} · ${keyword} keyword · ${vector} meaning · ${both} both`;
   })();
 
   const truncatedSimilarSeed = findSimilarPassage

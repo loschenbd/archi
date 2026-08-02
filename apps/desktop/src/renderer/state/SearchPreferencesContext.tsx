@@ -13,7 +13,10 @@ type ContextValue = SearchPreferences & {
 };
 
 const DEFAULTS: SearchPreferences = {
-  showMatchSource: true,
+  // Off by default: "MEANING + KEYWORD" badges on every card and a retrieval
+  // breakdown instead of a result count are diagnostics, not the default
+  // reading experience. Still available in Settings → Search.
+  showMatchSource: false,
   includeArchived: false,
   includeHidden: false
 };
