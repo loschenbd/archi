@@ -36,6 +36,20 @@ jobs:
       - name: Build workspace packages
         run: pnpm -r --filter "./packages/*" build
 
+      # The search package embeds with a bundled ONNX model and its tests fail
+      # outright without it. `fetch:model` normally rides along on the desktop
+      # app's `prebuild`, which the packages-only build above does not run, so
+      # fetch it explicitly. Cached on the fetch script's hash, same as the
+      # release workflow.
+      - name: Cache fetched embedding model
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/resources/models
+          key: bge-small-en-v1.5-${{ hashFiles('apps/desktop/scripts/fetch-embedding-model.mjs') }}
+
+      - name: Fetch embedding model
+        run: pnpm --filter @archi/desktop fetch:model
+
       - name: Typecheck
         run: pnpm typecheck
 
