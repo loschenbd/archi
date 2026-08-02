@@ -144,6 +144,21 @@ select {
   color: var(--text);
 }
 
+/* The rule above is written for text fields. Checkboxes and radios are not text
+   fields: width:100% stretches a 14px control into a full-row box (measured at
+   289px in the review pane), which shoves its label away and leaves the tick
+   floating in dead space. Opt them out here rather than per-component —
+   .settings-toggle patched only margin-top and inherited the stretch. */
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
 #root {
   display: flex;
   flex-direction: column;
@@ -3681,6 +3696,10 @@ body::before {
   flex-direction: column;
   gap: 20px;
   width: 100%;
+  /* Fill the content row so .review-card's flex:1 has room to centre into.
+     Without this the screen collapsed to its content (284px of an available
+     792px) and the card sat jammed under the progress bar above a dead void. */
+  height: 100%;
   min-height: 0;
 }
 
@@ -3760,30 +3779,46 @@ body::before {
   transition: width 220ms ease;
 }
 
-/* One highlight at a time, set as a page of a book rather than a list row. */
+/* One highlight at a time, set as a page of a book rather than a list row.
+   The card hugs its text; the card + actions pair is what gets centred in the
+   column, via the auto margins here and on .review-actions. `flex: 1` here
+   instead inflated the frame to the full 651px column and left the quotation
+   marooned in the middle of an empty box. */
 .review-card {
-  flex: 1;
+  /* Frame the measure, not the window: at full width the rule sat ~440px away
+     from a 616px text column on either side and read as an empty tray. */
+  width: min(712px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: auto;
+  max-height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 20px;
   padding: 48px;
   overflow-y: auto;
 }
 
+/* Long-form quotation wants a measured column, not the full window width.
+   NOT expressed in `ch`: that unit is the advance width of "0", and Newsreader's
+   figures are much wider than its average lowercase letter, so the intended
+   `68ch` measured 828px on screen and fit ~93 characters per line — half again
+   the target and past the point where the eye loses the line. 28em at 22px is
+   616px, which measures ~68 actual characters. */
 .review-card-body {
   font-family: Newsreader, Georgia, serif;
   font-size: 22px;
   line-height: 1.62;
-  /* Long-form quotation wants a measured column, not the full window width. */
-  max-width: 68ch;
+  max-width: 28em;
   margin: 0 auto;
 }
 
 .review-card-source {
   margin: 0 auto;
-  max-width: 68ch;
+  /* Matches .review-card-body's measure; em here resolves against this
+     element's 13px, so it is stated in the body's px terms instead. */
+  max-width: 616px;
   width: 100%;
   font-size: 13px;
   color: var(--ink-500);
@@ -3811,6 +3846,8 @@ body::before {
   display: flex;
   gap: 10px;
   justify-content: center;
+  /* Pairs with .review-card's margin-top:auto to centre the two as a group. */
+  margin-bottom: auto;
 }
 
 .review-actions kbd {

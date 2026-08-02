@@ -153,8 +153,10 @@ function createWindow(): BrowserWindow {
     // close — no minimize, no zoom, no fullscreen — and every other macOS
     // window has all three.
     window.setWindowButtonVisibility(true);
+    // Electron 39 made `app.dock` optional — it's undefined when the process
+    // has no dock (LSUIElement, headless CI). Guard rather than assert.
     if (hasIcon) {
-      app.dock.setIcon(iconPath);
+      app.dock?.setIcon(iconPath);
     }
   }
 
@@ -184,7 +186,7 @@ function createWindow(): BrowserWindow {
     window.show();
     window.focus();
     if (process.platform === "darwin") {
-      app.dock.show();
+      void app.dock?.show();
     }
   });
 
