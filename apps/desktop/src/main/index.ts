@@ -129,6 +129,11 @@ function createWindow(): BrowserWindow {
     title: APP_NAME,
     width: 1240,
     height: 840,
+    // The two-column layout stops making sense below ~1000px: the sidebar
+    // would stack above the content like a mobile page. Desktop windows are
+    // resizable, so the floor has to be enforced here, not in a media query.
+    minWidth: 1000,
+    minHeight: 640,
     show: false,
     ...(hasIcon ? { icon: iconPath } : {}),
     ...(process.platform === "darwin" ? { titleBarStyle: "hidden" as const } : {}),
@@ -137,7 +142,10 @@ function createWindow(): BrowserWindow {
     }
   });
   if (process.platform === "darwin") {
-    window.setWindowButtonVisibility(false);
+    // Show the real traffic lights. The custom single red dot could only
+    // close — no minimize, no zoom, no fullscreen — and every other macOS
+    // window has all three.
+    window.setWindowButtonVisibility(true);
     if (hasIcon) {
       app.dock.setIcon(iconPath);
     }
