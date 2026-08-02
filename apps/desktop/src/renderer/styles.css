@@ -1867,7 +1867,12 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 16px;
+  /* `.window-titlebar` is a fixed 36px strip pinned to the top of the app
+     window (z-index 1000). The banner renders at the top of the document, so
+     anything inside that strip is covered and unclickable — the top padding
+     reserves it. Keep it >= the titlebar height. */
+  padding: 44px 16px 10px;
+  -webkit-app-region: no-drag;
   background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
   color: var(--accent-strong);

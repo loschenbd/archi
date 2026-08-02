@@ -56,12 +56,15 @@ export function UpdateBanner(): JSX.Element | null {
         }
         case "error": {
           const message = event.payload?.message ?? "unknown error";
-          // Surface errors from an in-flight download, and from a check the
-          // user asked for. Background check failures (e.g. offline)
-          // shouldn't nag — they're still written to the main-process log
-          // via autoUpdater.logger.
+          // Surface errors from an in-flight download, from an update waiting
+          // to install (a failed "Restart now" must not look like nothing
+          // happened), and from a check the user asked for. Background check
+          // failures (e.g. offline) shouldn't nag — they're still written to
+          // the main-process log via autoUpdater.logger.
           setView((prev) =>
-            event.manual || prev.mode === "progress" ? { mode: "error", message } : prev
+            event.manual || prev.mode === "progress" || prev.mode === "downloaded"
+              ? { mode: "error", message }
+              : prev
           );
           break;
         }

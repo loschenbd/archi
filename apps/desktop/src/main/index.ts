@@ -1768,6 +1768,9 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("archi:updater-quit-install", () => {
+    // Logged so a "Restart now" that appears to do nothing can be told apart
+    // from a click that never reached the main process at all.
+    electronLog.info("archi:updater-quit-install requested");
     updater.quitAndInstall();
   });
 
