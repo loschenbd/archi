@@ -19,6 +19,33 @@ type Props = {
   onOpenWork: (workId: string) => void;
 };
 
+/**
+ * Kindle splits a long highlight across rows, and each row is stored as its
+ * own passage — so ~12% of a real library is a continuation fragment like
+ * "people's rejection of His Father." Resurfacing one as the highlight of the
+ * moment reads as broken. Readwise ships the same guard, on by default, for
+ * its daily review.
+ *
+ * The test is "reads as a complete sentence", which on a real 3,135-passage
+ * library keeps 77% — a picky filter is right for a surface that shows one
+ * quote at a time. Falls back to the unfiltered set rather than ever showing
+ * an empty card.
+ */
+const MIN_RESURFACE_LENGTH = 25;
+/** Starts like a sentence: a capital or digit, optionally behind an open quote. */
+const STARTS_CLEANLY = /^["'“‘([]?[A-Z0-9]/;
+/** Ends like a sentence: terminal punctuation, optionally behind a close quote. */
+const ENDS_CLEANLY = /["'”’)\]]?[.!?…]["'”’)\]]?$/;
+
+function isResurfaceable(passage: { body: string }): boolean {
+  const body = passage.body.trim();
+  return (
+    body.length >= MIN_RESURFACE_LENGTH &&
+    STARTS_CLEANLY.test(body) &&
+    ENDS_CLEANLY.test(body)
+  );
+}
+
 function pickRandom<T>(items: T[], excludeId?: string): T | null {
   if (items.length === 0) return null;
   const first = items[0];
@@ -40,8 +67,12 @@ function pickRandom<T>(items: T[], excludeId?: string): T | null {
 }
 
 export function RandomHighlight({ passages, works, onOpenWork }: Props): JSX.Element {
+  const resurfaceable = useMemo(() => {
+    const filtered = passages.filter(isResurfaceable);
+    return filtered.length > 0 ? filtered : passages;
+  }, [passages]);
   const [selected, setSelected] = useState<Passage | null>(() =>
-    pickRandom(passages)
+    pickRandom(resurfaceable)
   );
 
   const creatorByWorkId = useMemo(() => {
@@ -55,10 +86,10 @@ export function RandomHighlight({ passages, works, onOpenWork }: Props): JSX.Ele
   // If the passages list changes (sync brought new ones) and we don't have a
   // selection yet, pick one. Don't re-roll automatically otherwise.
   useEffect(() => {
-    if (!selected && passages.length > 0) {
-      setSelected(pickRandom(passages));
+    if (!selected && resurfaceable.length > 0) {
+      setSelected(pickRandom(resurfaceable));
     }
-  }, [passages, selected]);
+  }, [resurfaceable, selected]);
 
   if (passages.length === 0) {
     return (
@@ -72,7 +103,7 @@ export function RandomHighlight({ passages, works, onOpenWork }: Props): JSX.Ele
     return <section className="ui-card ui-card--ruled ui-card--loose" />;
   }
 
-  const canShuffle = passages.length > 1;
+  const canShuffle = resurfaceable.length > 1;
   const creator = creatorByWorkId.get(selected.workId);
 
   return (
@@ -111,7 +142,7 @@ export function RandomHighlight({ passages, works, onOpenWork }: Props): JSX.Ele
             className="ui-btn ui-btn--ghost"
             onClick={(event) => {
               event.stopPropagation();
-              setSelected(pickRandom(passages, selected.id));
+              setSelected(pickRandom(resurfaceable, selected.id));
             }}
             aria-label="Shuffle to a different highlight"
           >

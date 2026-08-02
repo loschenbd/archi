@@ -153,5 +153,23 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS notion_passage_pages_fingerprint_idx
         ON notion_passage_pages(fingerprint_hash);
     `
+  },
+  {
+    version: 5,
+    sql: `
+      -- Amazon serves "Sorry, we're unable to display this type of content."
+      -- in place of the highlight text for books it won't render. Earlier
+      -- versions ingested that string as if it were the reader's highlight,
+      -- so it shows up in the library and in search results. The scraper now
+      -- drops it; this retires the rows already stored.
+      --
+      -- Hidden rather than deleted: hiding is reversible and already
+      -- respected by search (includeHidden defaults to false), and the rows
+      -- still carry the position data that a future re-sync can reconcile.
+      UPDATE passages
+      SET is_hidden = 1
+      WHERE is_hidden = 0
+        AND body LIKE '%unable to display this type of content%';
+    `
   }
 ];

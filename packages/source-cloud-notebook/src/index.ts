@@ -1201,7 +1201,13 @@ export class PlaywrightCloudNotebookConnector implements CloudNotebookConnector 
             ".kp-notebook-highlight, [id^='highlight'], [class*='highlight-text']"
           ) ?? row) as HTMLElement;
           const body = highlightNode.innerText.trim();
-          if (!body || isMetadataTitle(body)) {
+          // Amazon serves this placeholder in place of the highlight text for
+          // content it won't render (publisher restrictions, some formats).
+          // It is not a highlight; ingesting it puts "Sorry, we're unable to
+          // display this type of content." into the library and the search
+          // index as if the reader had written it.
+          const isUnrenderablePlaceholder = /unable to display this type of content/i.test(body);
+          if (!body || isMetadataTitle(body) || isUnrenderablePlaceholder) {
             return null;
           }
           const id = resolveExternalPassageId(row, highlightNode, selectedBookId, index);
