@@ -93,6 +93,85 @@ describe("UpdaterController", () => {
     expect(fake.checkForUpdates).not.toHaveBeenCalled();
   });
 
+  it("tells the renderer why a manual check does nothing in a dev build", () => {
+    const { fake } = makeFakeAutoUpdater();
+    const { wc, sent } = makeFakeWebContents();
+    const c = new UpdaterController(fake, () => wc);
+    c.checkManual(false);
+    expect(sent[0]).toEqual({
+      channel: "archi:updater-status",
+      payload: {
+        kind: "error",
+        payload: { message: "Update checks are only available in the installed app." },
+        manual: true
+      }
+    });
+  });
+
+  it("emits a manual 'checking' status when the user starts a check", () => {
+    const { fake } = makeFakeAutoUpdater();
+    const { wc, sent } = makeFakeWebContents();
+    const c = new UpdaterController(fake, () => wc);
+    c.checkManual(true);
+    expect(sent[0]).toEqual({
+      channel: "archi:updater-status",
+      payload: { kind: "checking", payload: undefined, manual: true }
+    });
+    expect(fake.checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the resolving status as manual after a user-initiated check", () => {
+    const { fake, fire } = makeFakeAutoUpdater();
+    const { wc, sent } = makeFakeWebContents();
+    const c = new UpdaterController(fake, () => wc);
+    c.checkManual(true);
+    fire("update-not-available");
+    expect(sent[1]).toEqual({
+      channel: "archi:updater-status",
+      payload: { kind: "none", payload: undefined, manual: true }
+    });
+  });
+
+  it("marks a check failure as manual after a user-initiated check", () => {
+    const { fake, fire } = makeFakeAutoUpdater();
+    const { wc, sent } = makeFakeWebContents();
+    const c = new UpdaterController(fake, () => wc);
+    c.checkManual(true);
+    fire("error", new Error("offline"));
+    expect(sent[1]).toEqual({
+      channel: "archi:updater-status",
+      payload: { kind: "error", payload: { message: "offline" }, manual: true }
+    });
+  });
+
+  it("clears the manual flag so a later background result stays silent", () => {
+    const { fake, fire } = makeFakeAutoUpdater();
+    const { wc, sent } = makeFakeWebContents();
+    const c = new UpdaterController(fake, () => wc);
+    c.checkManual(true);
+    fire("update-not-available");
+    c.checkOnLaunch(true);
+    fire("update-not-available");
+    expect(sent[2]).toEqual({
+      channel: "archi:updater-status",
+      payload: { kind: "none", payload: undefined }
+    });
+    expect(sent[2].payload).not.toHaveProperty("manual");
+  });
+
+  it("does not mark a background check's result as manual", () => {
+    const { fake, fire } = makeFakeAutoUpdater();
+    const { wc, sent } = makeFakeWebContents();
+    const c = new UpdaterController(fake, () => wc);
+    c.checkOnLaunch(true);
+    fire("update-not-available");
+    expect(sent[0]).toEqual({
+      channel: "archi:updater-status",
+      payload: { kind: "none", payload: undefined }
+    });
+    expect(sent[0].payload).not.toHaveProperty("manual");
+  });
+
   it("forwards download() to autoUpdater.downloadUpdate", () => {
     const { fake } = makeFakeAutoUpdater();
     const { wc } = makeFakeWebContents();

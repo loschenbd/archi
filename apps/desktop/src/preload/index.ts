@@ -105,11 +105,12 @@ type CloudValidationReportView = {
   errorStack?: string;
 };
 
-type UpdaterStatusKind = "available" | "none" | "progress" | "downloaded" | "error";
+type UpdaterStatusKind = "checking" | "available" | "none" | "progress" | "downloaded" | "error";
 
 type UpdaterStatusEvent = {
   kind: UpdaterStatusKind;
   payload?: { version?: string; percent?: number; message?: string };
+  manual?: boolean;
 };
 
 type SyncProgressListener = (event: SyncProgressEvent) => void;
