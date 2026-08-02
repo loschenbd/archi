@@ -54,6 +54,26 @@ type UpdaterStatusEvent = {
   manual?: boolean;
 };
 
+type ReviewSessionItem = {
+  passageId: string;
+  body: string;
+  workId: string;
+  workTitle: string;
+  creator?: string;
+  position?: string;
+  halfLifeDays: number;
+  lastReviewedAt: string;
+  reviewCount: number;
+  recallProbability: number;
+};
+
+type ReviewSessionResponse = {
+  items: ReviewSessionItem[];
+  dueCount: number;
+  poolSize: number;
+  themeMatched: number | null;
+};
+
 declare global {
   interface Window {
     archi: {
@@ -77,6 +97,18 @@ declare global {
         download: () => Promise<void>;
         quitAndInstall: () => Promise<void>;
         onStatus: (cb: (event: UpdaterStatusEvent) => void) => () => void;
+      };
+      review: {
+        session: (request: {
+          limit: number;
+          theme?: string;
+          qualityFilter?: boolean;
+        }) => Promise<ReviewSessionResponse>;
+        record: (
+          passageId: string,
+          action: "reviewed" | "revisit"
+        ) => Promise<{ recorded: boolean; halfLifeDays?: number; reviewCount?: number }>;
+        stats: () => Promise<{ total: number; due: number; reviewed: number }>;
       };
       preferences: {
         get: <T>(key: string, fallback: T) => Promise<T>;

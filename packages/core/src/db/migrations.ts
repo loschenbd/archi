@@ -171,5 +171,24 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       WHERE is_hidden = 0
         AND body LIKE '%unable to display this type of content%';
     `
+  },
+  {
+    version: 6,
+    sql: `
+      -- Spaced-resurfacing state. Rows are written lazily: a passage with no
+      -- row is treated as never reviewed, with its half-life clock starting
+      -- at when it was highlighted. That keeps this table proportional to
+      -- what the reader has actually seen rather than to the library.
+      CREATE TABLE IF NOT EXISTS passage_reviews (
+        passage_id       TEXT PRIMARY KEY REFERENCES passages(id) ON DELETE CASCADE,
+        half_life_days   REAL NOT NULL,
+        last_reviewed_at TEXT NOT NULL,
+        review_count     INTEGER NOT NULL DEFAULT 0,
+        updated_at       TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS passage_reviews_last_reviewed_idx
+        ON passage_reviews(last_reviewed_at);
+    `
   }
 ];

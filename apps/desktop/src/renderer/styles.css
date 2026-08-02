@@ -3665,3 +3665,157 @@ body::before {
           mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   Review — spaced resurfacing
+   ───────────────────────────────────────────────────────────── */
+
+.content[data-screen="Review"] {
+  overflow-y: auto;
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+}
+
+.review-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-height: 0;
+}
+
+.review-screen--centered {
+  align-items: center;
+  justify-content: center;
+}
+
+.review-setup,
+.review-summary {
+  width: min(620px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-optional {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.review-stats {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.review-theme-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-size-slider {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.review-toggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.review-toggle input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.review-toggle-hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.review-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.review-progress-track {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-300) 28%, transparent);
+  overflow: hidden;
+}
+
+.review-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 220ms ease;
+}
+
+/* One highlight at a time, set as a page of a book rather than a list row. */
+.review-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  padding: 48px;
+  overflow-y: auto;
+}
+
+.review-card-body {
+  font-family: Newsreader, Georgia, serif;
+  font-size: 22px;
+  line-height: 1.62;
+  /* Long-form quotation wants a measured column, not the full window width. */
+  max-width: 68ch;
+  margin: 0 auto;
+}
+
+.review-card-source {
+  margin: 0 auto;
+  max-width: 68ch;
+  width: 100%;
+  font-size: 13px;
+  color: var(--ink-500);
+}
+
+.review-card-source button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.review-card-title {
+  font-weight: 600;
+}
+
+.review-card-meta {
+  color: var(--text-muted);
+}
+
+.review-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.review-actions kbd {
+  margin-left: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  opacity: 0.7;
+}

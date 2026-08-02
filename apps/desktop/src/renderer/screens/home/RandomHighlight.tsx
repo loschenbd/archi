@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { isCompleteSentence } from "@archi/core/review/quality.js";
 import { excerptOf } from "./utils";
 
 type Passage = {
@@ -18,33 +19,6 @@ type Props = {
   works?: WorkRef[];
   onOpenWork: (workId: string) => void;
 };
-
-/**
- * Kindle splits a long highlight across rows, and each row is stored as its
- * own passage — so ~12% of a real library is a continuation fragment like
- * "people's rejection of His Father." Resurfacing one as the highlight of the
- * moment reads as broken. Readwise ships the same guard, on by default, for
- * its daily review.
- *
- * The test is "reads as a complete sentence", which on a real 3,135-passage
- * library keeps 77% — a picky filter is right for a surface that shows one
- * quote at a time. Falls back to the unfiltered set rather than ever showing
- * an empty card.
- */
-const MIN_RESURFACE_LENGTH = 25;
-/** Starts like a sentence: a capital or digit, optionally behind an open quote. */
-const STARTS_CLEANLY = /^["'“‘([]?[A-Z0-9]/;
-/** Ends like a sentence: terminal punctuation, optionally behind a close quote. */
-const ENDS_CLEANLY = /["'”’)\]]?[.!?…]["'”’)\]]?$/;
-
-function isResurfaceable(passage: { body: string }): boolean {
-  const body = passage.body.trim();
-  return (
-    body.length >= MIN_RESURFACE_LENGTH &&
-    STARTS_CLEANLY.test(body) &&
-    ENDS_CLEANLY.test(body)
-  );
-}
 
 function pickRandom<T>(items: T[], excludeId?: string): T | null {
   if (items.length === 0) return null;
@@ -68,7 +42,9 @@ function pickRandom<T>(items: T[], excludeId?: string): T | null {
 
 export function RandomHighlight({ passages, works, onOpenWork }: Props): JSX.Element {
   const resurfaceable = useMemo(() => {
-    const filtered = passages.filter(isResurfaceable);
+    // Shared with the Review screen and the main process — see
+    // @archi/core/review/quality.js for why the heuristic is what it is.
+    const filtered = passages.filter((p) => isCompleteSentence(p.body));
     return filtered.length > 0 ? filtered : passages;
   }, [passages]);
   const [selected, setSelected] = useState<Passage | null>(() =>

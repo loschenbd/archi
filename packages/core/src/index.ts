@@ -3,5 +3,8 @@ export * from "./db/client.js";
 export * from "./db/migrations.js";
 export * from "./repositories/coreRepository.js";
 export * from "./repositories/notionPageCacheRepository.js";
+export * from "./repositories/reviewRepository.js";
 export * from "./sync/dedupe.js";
 export * from "./sync/jobStateMachine.js";
+export * from "./review/schedule.js";
+export * from "./review/quality.js";

@@ -10,7 +10,13 @@ import { PreferencesStore } from "./preferences.js";
 import { UpdaterController, type AutoUpdaterLike } from "./updater.js";
 import { buildApplicationMenu, openSupportWindow } from "./menu.js";
 import dotenv from "dotenv";
-import { CoreRepository, NotionPageCacheRepository, computeFingerprintHash, openCoreDatabase } from "@archi/core";
+import {
+  CoreRepository,
+  NotionPageCacheRepository,
+  ReviewRepository,
+  computeFingerprintHash,
+  openCoreDatabase
+} from "@archi/core";
 import { NotionDestination, type NotionSyncBatchProgressEvent } from "@archi/destination-notion";
 import { PlaywrightCloudNotebookConnector, decodeKindleHighlightLocation, appendValidationReport, type CloudPassage, type CloudValidationReport } from "@archi/source-cloud-notebook";
 import { normalizeDeviceExport } from "@archi/source-device-export";
@@ -28,6 +34,7 @@ import { CredentialStore } from "./credentialStore.js";
 import { ElectronCloudNetValidator } from "./cloudNetValidator.js";
 import { createSearchModule, type SearchModule } from "./searchModule.js";
 import { registerSearchIpc } from "./ipc/searchIpc.js";
+import { registerReviewIpc } from "./ipc/reviewIpc.js";
 import { createChatModule } from "./chatModule.js";
 import { registerChatIpc } from "./ipc/chatIpc.js";
 import { nextCloudAuthSurfaced } from "./cloudAuthSurfaced.js";
@@ -221,6 +228,7 @@ app.whenReady().then(() => {
   const db = openCoreDatabase(dbPath);
   const repository = new CoreRepository(db);
   const notionPageCache = new NotionPageCacheRepository(db);
+  const reviews = new ReviewRepository(db);
   const backfilledPositions = repository.backfillCloudPassagePositions(decodeKindleHighlightLocation);
   if (backfilledPositions > 0) {
     console.log(`[archi] Backfilled position for ${backfilledPositions} cloud passages from external_passage_id.`);
@@ -1791,6 +1799,7 @@ app.whenReady().then(() => {
   });
 
   registerSearchIpc(searchModule);
+  registerReviewIpc(reviews, searchModule);
 
   const chatModule = createChatModule({ search: searchModule.search, userDataPath });
   registerChatIpc(chatModule);

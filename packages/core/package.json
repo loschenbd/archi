@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./review/quality.js": {
+      "types": "./dist/review/quality.d.ts",
+      "import": "./dist/review/quality.js"
     }
   },
   "files": [

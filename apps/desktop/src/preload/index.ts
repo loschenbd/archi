@@ -113,6 +113,26 @@ type UpdaterStatusEvent = {
   manual?: boolean;
 };
 
+type ReviewSessionItem = {
+  passageId: string;
+  body: string;
+  workId: string;
+  workTitle: string;
+  creator?: string;
+  position?: string;
+  halfLifeDays: number;
+  lastReviewedAt: string;
+  reviewCount: number;
+  recallProbability: number;
+};
+
+type ReviewSessionResponse = {
+  items: ReviewSessionItem[];
+  dueCount: number;
+  poolSize: number;
+  themeMatched: number | null;
+};
+
 type SyncProgressListener = (event: SyncProgressEvent) => void;
 const syncProgressListenerMap = new Map<SyncProgressListener, (_event: IpcRendererEvent, payload: SyncProgressEvent) => void>();
 
@@ -227,6 +247,20 @@ const api = {
       ipcRenderer.invoke("archi:get-preference", { key, fallback }),
     set: (key: string, value: unknown): Promise<void> =>
       ipcRenderer.invoke("archi:set-preference", { key, value })
+  },
+  review: {
+    session: (request: {
+      limit: number;
+      theme?: string;
+      qualityFilter?: boolean;
+    }): Promise<ReviewSessionResponse> => ipcRenderer.invoke("archi:review:session", request),
+    record: (
+      passageId: string,
+      action: "reviewed" | "revisit"
+    ): Promise<{ recorded: boolean; halfLifeDays?: number; reviewCount?: number }> =>
+      ipcRenderer.invoke("archi:review:record", { passageId, action }),
+    stats: (): Promise<{ total: number; due: number; reviewed: number }> =>
+      ipcRenderer.invoke("archi:review:stats")
   },
   search: {
     query: (q: SearchQuery): Promise<SearchResponse> =>

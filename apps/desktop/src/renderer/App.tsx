@@ -8,6 +8,7 @@ import { coverAtHeight, coverSrcSet } from "./utils/coverImage";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { OnboardingWizard } from "./screens/onboarding/OnboardingWizard";
 import { ChatScreen } from "./screens/ChatScreen.js";
+import { ReviewScreen } from "./screens/ReviewScreen";
 import { SettingsScreen, type SettingsTab } from "./screens/SettingsScreen";
 import { SupportButton } from "./components/SupportButton";
 import { maskConnectionForBanner } from "./lib/syncBannerMapping";
@@ -17,15 +18,16 @@ import { WindowTitleBar } from "./components/WindowTitleBar";
 import { shouldShowSupportPrompt } from "./support-prompt";
 import { SearchPreferencesProvider } from "./state/SearchPreferencesContext";
 import { IndexerStatusProvider } from "./state/IndexerStatusContext";
-import { House, BookOpen, MessageSquareText, Sliders } from "lucide-react";
+import { House, BookOpen, MessageSquareText, Repeat, Sliders } from "lucide-react";
 import appLogo from "./assets/logo.png";
 
-const screens = ["Home", "Library", "Chat", "Settings"] as const;
+const screens = ["Home", "Library", "Review", "Chat", "Settings"] as const;
 type Screen = (typeof screens)[number];
 
 const screenIcons: Record<Screen, JSX.Element> = {
   Home: <House size={18} strokeWidth={1.6} aria-hidden="true" />,
   Library: <BookOpen size={18} strokeWidth={1.6} aria-hidden="true" />,
+  Review: <Repeat size={18} strokeWidth={1.6} aria-hidden="true" />,
   Chat: <MessageSquareText size={18} strokeWidth={1.6} aria-hidden="true" />,
   Settings: <Sliders size={18} strokeWidth={1.6} aria-hidden="true" />,
 };
@@ -716,6 +718,16 @@ export function App(): JSX.Element {
             onOpenWork={(workId) => {
               setSelectedLibraryWorkId(workId);
               setActiveScreen("Library");
+            }}
+          />
+        );
+      case "Review":
+        return (
+          <ReviewScreen
+            onOpenWork={(workId, passageId) => {
+              setActiveScreen("Library");
+              setSelectedLibraryWorkId(workId);
+              setPendingScrollPassageId(passageId);
             }}
           />
         );
