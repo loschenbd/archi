@@ -10,7 +10,7 @@
     "dev:renderer": "pnpm --filter @archi/desktop dev:renderer",
     "healthcheck": "pnpm --filter @archi/desktop healthcheck",
     "lint": "pnpm -r lint",
-    "postinstall": "pnpm --filter @archi/desktop rebuild:native",
+    "rebuild:node": "pnpm --filter @archi/desktop rebuild:node",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },
