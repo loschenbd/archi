@@ -129,5 +129,29 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
 
       INSERT INTO passages_fts(passages_fts) VALUES ('rebuild');
     `
+  },
+  {
+    version: 4,
+    sql: `
+      -- Maps a passage fingerprint to the Notion page it was written to, so a
+      -- re-sync can skip the two dataSources.query lookups that otherwise
+      -- precede every passage write. Notion throttles to ~3 requests/second
+      -- per connection, so those lookups dominate backfill wall-clock.
+      --
+      -- Scoped by data source: repointing Archi at a different workspace or
+      -- database must not resurrect page ids belonging to the old one.
+      -- Purely a cache — safe to delete; entries that no longer resolve are
+      -- detected and evicted during sync.
+      CREATE TABLE IF NOT EXISTS notion_passage_pages (
+        data_source_id   TEXT NOT NULL,
+        fingerprint_hash TEXT NOT NULL,
+        notion_page_id   TEXT NOT NULL,
+        updated_at       TEXT NOT NULL,
+        PRIMARY KEY (data_source_id, fingerprint_hash)
+      );
+
+      CREATE INDEX IF NOT EXISTS notion_passage_pages_fingerprint_idx
+        ON notion_passage_pages(fingerprint_hash);
+    `
   }
 ];

@@ -10,7 +10,7 @@ import { PreferencesStore } from "./preferences.js";
 import { UpdaterController, type AutoUpdaterLike } from "./updater.js";
 import { buildApplicationMenu, openSupportWindow } from "./menu.js";
 import dotenv from "dotenv";
-import { CoreRepository, computeFingerprintHash, openCoreDatabase } from "@archi/core";
+import { CoreRepository, NotionPageCacheRepository, computeFingerprintHash, openCoreDatabase } from "@archi/core";
 import { NotionDestination, type NotionSyncBatchProgressEvent } from "@archi/destination-notion";
 import { PlaywrightCloudNotebookConnector, decodeKindleHighlightLocation, appendValidationReport, type CloudPassage, type CloudValidationReport } from "@archi/source-cloud-notebook";
 import { normalizeDeviceExport } from "@archi/source-device-export";
@@ -212,6 +212,7 @@ app.whenReady().then(() => {
   const logPath = path.join(userDataPath, "logs", "sync.log");
   const db = openCoreDatabase(dbPath);
   const repository = new CoreRepository(db);
+  const notionPageCache = new NotionPageCacheRepository(db);
   const backfilledPositions = repository.backfillCloudPassagePositions(decodeKindleHighlightLocation);
   if (backfilledPositions > 0) {
     console.log(`[archi] Backfilled position for ${backfilledPositions} cloud passages from external_passage_id.`);
@@ -1070,7 +1071,15 @@ app.whenReady().then(() => {
               integrationToken: notionToken,
               parentPageId: settings.notion.parentPageId,
               libraryDatabaseId: settings.notion.libraryDatabaseId,
-              passagesDatabaseId: settings.notion.passagesDatabaseId
+              passagesDatabaseId: settings.notion.passagesDatabaseId,
+              // Removes two Notion lookups per passage on re-sync. Stale
+              // entries self-evict, so a wrong cache costs a round-trip, not
+              // correctness.
+              pageIdCache: {
+                get: (dataSourceId, fingerprintHash) => notionPageCache.get(dataSourceId, fingerprintHash),
+                set: (dataSourceId, fingerprintHash, pageId) => notionPageCache.set(dataSourceId, fingerprintHash, pageId),
+                delete: (dataSourceId, fingerprintHash) => notionPageCache.delete(dataSourceId, fingerprintHash)
+              }
             });
 
             const onNotionProgress = (event: NotionSyncBatchProgressEvent): void => {

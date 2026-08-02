@@ -43,7 +43,7 @@ importers:
         version: link:../../packages/core
       '@archi/destination-notion':
         specifier: workspace:*
-        version: link:../../packages/destination-notion
+        version: file:packages/destination-notion
       '@archi/search':
         specifier: workspace:*
         version: link:../../packages/search
@@ -247,8 +247,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@notionhq/client':
-        specifier: ^2.2.15
-        version: 2.3.0
+        specifier: ^5.23.3
+        version: 5.23.3
       node-fetch:
         specifier: ^2.7.0
         version: 2.7.0
@@ -313,6 +313,12 @@ packages:
 
   7zip-bin@5.2.0:
     resolution: {integrity: sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==}
+
+  '@archi/core@file:packages/core':
+    resolution: {directory: packages/core, type: directory}
+
+  '@archi/destination-notion@file:packages/destination-notion':
+    resolution: {directory: packages/destination-notion, type: directory}
 
   '@astrojs/check@0.9.9':
     resolution: {integrity: sha512-A5UW8uIuErLWEoRQvzgXpO1gTjUFtK8r7nU2Z7GewAMxUb7bPvpk11qaKKgxqXlHJWlAvaaxy+Xg28A6bmQ1Tg==}
@@ -1209,6 +1215,10 @@ packages:
   '@notionhq/client@2.3.0':
     resolution: {integrity: sha512-l7WqTCpQqC+HibkB9chghONQTYcxNQT0/rOJemBfmuKQRTu2vuV8B3yA395iKaUdDo7HI+0KvQaz9687Xskzkw==}
     engines: {node: '>=12'}
+
+  '@notionhq/client@5.23.3':
+    resolution: {integrity: sha512-Uk0ycO+u6+iueoE/eK9Aa/DGWd2tZ9ymvGF/MXcfxXXL+AS2JYWm1ols19rEk5qOdZ0l2KYc6zThx0iXQ3QhpQ==}
+    engines: {node: '>=18'}
 
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
@@ -4627,6 +4637,22 @@ snapshots:
 
   7zip-bin@5.2.0: {}
 
+  '@archi/core@file:packages/core':
+    dependencies:
+      better-sqlite3: 11.10.0
+      sqlite-vec: 0.1.9
+
+  '@archi/destination-notion@file:packages/destination-notion':
+    dependencies:
+      '@archi/core': file:packages/core
+      '@notionhq/client': 2.3.0
+      node-fetch: 2.7.0
+      tr46: 0.0.3
+      webidl-conversions: 3.0.1
+      whatwg-url: 5.0.0
+    transitivePeerDependencies:
+      - encoding
+
   '@astrojs/check@0.9.9(prettier@3.8.3)(typescript@5.9.3)':
     dependencies:
       '@astrojs/language-server': 2.16.9(prettier@3.8.3)(typescript@5.9.3)
@@ -5390,6 +5416,8 @@ snapshots:
       node-fetch: 2.7.0
     transitivePeerDependencies:
       - encoding
+
+  '@notionhq/client@5.23.3': {}
 
   '@oslojs/encoding@1.1.0': {}
 

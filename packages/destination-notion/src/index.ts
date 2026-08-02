@@ -1,5 +1,9 @@
 import { Client } from "@notionhq/client";
 import { applyPageMedia, chooseMedia, emojiFor, isMediaUrlRejection } from "./media.js";
+import { TokenBucketRateLimiter, retryAfterMs, type RateLimiterOptions } from "./rateLimiter.js";
+
+export type { RateLimiterOptions } from "./rateLimiter.js";
+export { TokenBucketRateLimiter } from "./rateLimiter.js";
 
 export type NotionDestinationConfig = {
   integrationToken: string;
@@ -7,6 +11,30 @@ export type NotionDestinationConfig = {
   libraryDatabaseId?: string;
   passagesDatabaseId?: string;
   rootIcon?: NotionRootIcon;
+  /**
+   * Optional local mapping from a passage fingerprint to the Notion page it
+   * was written to. Purely an optimization: when present it removes the two
+   * `dataSources.query` lookups that otherwise precede every passage write.
+   * Stale entries are detected and evicted automatically, so an out-of-date
+   * cache degrades to the uncached path rather than corrupting the sync.
+   */
+  pageIdCache?: NotionPageIdCache;
+  /**
+   * Paces outbound requests below Notion's ~3 req/s per-connection ceiling.
+   * Defaults to that documented rate; tests raise it to keep suites fast.
+   */
+  rateLimit?: RateLimiterOptions;
+};
+
+/**
+ * `scope` is the Notion data source the page lives in. Mappings are scoped so
+ * that repointing Archi at a different workspace or database can't resurrect
+ * page ids that belong to the old one.
+ */
+export type NotionPageIdCache = {
+  get(scope: string, fingerprintHash: string): Promise<string | undefined> | string | undefined;
+  set(scope: string, fingerprintHash: string, notionPageId: string): Promise<void> | void;
+  delete(scope: string, fingerprintHash: string): Promise<void> | void;
 };
 
 export type NotionRootIcon = {
@@ -17,6 +45,23 @@ export type NotionRootIcon = {
 
 const NOTION_API_BASE = "https://api.notion.com/v1";
 const NOTION_FILE_UPLOAD_VERSION = "2026-03-11";
+
+/**
+ * Pinned explicitly on EVERY client. `@notionhq/client` resolves the
+ * `Notion-Version` header per Client instance and silently falls back to
+ * `Client.defaultNotionVersion` when the option is omitted — so an unpinned
+ * client keeps working against whatever default the installed SDK happens to
+ * carry. Under a pre-2025-09-03 version, page creation with a `database_id`
+ * parent and database query/update start failing the moment a user adds a
+ * second data source to one of these databases, which is user-triggered
+ * breakage no app-side test reproduces.
+ *
+ * This value matches the typed contract of the installed SDK major.
+ */
+const NOTION_API_VERSION = "2025-09-03";
+
+/** The views API is exercised against this version; kept separate deliberately. */
+const NOTION_VIEWS_VERSION = "2026-03-11";
 
 export type NotionWorkInput = {
   sourceWorkId?: string;
@@ -123,21 +168,39 @@ export class NotionDestination {
     "notionhq_client_request_timeout",
     "notionhq_client_response_error",
     "rate_limited",
+    // HTTP 529. Notion's docs say to handle it exactly like a 429; without it
+    // a transient Notion-side overload fails the whole batch.
+    "service_overload",
     "service_unavailable",
     "internal_server_error"
   ]);
 
+  private readonly rateLimiter: TokenBucketRateLimiter;
+
   constructor(private readonly config: NotionDestinationConfig) {
     this.client = new Client({
       auth: config.integrationToken,
-      timeoutMs: 120_000
+      timeoutMs: 120_000,
+      notionVersion: NOTION_API_VERSION
     });
     this.viewsClient = new Client({
       auth: config.integrationToken,
       timeoutMs: 120_000,
-      notionVersion: "2026-03-11"
+      notionVersion: NOTION_VIEWS_VERSION
     });
+    // Shared across both clients: Notion's limit is per connection (token),
+    // not per Client instance.
+    this.rateLimiter = new TokenBucketRateLimiter(config.rateLimit);
   }
+
+  /**
+   * Data source ids for the two provisioned databases, resolved once per
+   * `ensureDatabases()` call. Under 2025-09-03+ a database is a container and
+   * the queryable/writable table is its data source; the two id types are not
+   * interchangeable.
+   */
+  private libraryDataSourceId?: string;
+  private passagesDataSourceId?: string;
 
   async testConnection(): Promise<boolean> {
     await this.client.users.me({});
@@ -155,7 +218,8 @@ export class NotionDestination {
   async ensureDatabases(): Promise<{ libraryDatabaseId: string; passagesDatabaseId: string }> {
     if (this.config.libraryDatabaseId && this.config.passagesDatabaseId) {
       try {
-        await this.ensureDatabaseSchema(this.config.libraryDatabaseId, this.config.passagesDatabaseId);
+        await this.resolveDataSourceIds(this.config.libraryDatabaseId, this.config.passagesDatabaseId);
+        await this.ensureDatabaseSchema();
         return {
           libraryDatabaseId: this.config.libraryDatabaseId,
           passagesDatabaseId: this.config.passagesDatabaseId
@@ -177,7 +241,8 @@ export class NotionDestination {
     if (discoveredDatabases.libraryDatabaseId && discoveredDatabases.passagesDatabaseId) {
       this.config.libraryDatabaseId = discoveredDatabases.libraryDatabaseId;
       this.config.passagesDatabaseId = discoveredDatabases.passagesDatabaseId;
-      await this.ensureDatabaseSchema(discoveredDatabases.libraryDatabaseId, discoveredDatabases.passagesDatabaseId);
+      await this.resolveDataSourceIds(discoveredDatabases.libraryDatabaseId, discoveredDatabases.passagesDatabaseId);
+      await this.ensureDatabaseSchema();
       return {
         libraryDatabaseId: discoveredDatabases.libraryDatabaseId,
         passagesDatabaseId: discoveredDatabases.passagesDatabaseId
@@ -186,14 +251,20 @@ export class NotionDestination {
 
     let libraryDatabaseId = discoveredDatabases.libraryDatabaseId;
     if (!libraryDatabaseId) {
+      // Under 2025-09-03+ the schema lives on the database's initial data
+      // source, and the create response hands back its id — no extra retrieve.
       const library = await this.withRetry(() =>
         this.client.databases.create({
           parent: { type: "page_id", page_id: parentPageId },
           title: [{ type: "text", text: { content: "Library" } }],
-          properties: this.buildLibraryProperties() as never
+          initial_data_source: { properties: this.buildLibraryProperties() as never }
         })
       );
       libraryDatabaseId = library.id;
+      this.libraryDataSourceId = this.firstDataSourceId(library);
+    }
+    if (!this.libraryDataSourceId) {
+      this.libraryDataSourceId = (await this.getPrimaryDataSourceId(libraryDatabaseId)) ?? undefined;
     }
 
     let passagesDatabaseId = discoveredDatabases.passagesDatabaseId;
@@ -202,16 +273,64 @@ export class NotionDestination {
         this.client.databases.create({
           parent: { type: "page_id", page_id: parentPageId },
           title: [{ type: "text", text: { content: "Passages" } }],
-          properties: this.buildPassageProperties(libraryDatabaseId) as never
+          initial_data_source: {
+            properties: this.buildPassageProperties(this.requireLibraryDataSourceId()) as never
+          }
         })
       );
       passagesDatabaseId = passages.id;
+      this.passagesDataSourceId = this.firstDataSourceId(passages);
+    }
+    if (!this.passagesDataSourceId) {
+      this.passagesDataSourceId = (await this.getPrimaryDataSourceId(passagesDatabaseId)) ?? undefined;
     }
 
     this.config.libraryDatabaseId = libraryDatabaseId;
     this.config.passagesDatabaseId = passagesDatabaseId;
-    await this.ensureDatabaseSchema(libraryDatabaseId, passagesDatabaseId);
+    await this.ensureDatabaseSchema();
     return { libraryDatabaseId, passagesDatabaseId };
+  }
+
+  /** Resolves and caches the primary data source id for both databases. */
+  private async resolveDataSourceIds(libraryDatabaseId: string, passagesDatabaseId: string): Promise<void> {
+    const [libraryDataSourceId, passagesDataSourceId] = await Promise.all([
+      this.getPrimaryDataSourceId(libraryDatabaseId),
+      this.getPrimaryDataSourceId(passagesDatabaseId)
+    ]);
+    if (!libraryDataSourceId || !passagesDataSourceId) {
+      const error = new Error(`Notion database is missing a data source (library=${libraryDataSourceId}, passages=${passagesDataSourceId}).`);
+      (error as Error & { code?: string }).code = "object_not_found";
+      throw error;
+    }
+    this.libraryDataSourceId = libraryDataSourceId;
+    this.passagesDataSourceId = passagesDataSourceId;
+  }
+
+  /**
+   * `GetDatabaseResponse` is a union whose partial arm omits `data_sources`,
+   * so the field is read through a narrowing cast rather than a type guard.
+   */
+  private dataSourceIdsOf(database: unknown): string[] {
+    const dataSources = (database as { data_sources?: Array<{ id?: string }> }).data_sources ?? [];
+    return dataSources.map((dataSource) => dataSource.id).filter((id): id is string => Boolean(id));
+  }
+
+  private firstDataSourceId(database: unknown): string | undefined {
+    return this.dataSourceIdsOf(database)[0];
+  }
+
+  private requireLibraryDataSourceId(): string {
+    if (!this.libraryDataSourceId) {
+      throw new Error("Notion library data source id is not resolved yet.");
+    }
+    return this.libraryDataSourceId;
+  }
+
+  private requirePassagesDataSourceId(): string {
+    if (!this.passagesDataSourceId) {
+      throw new Error("Notion passages data source id is not resolved yet.");
+    }
+    return this.passagesDataSourceId;
   }
 
   private async ensureParentPageId(): Promise<string> {
@@ -413,7 +532,6 @@ export class NotionDestination {
       );
     } catch (error) {
       // Icon is a nice-to-have; don't block sync if upload or update fails.
-      // eslint-disable-next-line no-console
       console.warn("Failed to set Archi root page icon:", error instanceof Error ? error.message : error);
     }
   }
@@ -497,8 +615,9 @@ export class NotionDestination {
     forceRefreshMedia: boolean
   ): Promise<string> {
     const externalId = this.normalizeTextValue(work.externalId);
+    const libraryDataSourceId = this.requireLibraryDataSourceId();
     const existing =
-      (await this.findOneByRichText(libraryDatabaseId, "External ID", externalId)) ??
+      (await this.findOneByRichText(libraryDataSourceId, "External ID", externalId)) ??
       (await this.findLegacyLibraryWorkWithoutExternalId(libraryDatabaseId, work));
     const properties = {
       Title: { title: [{ type: "text", text: { content: this.titleText(work.displayTitle, "Untitled") } }] },
@@ -526,7 +645,7 @@ export class NotionDestination {
     } else {
       const created = await this.withRetry(() =>
         this.client.pages.create({
-          parent: { database_id: libraryDatabaseId },
+          parent: { type: "data_source_id", data_source_id: libraryDataSourceId },
           properties: properties as never
         })
       );
@@ -599,8 +718,8 @@ export class NotionDestination {
       });
     }
     const queried = await this.withRetry(() =>
-      this.client.databases.query({
-        database_id: libraryDatabaseId,
+      this.client.dataSources.query({
+        data_source_id: this.requireLibraryDataSourceId(),
         page_size: 1,
         filter: {
           and: filters
@@ -618,9 +737,7 @@ export class NotionDestination {
   }
 
   private async upsertPassage(passagesDatabaseId: string, workPageId: string, passage: NotionPassageInput): Promise<void> {
-    const existing =
-      (await this.findOneByRichText(passagesDatabaseId, "External Passage ID", passage.externalPassageId)) ??
-      (await this.findOneByRichText(passagesDatabaseId, "Fingerprint Hash", passage.fingerprintHash));
+    const passagesDataSourceId = this.requirePassagesDataSourceId();
 
     const properties = {
       Passage: { title: [{ type: "text", text: { content: this.titleText(passage.body, "Passage") } }] },
@@ -640,26 +757,92 @@ export class NotionDestination {
       Archived: { checkbox: passage.isArchived }
     };
 
+    // A locally cached page id skips both lookup round-trips below. Notion
+    // throttles to ~3 requests/second per connection, so those two queries
+    // dominate backfill wall-clock — 2-3 requests per highlight instead of ~1.
+    const cachedPageId = await this.readCachedPageId(passagesDataSourceId, passage.fingerprintHash);
+    if (cachedPageId) {
+      const applied = await this.tryUpdateCachedPage(passagesDataSourceId, cachedPageId, passage.fingerprintHash, properties);
+      if (applied) {
+        return;
+      }
+      // Mapping was stale (page deleted in Notion) and has been evicted.
+      // Fall through to the authoritative lookup rather than blindly creating.
+    }
+
+    const existing =
+      (await this.findOneByRichText(passagesDataSourceId, "External Passage ID", passage.externalPassageId)) ??
+      (await this.findOneByRichText(passagesDataSourceId, "Fingerprint Hash", passage.fingerprintHash));
+
     if (existing) {
       await this.updatePageProperties(existing.id, properties);
+      await this.writeCachedPageId(passagesDataSourceId, passage.fingerprintHash, existing.id);
       return;
     }
 
-    await this.withRetry(() =>
+    const created = await this.withRetry(() =>
       this.client.pages.create({
-        parent: { database_id: passagesDatabaseId },
+        parent: { type: "data_source_id", data_source_id: passagesDataSourceId },
         properties: properties as never
       })
     );
+    await this.writeCachedPageId(passagesDataSourceId, passage.fingerprintHash, created.id);
   }
 
-  private async findOneByRichText(databaseId: string, propertyName: string, value: string | undefined): Promise<{ id: string } | null> {
+  /**
+   * Applies properties to a page we believe already exists. Returns false when
+   * the cached mapping turned out to be stale, having evicted it first.
+   */
+  private async tryUpdateCachedPage(
+    scope: string,
+    pageId: string,
+    fingerprintHash: string,
+    properties: Record<string, unknown>
+  ): Promise<boolean> {
+    try {
+      await this.updatePageProperties(pageId, properties);
+      return true;
+    } catch (error) {
+      if (!this.isNotionObjectMissingError(error)) {
+        throw error;
+      }
+      await this.evictCachedPageId(scope, fingerprintHash);
+      return false;
+    }
+  }
+
+  private async readCachedPageId(scope: string, fingerprintHash: string): Promise<string | undefined> {
+    try {
+      return (await this.config.pageIdCache?.get(scope, fingerprintHash)) ?? undefined;
+    } catch {
+      // The cache is an optimization; never let it break a sync.
+      return undefined;
+    }
+  }
+
+  private async writeCachedPageId(scope: string, fingerprintHash: string, pageId: string): Promise<void> {
+    try {
+      await this.config.pageIdCache?.set(scope, fingerprintHash, pageId);
+    } catch {
+      // Ignore: a missed cache write only costs lookups on the next run.
+    }
+  }
+
+  private async evictCachedPageId(scope: string, fingerprintHash: string): Promise<void> {
+    try {
+      await this.config.pageIdCache?.delete(scope, fingerprintHash);
+    } catch {
+      // Ignore: a stale entry will be re-detected and evicted next run.
+    }
+  }
+
+  private async findOneByRichText(dataSourceId: string, propertyName: string, value: string | undefined): Promise<{ id: string } | null> {
     if (!value) {
       return null;
     }
     const queried = await this.withRetry(() =>
-      this.client.databases.query({
-        database_id: databaseId,
+      this.client.dataSources.query({
+        data_source_id: dataSourceId,
         page_size: 1,
         filter: {
           property: propertyName,
@@ -795,14 +978,8 @@ export class NotionDestination {
   }
 
   private async getPrimaryDataSourceId(databaseId: string): Promise<string | null> {
-    const database = await this.withRetry(() =>
-      this.viewsClient.request<{ data_sources?: Array<{ id?: string }> }>({
-        path: `databases/${databaseId}`,
-        method: "get"
-      })
-    );
-    const firstDataSource = database.data_sources?.[0];
-    return firstDataSource?.id ?? null;
+    const database = await this.withRetry(() => this.client.databases.retrieve({ database_id: databaseId }));
+    return this.firstDataSourceId(database) ?? null;
   }
 
   private async findLinkedDatabaseIdOnPage(pageId: string, dataSourceId: string): Promise<string | null> {
@@ -825,13 +1002,8 @@ export class NotionDestination {
     } while (cursor);
 
     for (const childDatabaseId of childDatabaseIds) {
-      const database = await this.withRetry(() =>
-        this.viewsClient.request<{ data_sources?: Array<{ id?: string }> }>({
-          path: `databases/${childDatabaseId}`,
-          method: "get"
-        })
-      );
-      const matchesDataSource = (database.data_sources ?? []).some((dataSource) => dataSource.id === dataSourceId);
+      const database = await this.withRetry(() => this.client.databases.retrieve({ database_id: childDatabaseId }));
+      const matchesDataSource = this.dataSourceIdsOf(database).includes(dataSourceId);
       if (matchesDataSource) {
         return childDatabaseId;
       }
@@ -890,11 +1062,12 @@ export class NotionDestination {
     };
   }
 
-  private buildPassageProperties(libraryDatabaseId: string): Record<string, unknown> {
+  private buildPassageProperties(libraryDataSourceId: string): Record<string, unknown> {
     return {
       Passage: { title: {} },
       "Reader Note": { rich_text: {} },
-      Work: { relation: { database_id: libraryDatabaseId, type: "single_property", single_property: {} } },
+      // Relations target a data source under 2025-09-03+, not a database.
+      Work: { relation: { data_source_id: libraryDataSourceId, type: "single_property", single_property: {} } },
       Position: { rich_text: {} },
       "Position Kind": { select: { options: [] } },
       "Marker Color": { select: { options: [] } },
@@ -922,14 +1095,17 @@ export class NotionDestination {
     };
   }
 
-  private async ensureDatabaseSchema(libraryDatabaseId: string, passagesDatabaseId: string): Promise<void> {
+  private async ensureDatabaseSchema(): Promise<void> {
+    const libraryDataSourceId = this.requireLibraryDataSourceId();
+    const passagesDataSourceId = this.requirePassagesDataSourceId();
+    // Schema lives on the data source, not the database container.
     const [library, passages] = await Promise.all([
-      this.withRetry(() => this.client.databases.retrieve({ database_id: libraryDatabaseId })),
-      this.withRetry(() => this.client.databases.retrieve({ database_id: passagesDatabaseId }))
+      this.withRetry(() => this.client.dataSources.retrieve({ data_source_id: libraryDataSourceId })),
+      this.withRetry(() => this.client.dataSources.retrieve({ data_source_id: passagesDataSourceId }))
     ]);
     const libraryProperties = this.buildLibraryProperties();
-    const passageProperties = this.buildPassageProperties(libraryDatabaseId);
-    const relationPropertyName = this.findRelationPropertyName(library, passagesDatabaseId);
+    const passageProperties = this.buildPassageProperties(libraryDataSourceId);
+    const relationPropertyName = this.findRelationPropertyName(library, passagesDataSourceId);
     if (relationPropertyName) {
       libraryProperties["Passage Count"] = {
         rollup: { relation_property_name: relationPropertyName, rollup_property_name: "Passage", function: "count" }
@@ -941,16 +1117,16 @@ export class NotionDestination {
         rollup: { relation_property_name: relationPropertyName, rollup_property_name: "Marked At", function: "latest_date" }
       };
     }
-    await this.addMissingProperties(libraryDatabaseId, libraryProperties, library);
-    await this.addMissingProperties(passagesDatabaseId, passageProperties, passages);
+    await this.addMissingProperties(libraryDataSourceId, libraryProperties, library);
+    await this.addMissingProperties(passagesDataSourceId, passageProperties, passages);
   }
 
   private async addMissingProperties(
-    databaseId: string,
+    dataSourceId: string,
     required: Record<string, unknown>,
-    currentDatabase: Awaited<ReturnType<Client["databases"]["retrieve"]>>
+    currentDataSource: Awaited<ReturnType<Client["dataSources"]["retrieve"]>>
   ): Promise<void> {
-    const currentProperties = currentDatabase.properties as Record<string, unknown>;
+    const currentProperties = currentDataSource.properties as Record<string, unknown>;
     const missingProperties = Object.fromEntries(
       Object.entries(required).filter(([propertyName]) => !Object.hasOwn(currentProperties, propertyName))
     );
@@ -958,23 +1134,23 @@ export class NotionDestination {
       return;
     }
     await this.withRetry(() =>
-      this.client.databases.update({
-        database_id: databaseId,
+      this.client.dataSources.update({
+        data_source_id: dataSourceId,
         properties: missingProperties as never
       })
     );
   }
 
   private findRelationPropertyName(
-    libraryDatabase: Awaited<ReturnType<Client["databases"]["retrieve"]>>,
-    passagesDatabaseId: string
+    libraryDataSource: Awaited<ReturnType<Client["dataSources"]["retrieve"]>>,
+    passagesDataSourceId: string
   ): string | null {
-    const properties = libraryDatabase.properties as Record<string, { type?: string; relation?: { database_id?: string } }>;
+    const properties = libraryDataSource.properties as Record<string, { type?: string; relation?: { data_source_id?: string } }>;
     for (const [propertyName, property] of Object.entries(properties)) {
       if (property.type !== "relation") {
         continue;
       }
-      if (property.relation?.database_id === passagesDatabaseId) {
+      if (property.relation?.data_source_id === passagesDataSourceId) {
         return propertyName;
       }
     }
@@ -984,6 +1160,9 @@ export class NotionDestination {
   private async withRetry<T>(operation: () => Promise<T>): Promise<T> {
     let lastError: unknown;
     for (let attempt = 0; attempt < 8; attempt += 1) {
+      // Proactive pacing. Without it a backfill deliberately walks into the
+      // 3 req/s ceiling and pays a 429 penalty wait on every excess request.
+      await this.rateLimiter.acquire();
       try {
         return await operation();
       } catch (error) {
@@ -991,12 +1170,23 @@ export class NotionDestination {
         if (!this.isRetryableError(error) || attempt === 7) {
           break;
         }
+        // Notion sets Retry-After (integer seconds) on 429/529 and asks that
+        // it be respected; it is not always present, hence the backoff floor.
+        const serverDelayMs = retryAfterMs(error);
         const baseDelayMs = Math.min(500 * 2 ** attempt, 20_000);
         const jitterMs = Math.floor(Math.random() * 200);
-        await new Promise((resolve) => setTimeout(resolve, baseDelayMs + jitterMs));
+        await this.sleep(serverDelayMs ?? baseDelayMs + jitterMs);
       }
     }
     throw lastError;
+  }
+
+  private sleep(milliseconds: number): Promise<void> {
+    const injected = this.config.rateLimit?.sleep;
+    if (injected) {
+      return Promise.resolve(injected(milliseconds));
+    }
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
   private isRetryableError(error: unknown): boolean {

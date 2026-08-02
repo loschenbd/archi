@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@archi/core": "workspace:*",
-    "@notionhq/client": "^2.2.15",
+    "@notionhq/client": "^5.23.3",
     "node-fetch": "^2.7.0",
     "tr46": "^0.0.3",
     "webidl-conversions": "^3.0.1",
