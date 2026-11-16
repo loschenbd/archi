@@ -46,7 +46,7 @@ Go to <https://github.com/loschenbd/archi/settings/secrets/actions> →
 | `MAC_CERT_P12_BASE64` | paste from clipboard (step 2.5) |
 | `MAC_CERT_PASSWORD` | the .p12 password from step 2.4 |
 | `KEYCHAIN_PASSWORD` | run `openssl rand -hex 32` and paste |
-| `APPLE_ID` | `loschenbd@gmail.com` |
+| `APPLE_ID` | `you@example.com` |
 | `APPLE_APP_SPECIFIC_PASSWORD` | the app-specific password from step 1 |
 | `APPLE_TEAM_ID` | `74KV536J36` |
 
@@ -120,7 +120,7 @@ You can also confirm visually: download the DMG in Safari, double-click — no
 ```bash
 # export notarize creds for this shell (electron-builder 24+ reads them
 # directly; the keychainProfile route was removed from the schema).
-export APPLE_ID="loschenbd@gmail.com"
+export APPLE_ID="you@example.com"
 export APPLE_APP_SPECIFIC_PASSWORD="<app-specific-password>"
 export APPLE_TEAM_ID="74KV536J36"
 
