@@ -38,7 +38,7 @@ so for local releases you must export the credentials in your shell
 before running `pnpm release`:
 
 ```bash
-export APPLE_ID="loschenbd@gmail.com"
+export APPLE_ID="you@example.com"
 export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 export APPLE_TEAM_ID="74KV536J36"
 ```
@@ -51,7 +51,7 @@ Optional — store a notarytool keychain profile for ad-hoc submissions:
 
 ```bash
 xcrun notarytool store-credentials archi-notarize \
-  --apple-id "loschenbd@gmail.com" \
+  --apple-id "you@example.com" \
   --team-id 74KV536J36 \
   --password "<app-specific-password>"
 xcrun notarytool history --keychain-profile archi-notarize
